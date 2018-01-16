@@ -64,7 +64,7 @@
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -AddFeatures
 
 	.NOTES
-		Be aware that removing the Provisioning Application Package "Microsoft.XBOX.TCUI, or removing the System Application "XboxCallableUI," will "break" the App Troubleshooter.
+		Be aware that removing the Provisioning Application Package "Microsoft.XBOX.TCUI," or removing the System Application "XboxCallableUI," will "break" the App Troubleshooter.
 	
 	.NOTES
 		===========================================================================
@@ -90,12 +90,12 @@ Param
 			   HelpMessage = 'The build number of the image.')]
 	[ValidateRange(15063, 16299)]
 	[int]$Build,
-	[Parameter(HelpMessage = 'Prompts the user to determine whether or not a Provisioned App Package is removed.')]
+	[Parameter(HelpMessage = 'Prompts the user to determine whether or not a Provisioning App Package is removed.')]
 	[Alias('Select')]
 	[switch]$SelectApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioned App Packages.')]
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages.')]
 	[switch]$AllApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioned App Packages not included in the WhiteList.')]
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages not included in the WhiteList.')]
 	[Alias('WhiteList')]
 	[switch]$UseWhiteList,
 	[Parameter(HelpMessage = 'Removes the provisioning and installation of System Apps.')]
@@ -141,7 +141,7 @@ Param
 	#"XboxGameCallableUI"
 )
 
-## Provisioned App Packages to keep if using the -UseWhiteList switch. Add the Apps' display name to the list. Do NOT use wildcards.
+## Provisioning App Packages to keep if using the -UseWhiteList switch. Add the Apps' display name to the list. Do NOT use wildcards.
 [string[]]$AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
