@@ -56,12 +56,12 @@
 	## *************************************************************************************************
 	
 	## Answer file variables.
-	$ComputerName = "PfW-SYSPREP"
-	$Manufacturer = "Omnic Tech"
-	$Model = "970A-D3P"
+	$ComputerName = "MY-PC"
+	$Manufacturer = "Gigabyte."
+	$Model = "GA‑Z170X‑Gaming G1"
 	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
-	$Owner = "Omnic Tech"
-	$Organization = "Omnic Tech"
+	$Owner = "My Name"
+	$Organization = "My Org"
 	
 	## *************************************************************************************************
 	## *                                      END VARIABLES.                                           *
