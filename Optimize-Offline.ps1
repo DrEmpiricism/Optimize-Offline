@@ -1436,12 +1436,13 @@ If ($Error.Count.Equals(0))
 }
 Else
 {
-	$SaveErrorLog = Join-Path -Path $SaveFolder -ChildPath "ErrorLog.log"
-	Set-Content -Path $SaveErrorLog -Value $Error
+	$SaveErrorLog = Join-Path -Path $env:TEMP -ChildPath "ErrorLog.log"
+	Set-Content -Path $SaveErrorLog -Value $Error.ToArray() -Force
+	Move-Item -Path $env:TEMP\ErrorLog.log -Destination $SaveFolder -Force
 	Write-Output ''
 	Write-Output "Newly optimized image has been saved to $SaveFolder."
 	Write-Output ''
-	Process-Log -Output "$Script completed with [$($Error.Count)] errors.`nErrorLog saved to $SaveFolder\ErrorLog.log" -LogPath $LogFile -Level Warning
+	Process-Log -Output "$Script completed with [$($Error.Count)] errors.`nErrorLog saved to $SaveFolder" -LogPath $LogFile -Level Warning
 	Move-Item -Path $LogFile -Destination $SaveFolder -Force
 	Write-Output ''
 }
