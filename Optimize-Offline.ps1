@@ -1584,11 +1584,11 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 		}
 		If ($Build -ge "16299" -and $RegistryComplete -eq $true)
 		{
-			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender" -Force)
+			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender" -Force)
 		}
 		ElseIf ($Build -eq "15063" -and $RegistryComplete -eq $true)
 		{
-			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender" -Force)
+			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;windowsdefender" -Force)
 		}
 		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\SecurityHealthService" -Name "Start" -Value 4 -Force)
 		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\WinDefend" -Name "Start" -Value 4 -Force)
@@ -1715,6 +1715,15 @@ If ($RegistryComplete -eq $true)
 		Else
 		{
 			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\DiagTrack" -Name "Start" -Value 4 -Force)
+		}
+		If (!(Test-Path -Path "$System\ControlSet001\Services\dmwappushservice"))
+		{
+			[void](New-Item -Path "$System\ControlSet001\Services\dmwappushservice" -Force)
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -PropertyType DWord -Value 4 -Force)
+		}
+		Else
+		{
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -Value 4 -Force)
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\dmwappushsvc"))
 		{
