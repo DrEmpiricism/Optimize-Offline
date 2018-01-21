@@ -1,4 +1,4 @@
-﻿Function Additional-Features
+Function Additional-Features
 {
 <#
 	.SYNOPSIS
@@ -8,7 +8,7 @@
 		If the switch for this function is used by the main Optimize-Offline script, it will be called before the image is finalized.
 	
 	.PARAMETER ContextMenu
-		Adds Copy-Move, Open with Notepad, Create a restore-point, Extended disk clean-up, Install CAB, Elevated command-prompt and Elevated PowerShell to the context menu.
+		Adds Copy-Move, Create a Quick Restore Point, Extended Disk Clean-up, Install CAB File, Restart Explorer, Elevated Command-Prompt and Elevated PowerShell to the context menu.
 	
 	.PARAMETER NetFx3
 		Adds the .NET Framework 3.5 Windows packages to the image and enables the NetFx3 optional feature.
@@ -22,12 +22,21 @@
 	.PARAMETER Unattend
 		Adds the supplied unattend or autounattend answer file to the image.
 	
+	.PARAMETER GenuineTicket
+		Adds a supplied GenuineTicket.xml to the image for auto-activation.
+	
 	.PARAMETER HostsFile
 		Downloads Steven Black's master Hosts File from GitHub and adds it to the image (https://github.com/StevenBlack/hosts).
 	
+	.PARAMETER Win32Calc
+		Applies the Windows 10 LTSB Win32 Calculator to the image. This is useful when removing the Calculator Provisionining Application Package.
+	
+	.PARAMETER SysPrep
+		Sets the image up for automatic booting into Audit System for System Preparation.
+	
 	.NOTES
 		Image and package path variables can point to a single file or a directory of files. If a directory is detected, the script will recursively add those files to the image.
-		If replacing default images, ensure they meet Windows' dimentional requirements (view the ReadMe.txt in the Images folder).
+		If replacing default images, ensure they meet Windows' dimentional requirements.
 	
 	.NOTES
 		===========================================================================
@@ -35,8 +44,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Additional-Features.ps1
-		Version:        1.0.7
-		Last updated:	01/16/2018
+		Version:        2.0.0
+		Last updated:	01/21/2018
 		===========================================================================
 #>
 	[CmdletBinding()]
@@ -46,13 +55,15 @@
 		[switch]$NetFx3,
 		[switch]$SystemImages,
 		[switch]$OfflineServicing,
-		[ValidateNotNullOrEmpty()]
-		[string]$Unattend,
-		[switch]$HostsFile
+		[switch]$Unattend,
+		[switch]$GenuineTicket,
+		[switch]$HostsFile,
+		[switch]$Win32Calc,
+		[switch]$SysPrep
 	)
 	
 	## *************************************************************************************************
-	## *          			    THE VARIABLES BELOW CAN BE EDITED.          	           *
+	## *          					THE VARIABLES BELOW CAN BE EDITED.          			           *
 	## *************************************************************************************************
 	
 	## Answer file variables.
@@ -67,53 +78,118 @@
 	## *                                      END VARIABLES.                                           *
 	## *************************************************************************************************
 	
+	$ProgressPreference = "SilentlyContinue"
 	$WallpaperPath = "$PSScriptRoot\Additional\Images\Wallpaper"
 	$LockScreenPath = "$PSScriptRoot\Additional\Images\LockScreen"
 	$SystemLogoPath = "$PSScriptRoot\Additional\Images\Logo"
 	$AccountPicturePath = "$PSScriptRoot\Additional\Images\Account"
 	$NetFX3PackagePath = "$PSScriptRoot\Additional\NetFx3"
+	$UnattendPath = "$PSScriptRoot\Additional\Unattend"
+	$GenuineTicketPath = "$PSScriptRoot\Additional\GenuineTicket"
+	$Win32CalcImagePath = "$PSScriptRoot\Additional\Win32Calc"
 	
-	If ($ContextMenu)
+	If ($Unattend -and $SysPrep)
 	{
 		ECHO ''
-		ECHO "Adding context menu features."
-		[void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
-		#****************************************************************
-		ECHO '' >> $WorkFolder\Registry-Optimizations.log
-		ECHO "Adding 'Copy-Move' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************		
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}" /f)
-		#****************************************************************
-		ECHO '' >> $WorkFolder\Registry-Optimizations.log
-		ECHO "Adding 'Open with Notepad' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************		
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "notepad.exe,-2" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "notepad.exe %1" /f)
-		#****************************************************************
-		ECHO '' >> $WorkFolder\Registry-Optimizations.log
-		ECHO "Adding 'Extended Disk Clean-up' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************		
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Extended Disk Clean-up" /v "HasLUAShield" /t REG_SZ /d "" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Extended Disk Clean-up" /v "Icon" /t REG_SZ /d "cleanmgr.exe" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Extended Disk Clean-up\command" /ve /t REG_SZ /d "WScript C:\Windows\Extended-Disk-Cleanup.vbs" /f)
-		#****************************************************************
-		ECHO '' >> $WorkFolder\Registry-Optimizations.log
-		ECHO "Adding 'Quick Restore Point' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************		
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" /v "HasLUAShield" /t REG_SZ /d "" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" /v "Icon" /t REG_SZ /d "SystemPropertiesProtection.exe" /f)
-		[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command" /ve /t REG_SZ /d "WScript C:\Windows\Create-Restore-Point.vbs" /f)
-		#****************************************************************
+		Write-Warning -Message "The -Unattend switch cannot be used together with the -SysPrep switch.`n`nDisabling the -SysPrep switch."
+		$SysPrep = $null
 		SLEEP 3
-		[gc]::collect()
-		[void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
 	}
 	
 	If ($ContextMenu)
 	{
-		$AddContextScripts = {
-			$ExtendedDiskCleanupStr = @"
+		$AddContextRegValues = {
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Open with Notepad' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************		
+			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "notepad.exe,-2" /f)
+			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "notepad.exe %1" /f)
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Copy-Move' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}" -Force) };
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Extended Disk Clean-up' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up' -Name 'Icon' -Value "cleanmgr.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command' -Name '(default)' -Value "WScript C:\Windows\Extended-Disk-Cleanup.vbs" -Type String -Force);
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Quick Restore Point' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point' -Name 'Icon' -Value "SystemPropertiesProtection.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command' -Name '(default)' -Value "WScript C:\Windows\Create-Restore-Point.vbs" -Type String -Force);
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Elevated Command-Prompt' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Icon' -Value "cmd.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'SeparatorAfter' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Position' -Value "Bottom" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Icon' -Value "cmd.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'SeparatorAfter' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Position' -Value "Bottom" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -Type String -Force);
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Elevated PowerShell' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type String -Force);
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Install CAB' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name '(default)' -Value "Install" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name 'HasLUAShield' -Value "" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command' -Name '(default)' -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -Type String -Force);
+			#****************************************************************
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding 'Restart Explorer' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			#****************************************************************
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Force) };
+			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command")) { [void](NI "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Force) };
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'icon' -Value "explorer.exe" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'Position' -Value "bottom" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command' -Name '(default)' -Value "Restart-Explorer.cmd" -Type String -Force);
+		}
+		$AddVBSScripts = {
+			$ExtendedDiskVBS = @"
 If WScript.Arguments.length =0 Then
   Set Cleanup1 = CreateObject("Shell.Application")
   Cleanup1.ShellExecute "wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1
@@ -122,31 +198,18 @@ Else
    Cleanup2.run ("cmd.exe /c cleanmgr /sageset:65535 & cleanmgr /sagerun:65535"), 0
 End If
 "@
-			$CreateRestorePointStr = @"
+			$RestorePointVBS = @"
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
     Set colOS = objWMI.ExecQuery("Select * from Win32_OperatingSystem")
     For Each objOS in colOS
         If instr(objOS.Caption, "Windows 10") Then
-        	SystemOS = "Windows 10"
-        elseIf instr(objOS.Caption, "Windows 8") Then
-        	SystemOS = "Windows 8"
-        elseIf instr(objOS.Caption, "Windows 7") Then
-        	SystemOS = "Windows 7"    
+        	SystemOS = "Windows 10" 
         End If
 	Next
 End Function
 
-If SystemOS = "Windows 7" Then
-	If WScript.Arguments.length =0 Then
-  		Set objShell = CreateObject("Shell.Application")
-		objShell.ShellExecute "wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1
-	Else
-  		CreateSRP
-  	End If
-End If
-
-If SystemOS = "Windows 8" Or SystemOS = "Windows 10" Then
+If SystemOS = "Windows 10" Then
 	If WScript.Arguments.length =0 Then
   		Set objShell = CreateObject("Shell.Application")
 		objShell.ShellExecute "wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1 
@@ -164,184 +227,51 @@ End If
 Sub CreateSRP
 	Set SRP = getobject("winmgmts:\\.\root\default:Systemrestore")
 	sDesc = "Manual Restore Point"
-	sDesc = InputBox ("Enter a restore point description.", "Manually Create System Restore Point","Manual Restore Point")
+	sDesc = InputBox ("Enter a restore point description.", "Create Quick System Restore Point","Quick Restore Point")
 	If Trim(sDesc) <> "" Then
 		sOut = SRP.createrestorepoint (sDesc, 0, 100)
 		If sOut <> 0 Then
 	 		WScript.echo "Error " & sOut & ": Unable to create Restore Point."
                 else 
-                MsgBox "The restore point " & Chr(34) & sDesc & Chr(34) & " was created successfully.", 0, "Manually Create System Restore Point"
+                MsgBox "The restore point " & Chr(34) & sDesc & Chr(34) & " was created successfully.", 0, "Create Quick System Restore Point"
 		End If
 	End If
 End Sub
 "@
-			$ExtendedDiskCleanupScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
-			SC -Path $ExtendedDiskCleanupScript -Value $ExtendedDiskCleanupStr
-			$CreateRestorePointScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
-			SC -Path $CreateRestorePointScript -Value $CreateRestorePointStr -Force
+			$CreateExtendedDiskVBS = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
+			SC -Path $CreateExtendedDiskVBS -Value $ExtendedDiskVBS
+			$CreateRestorePointVBS = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
+			SC -Path $CreateRestorePointVBS -Value $RestorePointVBS -Force
 		}
-		& $AddContextScripts
-	}
-	
-	If ($ContextMenu)
-	{
-		If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd")
-		{
-			$AddToContextMenuCMD = {
-				$ElevatedConsoles = @"
-REGEDIT /S "%WINDIR%\Setup\Scripts\ElevatedConsoles-To-ContextMenu.reg"
+		$RestartExplorer = {
+			$RestartExplorerCMD = @"
+@ECHO OFF
+ECHO:
+ECHO Killing Explorer.exe
+ECHO:
+TASKKILL /F /IM Explorer.exe
+ECHO:
+ECHO Ready to restart Explorer.exe
+TIMEOUT /T -1
+START "Starting Explorer.exe" Explorer.exe
+TIMEOUT /T 8 /NOBREAK >NUL
+ECHO:
+ECHO Explorer.exe has started successfully.
+TIMEOUT /T 5 /NOBREAK >NUL
+EXIT
 "@
-				$InstallCAB = @"
-REGEDIT /S "%WINDIR%\Setup\Scripts\InstallCAB-to-ContextMenu.reg"
-"@
-				$ElevatedConsolesFile = @"
-Windows Registry Editor Version 5.00
-
-; Elevated Command-Prompt
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\runas]
-@="Elevated Command-Prompt"
-"Icon"="cmd.exe"
-"HasLUAShield"=""
-"SeparatorAfter"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\runas\command]
-@="CMD /S /K PUSHD \"%V\""
-
-[HKEY_CLASSES_ROOT\Directory\shell\runas]
-@="Elevated Command-Prompt"
-"Icon"="cmd.exe"
-"HasLUAShield"=""
-"SeparatorAfter"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\shell\runas\command]
-@="CMD /S /K PUSHD \"%V\""
-
-; Elevated PowerShell
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\ElevatedPowerShell]
-@="Elevated PowerShell"
-"Icon"="powershell.exe"
-"HasLUAShield"=""
-"SeparatorBefore"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\ElevatedPowerShell\command]
-@="Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''\"%V\"'''"
-
-[HKEY_CLASSES_ROOT\Directory\shell\ElevatedPowerShell]
-@="Elevated PowerShell"
-"Icon"="powershell.exe"
-"HasLUAShield"=""
-"SeparatorBefore"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\shell\ElevatedPowerShell\command]
-@="Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''\"%V\"'''"
-
-"@
-				$InstallCABFile = @"
-Windows Registry Editor Version 5.00
-
-[-HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs]
-
-[HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs]
-@="Install"
-"HasLUAShield"=""
-
-[HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs\Command]
-@="CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:\"%1\""
-
-"@
-				AC -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd" -Value ($ElevatedConsoles, $InstallCAB) -Encoding ASCII -Force
-				$CreateElevatedRegFile = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "ElevatedConsoles-To-ContextMenu.reg"
-				SC -Path $CreateElevatedRegFile -Value $ElevatedConsolesFile -Encoding Unicode -Force
-				$CreateCABRegFile = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "InstallCAB-to-ContextMenu.reg"
-				SC -Path $CreateCABRegFile -Value $InstallCABFile -Encoding Unicode -Force
-			}
-			& $AddToContextMenuCMD
+			$CreateRestartExplorerScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Restart-Explorer.cmd"
+			SC -Path $CreateRestartExplorerScript -Value $RestartExplorerCMD -Encoding ASCII -Force
 		}
-		Else
-		{
-			$AddToContextMenuCMD = {
-				$ElevatedConsoles = @"
-REGEDIT /S "%WINDIR%\Setup\Scripts\ElevatedConsoles-To-ContextMenu.reg"
-"@
-				$InstallCAB = @"
-REGEDIT /S "%WINDIR%\Setup\Scripts\InstallCAB-to-ContextMenu.reg"
-"@
-				$ElevatedConsolesFile = @"
-Windows Registry Editor Version 5.00
-
-; Elevated Command-Prompt
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\runas]
-@="Elevated Command-Prompt"
-"Icon"="cmd.exe"
-"HasLUAShield"=""
-"SeparatorAfter"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\runas\command]
-@="CMD /S /K PUSHD \"%V\""
-
-[HKEY_CLASSES_ROOT\Directory\shell\runas]
-@="Elevated Command-Prompt"
-"Icon"="cmd.exe"
-"HasLUAShield"=""
-"SeparatorAfter"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\shell\runas\command]
-@="CMD /S /K PUSHD \"%V\""
-
-; Elevated PowerShell
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\ElevatedPowerShell]
-@="Elevated PowerShell"
-"Icon"="powershell.exe"
-"HasLUAShield"=""
-"SeparatorBefore"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\ElevatedPowerShell\command]
-@="Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''\"%V\"'''"
-
-[HKEY_CLASSES_ROOT\Directory\shell\ElevatedPowerShell]
-@="Elevated PowerShell"
-"Icon"="powershell.exe"
-"HasLUAShield"=""
-"SeparatorBefore"=""
-"Position"="Bottom"
-
-[HKEY_CLASSES_ROOT\Directory\shell\ElevatedPowerShell\command]
-@="Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''\"%V\"'''"
-
-"@
-				$InstallCABFile = @"
-Windows Registry Editor Version 5.00
-
-[-HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs]
-
-[HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs]
-@="Install"
-"HasLUAShield"=""
-
-[HKEY_CLASSES_ROOT\CABFolder\Shell\RunAs\Command]
-@="CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:\"%1\""
-
-"@
-				$CreateOOBEScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "OOBE.cmd"
-				SC -Path "$CreateOOBEScript" -Value ($ElevatedConsoles, $InstallCAB) -Encoding ASCII -Force
-				$CreateElevatedRegFile = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "ElevatedConsoles-To-ContextMenu.reg"
-				SC -Path $CreateElevatedRegFile -Value $ElevatedConsolesFile -Encoding Unicode -Force
-				$CreateCABRegFile = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "InstallCAB-to-ContextMenu.reg"
-				SC -Path $CreateCABRegFile -Value $InstallCABFile -Encoding Unicode -Force
-			}
-			& $AddToContextMenuCMD
-		}
+		ECHO ''
+		ECHO "Adding Context Menu features."
+		[void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
+		& $AddContextRegValues
+		SLEEP 3
+		[System.GC]::Collect()
+		[void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
+		& $AddVBSScripts
+		& $RestartExplorer
 	}
 	
 	If ($NetFx3)
@@ -363,7 +293,7 @@ Windows Registry Editor Version 5.00
 	If ($SystemImages)
 	{
 		ECHO ''
-		ECHO "Adding or replacing any System Images."
+		ECHO "Adding or replacing System Images."
 		SLEEP 3
 		If ((DIR -Path $LockScreenPath).Name -contains "img100.jpg")
 		{
@@ -372,9 +302,9 @@ Windows Registry Editor Version 5.00
 				$Grant = "/Grant"
 				$User = "Administrators"
 				$Permission = ":F"
-				[void](TAKEOWN /F $DefaultLockScreenImage /A)
+				[void](IEX -Command ('TAKEOWN /F $DefaultLockScreenImage /A'))
 				[void](IEX -Command ('ICACLS $DefaultLockScreenImage $Grant "${User}${Permission}" /Q'))
-				COPY -Path "$LockScreenPath\img100.jpg" -Destination $DefaultLockScreenImage -Force
+				COPY -Path $LockScreenPath\img100.jpg -Destination $DefaultLockScreenImage -Force
 			}
 			& $ReplaceDefaultLockScreen
 		}
@@ -420,7 +350,7 @@ Windows Registry Editor Version 5.00
 				$Grant = "/Grant"
 				$User = "Administrators"
 				$Permission = ":(OI)(CI)F"
-				[void](TAKEOWN /F $DefaultAccountPictures /A /R /D Y)
+				[void](IEX -Command ('TAKEOWN /F $DefaultAccountPictures /A /R /D Y'))
 				[void](IEX -Command ('ICACLS $DefaultAccountPictures $Grant "${User}${Permission}" /T /C /Q'))
 				COPY -Path "$AccountPicturePath\*" -Destination "$MountFolder\ProgramData\Microsoft\User Account Pictures" -Recurse -Force
 			}
@@ -473,7 +403,7 @@ Windows Registry Editor Version 5.00
 	
 	If ($Unattend)
 	{
-		If (([IO.FileInfo]$Unattend).Extension -like ".XML")
+		If ((DIR -Path $UnattendPath).Name -match "unattend.xml")
 		{
 			ECHO ''
 			ECHO "Adding an unattend.xml answer file to the image."
@@ -482,13 +412,28 @@ Windows Registry Editor Version 5.00
 			{
 				[void](NI -Path "$MountFolder\Windows\Panther" -Type Directory -Force)
 			}
-			COPY -Path $Unattend -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
+			COPY -Path $UnattendPath\unattend.xml -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
 		}
 		Else
 		{
 			ECHO ''
-			Write-Warning -Message "$Unattend is not a valid path."
+			Write-Warning -Message "$UnattendPath does not contain an unattend.xml file."
 			SLEEP 3
+		}
+	}
+	
+	If ($GenuineTicket)
+	{
+		If ((DIR -Path $GenuineTicketPath).Name -match "GenuineTicket.xml")
+		{
+			ECHO ''
+			ECHO "Adding a GenuineTicket.xml to the image."
+			SLEEP 3
+			COPY -Path $GenuineTicketPath\GenuineTicket.xml -Destination "$MountFolder\ProgramData\Microsoft\Windows\ClipSVC\GenuineTicket\GenuineTicket.xml" -Force
+		}
+		Else
+		{
+			Write-Warning -Message "$GenuineTicketPath does not contain a GenuineTicket.xml file."
 		}
 	}
 	
@@ -507,16 +452,267 @@ Windows Registry Editor Version 5.00
 		Else
 		{
 			ECHO ''
-			Write-Warning "Connection test failed. Unable to replace the default Hosts File."
+			Write-Warning -Message "Connection test failed. Unable to replace the default Hosts File."
 			SLEEP 3
 		}
+	}
+	
+	If ($Win32Calc)
+	{
+		$AddWin32Calc = {
+			If ((Test-Path -Path "$Win32CalcImagePath\Win32Calc.wim") -and (Test-Path -Path "$Win32CalcImagePath\Win32Calc_en-US.wim"))
+			{
+				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 1 -CheckIntegrity -Verify)
+				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 2 -CheckIntegrity -Verify)
+				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 1 -CheckIntegrity -Verify)
+				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 2 -CheckIntegrity -Verify)
+				$W32CalcStr = @"
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator]
+@="URL:calculator"
+"URL Protocol"=""
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon]
+@="C:\\Windows\\System32\\win32calc.exe,0"
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command]
+@="C:\\Windows\\System32\\win32calc.exe"
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\App Management\WindowsFeatureCategories]
+"COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ShellCompatibility\InboxApp]
+"56230F2FD0CC3EB4_Calculator_lnk_amd64.lnk"=hex(2):43,00,3a,00,5c,00,50,00,72,\
+  00,6f,00,67,00,72,00,61,00,6d,00,44,00,61,00,74,00,61,00,5c,00,4d,00,69,00,\
+  63,00,72,00,6f,00,73,00,6f,00,66,00,74,00,5c,00,57,00,69,00,6e,00,64,00,6f,\
+  00,77,00,73,00,5c,00,53,00,74,00,61,00,72,00,74,00,20,00,4d,00,65,00,6e,00,\
+  75,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,73,00,5c,00,41,00,63,\
+  00,63,00,65,00,73,00,73,00,6f,00,72,00,69,00,65,00,73,00,5c,00,43,00,61,00,\
+  6c,00,63,00,75,00,6c,00,61,00,74,00,6f,00,72,00,2e,00,6c,00,6e,00,6b,00,00,\
+  00
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Calculator/Debug]
+"OwningPublisher"="{75f48521-4131-4ac3-9887-65473224fcb2}"
+"Enabled"=dword:00000000
+"Isolation"=dword:00000000
+"ChannelAccess"="O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)"
+"Type"=dword:00000003
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Calculator/Diagnostic]
+"OwningPublisher"="{75f48521-4131-4ac3-9887-65473224fcb2}"
+"Enabled"=dword:00000000
+"Isolation"=dword:00000000
+"ChannelAccess"="O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)"
+"Type"=dword:00000002
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}]
+@="Microsoft-Windows-Calculator"
+"ResourceFileName"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,\
+  00,6f,00,74,00,25,00,5c,00,73,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,\
+  5c,00,77,00,69,00,6e,00,33,00,32,00,63,00,61,00,6c,00,63,00,2e,00,65,00,78,\
+  00,65,00,00,00
+"MessageFileName"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,\
+  6f,00,74,00,25,00,5c,00,73,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,\
+  00,77,00,69,00,6e,00,33,00,32,00,63,00,61,00,6c,00,63,00,2e,00,65,00,78,00,\
+  65,00,00,00
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences]
+"Count"=dword:00000002
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences\0]
+@="Microsoft-Windows-Calculator/Diagnostic"
+"Id"=dword:00000010
+"Flags"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences\1]
+@="Microsoft-Windows-Calculator/Debug"
+"Id"=dword:00000011
+"Flags"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Management\WindowsFeatureCategories]
+"COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
+
+"@
+				$W32RegFile = Join-Path -Path $WorkFolder -ChildPath "Win32Calc.reg"
+				SC -Path $W32RegFile -Value $W32CalcStr -Encoding Unicode -Force
+				[void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
+				REGEDIT /S "$WorkFolder\Win32Calc.reg"
+				[System.GC]::Collect()
+				[void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
+				$LnkINI = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+				$W32CalcLnk = "Calculator.lnk=@%SystemRoot%\system32\shell32.dll,-22019"
+				$LnkContent = (CAT -Path $LnkINI)
+				If ((SLS -InputObject $LnkContent -Pattern $W32CalcLnk -NotMatch -Quiet) -eq $true)
+				{
+					ATTRIB -S -H $LnkINI
+					AC -Path $LnkINI -Value $W32CalcLnk -Encoding Unicode -Force
+					ATTRIB +S +H $LnkINI
+				}
+			}
+			Else
+			{
+				ECHO ''
+				Write-Warning -Message "$Win32CalcImagePath does not contain the required Win32Calc WIM files."
+			}
+		}
+		ECHO ''
+		ECHO "Applying the Win32 Calculator."
+		& $AddWin32Calc
+		DEL -Path "$WorkFolder\Win32Calc.reg" -Force
+		SLEEP 3
+	}
+	
+	If ($SysPrep)
+	{
+		If (!($OfflineServicing))
+		{
+			$BootToAudit = {
+				$AuditBootStr = @"
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <Reseal>
+                <Mode>Audit</Mode>
+            </Reseal>
+        </component>
+    </settings>
+    <settings pass="auditSystem">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
+            <TimeZone>Eastern Standard Time</TimeZone>
+            <DoNotCleanTaskBar>false</DoNotCleanTaskBar>
+        </component>
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <AuditComputerName>
+                <MustReboot>true</MustReboot>
+                <Name>$ComputerName</Name>
+            </AuditComputerName>
+        </component>
+    </settings>
+    <settings pass="auditUser">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <OEMInformation>
+                <HelpCustomized>false</HelpCustomized>
+                <Logo>$SystemLogo</Logo>
+                <Manufacturer>$Manufacturer</Manufacturer>
+                <Model>$Model</Model>
+            </OEMInformation>
+            <RegisteredOrganization>$Organization</RegisteredOrganization>
+            <RegisteredOwner>$Owner</RegisteredOwner>
+        </component>
+    </settings>
+</unattend>
+"@
+				$AuditBootXML = Join-Path -Path $TempFolder -ChildPath "unattend.xml"
+				SC -Path $AuditBootXML -Value $AuditBootStr
+				If (!(Test-Path -Path "$MountFolder\Windows\Panther"))
+				{
+					[void](NI -Path "$MountFolder\Windows\Panther" -Type Directory -Force)
+				}
+				COPY -Path $TempFolder\unattend.xml -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
+				
+				If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd")
+				{
+					REN -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -NewName "SetupComplete.txt" -Force
+				}
+				If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd")
+				{
+					REN -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd" -NewName "OOBE.txt" -Force
+				}
+			}
+			ECHO ''
+			ECHO "Setting image up for Audit Booting and System Preparation"
+			SLEEP 3
+			& $BootToAudit
+			$AuditBootComplete = $true
+		}
+		Else
+		{
+			$BootToAudit = {
+				$AuditBootStr = @"
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <Reseal>
+                <Mode>Audit</Mode>
+            </Reseal>
+        </component>
+    </settings>
+    <settings pass="auditSystem">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
+            <TimeZone>Eastern Standard Time</TimeZone>
+            <DoNotCleanTaskBar>false</DoNotCleanTaskBar>
+        </component>
+    </settings>
+</unattend>
+"@
+				$AuditBootXML = Join-Path -Path $TempFolder -ChildPath "unattend.xml"
+				SC -Path $AuditBootXML -Value $AuditBootStr
+				If (!(Test-Path -Path "$MountFolder\Windows\Panther"))
+				{
+					[void](NI -Path "$MountFolder\Windows\Panther" -Type Directory -Force)
+				}
+				COPY -Path $TempFolder\unattend.xml -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
+				
+				If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd")
+				{
+					REN -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -NewName "SetupComplete.txt" -Force
+				}
+				If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd")
+				{
+					REN -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd" -NewName "OOBE.txt" -Force
+				}
+			}
+			ECHO ''
+			ECHO "Setting image up for Audit Booting and System Preparation."
+			SLEEP 3
+			& $BootToAudit
+			$AuditBootComplete = $true
+		}
+	}
+	
+	If ($AuditBootComplete -eq $true)
+	{
+		$RemoveOneDrive = {
+			$RemoveOneDriveStr = @"
+TASKKILL /F /IM OneDrive.exe >NUL 2>&1
+IF EXIST %SystemRoot%\System32\OneDriveSetup.exe (
+START /WAIT %SystemRoot%\System32\OneDriveSetup.exe /UNINSTALL
+) ELSE (
+START /WAIT %SystemRoot%\SysWOW64\OneDriveSetup.exe /UNINSTALL
+)
+RMDIR /S /Q "%UserProfile%\OneDrive" >NUL 2>&1
+RMDIR /S /Q "%LocalAppData%\Microsoft\OneDrive" >NUL 2>&1
+RMDIR /S /Q "%SystemDrive%\OneDriveTemp" >NUL 2>&1
+RMDIR /S /Q "%ProgramData%\Microsoft OneDrive" >NUL 2>&1
+"@
+			$RemoveOneDriveScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "Remove-OneDrive.cmd"
+			SC -Path $RemoveOneDriveScript -Value $RemoveOneDriveStr -Encoding ASCII -Force
+		}
+		$ReadMe = {
+			$ReadMeStr = @"
+Run "Disable-OneDrive.cmd" to uninstall OneDrive and remove its directories.
+There is a bug when doing a SysPrep where OneDrive will continue to point to the BUILTIN\Administrator account after Copy Profile is initiated which breaks all OneDrive links.
+Removing OneDrive via the Remove-OneDrive.cmd will prevent this from occuring, though OneDrive will have to be re-installed after the image has been generalized and installed.
+
+Before generalizing the image, rename the SetupComplete.cmd.txt and OOBE.cmd.txt files in %WINDIR%\Setup\Scripts to SetupComplete.cmd and OOBE.cmd so they both run during Windows setup.
+"@
+			$ReadMeText = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "ReadMe.txt"
+			SC -Path $ReadMeText -Value $ReadMeStr -Force
+		}
+		& $RemoveOneDrive
+		& $ReadMe
 	}
 }
 # SIG # Begin signature block
 # MIIJcwYJKoZIhvcNAQcCoIIJZDCCCWACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUExGA4S1uflZZEGlfmkkXti7X
-# 3J+gggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzXjZrSaZH+Ije7+IXFE1Thws
+# NVOgggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
 # MCkxJzAlBgNVBAMTHk9NTklDLlRFQ0gtQ0EgQ2VydGlmaWNhdGUgUm9vdDAeFw0x
 # NzExMDcwMzM4MjBaFw0zOTEyMzEyMzU5NTlaMCQxIjAgBgNVBAMTGU9NTklDLlRF
 # Q0ggUG93ZXJTaGVsbCBDU0MwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
@@ -554,14 +750,14 @@ Windows Registry Editor Version 5.00
 # qHcndUPZwjGCAkwwggJIAgEBMD0wKTEnMCUGA1UEAxMeT01OSUMuVEVDSC1DQSBD
 # ZXJ0aWZpY2F0ZSBSb290AhB0u1Cd2puAkkG+oZic5rsmMAkGBSsOAwIaBQCggeUw
 # GQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisG
-# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJZxgKM2dBqpLcNeYy1rY0VgXCimMIGE
+# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJBWIsqXdbdaVd6whHTXTDcUhlbUMIGE
 # BgorBgEEAYI3AgEMMXYwdKBygHAATwBwAHQAaQBtAGkAegBlAC0ATwBmAGYAbABp
 # AG4AZQAnAHMAIABhAGQAZABpAHQAaQBvAG4AYQBsACAAZgBlAGEAdAB1AHIAZQAn
 # AHMAIABmAHUAbgBjAHQAaQBvAG4AIABzAGMAcgBpAHAAdAAuMA0GCSqGSIb3DQEB
-# AQUABIIBAEHIqUIoK/dWQYnVZWDKYmvy17DnufsmsuuRFAKBdp9bziTrTCgOifrq
-# Zoj/YCDCUDQvlWp5wpdwVqqbL0iLxUzctwh5J60XV+El71XBUvviLtuKaxQo+GUY
-# q6V3/0IxOeJ2NdA6vU4sc/nu1R4O6LV0DaSdcO77xbx8c1gd7hvjlCoFdFgPEbU+
-# NDf50ZUprX2bRx9AMXrPHtHa1GzQtRQLEONlxM95+ZQZZ5K6qJoDXQWODh1UVwoU
-# tORyqLDL3q0LuqVznj5S5HPP1EXqeztqZ2qAT0z8k0H3a4X4yiBGnveBrSkkadvk
-# H25i/u1KGMf6ycjGjdxEPEndLHFr4rc=
+# AQUABIIBADPaJXH3fcgesWfrxBkrlEt4JXeOXkrl2Jkb8aQbv72WP6koB07/sGSp
+# /+BZwRRAovQCx7ZdlggG9PjTMeb79J0JpmV/hsFZELYZuJdgdhFlCwdeDeO6KOye
+# uwEYUccXwVOk+G2WXlBLN88m09Q4q5YWrazm7vcKeeBZtWsde4dMjgR+zAK0avVz
+# JR+sQ+DNPR6yZox8wtpB/uUogONUukwZUgodZK+2Q0qS7XREkyK7cZm9PKTqkZeO
+# aaJoejqCmndQtUV1UyMlZdz0rh7+rVd1v0kCvv/Ktte9pQbAmeQlv6ycVWJI4Spq
+# yZcTKIBpokoD18Y1vJkvgSlC1ZJJQR4=
 # SIG # End signature block
