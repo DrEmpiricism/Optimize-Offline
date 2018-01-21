@@ -1,0 +1,31 @@
+Version 3.0 has been released and includes some significant updates, changes and modifications.
+
+The Helper-Script.ps1 has been removed.
+
+There's a new function that allows for ownership of registry keys and subkeys to be granted to the BUILTIN\Administrator account, using Access Token privileges.
+
+There are additional services and drivers disabled through the offline registry hives.
+
+There are additional notes with some pertinent information regarding Provisioning Application Packages and Systep Applications.
+
+Re-wrote the process where System Applications are "de-provisioned" and removed.
+
+Added additional security registry settings.
+
+The Additional-Features function script has been almost entirely re-written.
+
+Now values are applied directly to the offline registry hives as opposed to using "REGEDIT /S" via OOBE.cmd
+
+OOBE.cmd is not omitted, as it's no longer required with the elevated registry function.
+
+The Windows 10 Enterprise LTSB 2016 Calculator (Win32Calc) is now able to be applied to the image. This is valuable if the regular calculator Provisioning Application Package is removed yet one still wants a built-in calculator.
+
+A -SysPrep switch has been added that will auto-boot the image into Audit System for System Preparation.
+
+A -GenuineTicket switch has been added that will apply a GenuineTicket.xml to the image for automatic activation upon installation.
+
+And -Unattend switch has been added that will apply a custom unattend.xml to the image.
+
+Generated scripts have been tweaked and modified to omit versions of Windows prior to Windows 10.
+
+There's additional checking to ensure the build being optimized is supported (currently, there's no support for Insider Updates).
