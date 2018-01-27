@@ -18,7 +18,7 @@ The Additional-Features function script has been almost entirely re-written.
 
 Now values are applied directly to the offline registry hives as opposed to using "REGEDIT /S" via OOBE.cmd
 
-OOBE.cmd is not omitted, as it's no longer required with the elevated registry function.
+OOBE.cmd is now omitted, as it's no longer required with the elevated registry function.
 
 The Windows 10 Enterprise LTSB 2016 Calculator (Win32Calc) is now able to be applied to the image. This is valuable if the regular calculator Provisioning Application Package is removed yet one still wants a built-in calculator.
 
