@@ -72,63 +72,40 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.0
-		Last updated:	01/21/2018
+		Version:        3.0.2
+		Last updated:	01/30/2018
 		===========================================================================
 #>
 [CmdletBinding()]
 Param
 (
 	[Parameter(Mandatory = $true,
-			   HelpMessage = 'The path to a Windows Installation ISO or an Install.WIM.')]
-	[ValidateScript({
-			If ((Test-Path $(Resolve-Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
-			ElseIf ((Test-Path $(Resolve-Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
+			   HelpMessage = 'The path to a Windows Installation ISO or an Install.WIM.')][ValidateScript({
+			If ((Test-Path $(Resolve-Path $_) -Type Leaf) -and ($_ -like "*.iso")) { $_ }
+			ElseIf ((Test-Path $(Resolve-Path $_) -Type Leaf) -and ($_ -like "*.wim")) { $_ }
 			Else { Throw "$_ is an invalid image path." }
-		})]
-	[Alias('ISO', 'WIM')]
-	[string]$ImagePath,
-	[Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')]
-	[ValidateRange(1, 16)]
-	[int]$Index = 1,
+		})][Alias('ISO', 'WIM')][string]$ImagePath,
+	[Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')][ValidateRange(1, 16)][int]$Index = 1,
 	[Parameter(Mandatory = $true,
-			   HelpMessage = 'The build number of the image.')]
-	[ValidateRange(15063, 16299)]
-	[int]$Build,
-	[Parameter(HelpMessage = 'Prompts the user to determine whether or not a Provisioning App Package is removed.')]
-	[Alias('Select')]
-	[switch]$SelectApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages.')]
-	[switch]$AllApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages not included in the WhiteList.')]
-	[Alias('WhiteList')]
-	[switch]$UseWhiteList,
-	[Parameter(HelpMessage = 'Removes the provisioning and installation of System Apps.')]
-	[Alias('SysApps')]
-	[switch]$SystemApps,
-	[Parameter(HelpMessage = 'Adds optimized entries and values to the image registry hives.')]
-	[Alias('RegEdit')]
-	[switch]$OptimizeRegistry,
-	[Parameter(HelpMessage = 'Disables all Windows Optional Features included in the DisableList.')]
-	[Alias('Features')]
-	[switch]$DisableFeatures,
-	[Parameter(HelpMessage = 'Removes all Windows Packages included in the RemovalList.')]
-	[Alias('Packages')]
-	[switch]$RemovePackages,
+			   HelpMessage = 'The build number of the image.')][ValidateRange(15063, 16299)][int]$Build,
+	[Parameter(HelpMessage = 'Prompts the user to determine whether or not a Provisioning App Package is removed.')][Alias('Select')][switch]$SelectApps,
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages.')][switch]$AllApps,
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages not included in the WhiteList.')][Alias('WhiteList')][switch]$UseWhiteList,
+	[Parameter(HelpMessage = 'Removes the provisioning and installation of System Apps.')][Alias('SysApps')][switch]$SystemApps,
+	[Parameter(HelpMessage = 'Adds optimized entries and values to the image registry hives.')][Alias('RegEdit')][switch]$OptimizeRegistry,
+	[Parameter(HelpMessage = 'Disables all Windows Optional Features included in the DisableList.')][Alias('Features')][switch]$DisableFeatures,
+	[Parameter(HelpMessage = 'Removes all Windows Packages included in the RemovalList.')][Alias('Packages')][switch]$RemovePackages,
 	[Parameter(Mandatory = $false,
-			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
-	[Alias('Drivers')]
-	[string]$AddDrivers,
-	[Parameter(HelpMessage = 'Calls the Additional-Features function script.')]
-	[switch]$AddFeatures
+			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')][ValidateScript({ Test-Path $(Resolve-Path $_) })][Alias('Drivers')][string]$AddDrivers,
+	[Parameter(HelpMessage = 'Calls the Additional-Features function script.')][switch]$AddFeatures
 )
 
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
 ## *************************************************************************************************
 
-## System Apps to remove. Adding ImmersiveControlPanel or ShellExperienceHost to this list will result in a NON-FUNCTIONAL final image.
+# Comment out any System Apps to keep, or add any others to remove. 
+# Adding ImmersiveControlPanel or ShellExperienceHost to this list will result in a NON-FUNCTIONAL final image.
 [string[]]$SystemAppsList = @(
 	"contactsupport"
 	"ContentDeliveryManager"
@@ -143,27 +120,27 @@ Param
 	"PPIProjection"
 	"SecHealthUI"
 	"SecureAssessmentBrowser"
-	#"XboxGameCallableUI"
+	"XboxGameCallableUI"
 )
 
-## Provisioning App Packages to keep if using the -UseWhiteList switch. Add the Apps' display name to the list. Do NOT use wildcards.
+# Provisioning App Packages to keep if using the -UseWhiteList switch. Add the Apps' display name to the list.
 [string[]]$AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
-	#"Microsoft.WindowsCalculator"
+	"Microsoft.WindowsCalculator"
 	"Microsoft.Xbox.TCUI"
 	"Microsoft.StorePurchaseApp"
 	"Microsoft.WindowsStore"
 )
 
-## Features to be disabled if using the -DisableFeatures switch. Wildcards accepted.
+# Features to be disabled if using the -DisableFeatures switch.
 [string[]]$FeatureDisableList = @(
 	"*WorkFolders-Client*"
 	"*WindowsMediaPlayer*"
 	"*Internet-Explorer*"
 )
 
-## Packages to be removed if using the -RemovePackages switch. Wildcards accepted.
+# Packages to be removed if using the -RemovePackages switch.
 [string[]]$PackageRemovalList = @(
 	"*ContactSupport*"
 	"*QuickAssist*"
@@ -171,8 +148,8 @@ Param
 	"*MediaPlayer*"
 )
 
-## Switches to be used when the Additional-Features function script is called.
-$AdditionalFeatures = "-ContextMenu -SystemImages -OfflineServicing -HostsFile -Win32Calc"
+# The arguments to be used if the Additional-Features function script is called by using the -AddFeatures switch.
+$AdditionalFeatures = "-ContextMenu -SystemImages -NetFx3 -OfflineServicing -HostsFile -Win32Calc"
 
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
@@ -198,15 +175,9 @@ Function Process-Log
 	Param
 	(
 		[Parameter(Mandatory = $true,
-				   ValueFromPipelineByPropertyName = $true)]
-		[ValidateNotNullOrEmpty()]
-		[Alias('LogContent')]
-		[string]$Output,
-		[Parameter(Mandatory = $false)]
-		[string]$LogPath = "$env:SystemDrive\PowerShellLog.log",
-		[Parameter(Mandatory = $false)]
-		[ValidateSet('Info', 'Warning', 'Error')]
-		[string]$Level = "Info",
+				   ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias('LogContent')][string]$Output,
+		[Parameter(Mandatory = $false)][string]$LogPath = "$env:SystemDrive\PowerShellLog.log",
+		[Parameter(Mandatory = $false)][ValidateSet('Info', 'Warning', 'Error')][string]$Level = "Info",
 		[switch]$NoClobber
 	)
 	
@@ -226,7 +197,7 @@ Function Process-Log
 			Write-Verbose "Logging has started."
 			Write-Output ''
 			Start-Sleep 2
-			$CreateLogFile = New-Item $LogPath -ItemType File -Force
+			$CreateLogFile = New-Item $LogPath -Type File -Force
 		}
 		$DateFormat = Get-Date -Format "[MM-dd-yyyy hh:mm:ss]"
 		Switch ($Level)
@@ -256,12 +227,13 @@ using System.Runtime.InteropServices;
 public class AdjustAccessToken
 {
     [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
-    internal static extern bool AdjustTokenPrivileges(
-        IntPtr htok, 
+    internal static extern bool AdjustTokenPrivileges
+        (
+        IntPtr htok,
         bool disall,
-        ref TokPriv1Luid newst, 
-        int len, 
-        IntPtr prev, 
+        ref TokPriv1Luid newst,
+        int len,
+        IntPtr prev,
         IntPtr relen
         );
 
@@ -269,16 +241,18 @@ public class AdjustAccessToken
     internal static extern IntPtr GetCurrentProcess();
 
     [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
-    internal static extern bool OpenProcessToken(
-        IntPtr h, 
-        int acc, 
+    internal static extern bool OpenProcessToken
+        (
+        IntPtr h,
+        int acc,
         ref IntPtr
         phtok
         );
 
     [DllImport("advapi32.dll", SetLastError = true)]
-    internal static extern bool LookupPrivilegeValue(
-        string host, 
+    internal static extern bool LookupPrivilegeValue
+        (
+        string host,
         string name,
         ref long pluid
         );
@@ -294,7 +268,8 @@ public class AdjustAccessToken
     internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
     internal const int TOKEN_QUERY = 0x00000008;
     internal const int TOKEN_ADJUST_PRIVILEGES = 0x00000020;
-    public static bool GrantPrivilege(
+    public static bool GrantPrivilege
+        (
         string privilege
         )
     {
@@ -304,35 +279,42 @@ public class AdjustAccessToken
             TokPriv1Luid tp;
             IntPtr hproc = GetCurrentProcess();
             IntPtr htok = IntPtr.Zero;
-            retVal = OpenProcessToken(
-                hproc, 
-                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, 
+            retVal = OpenProcessToken
+                (
+                hproc,
+                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
                 ref htok
                 );
             tp.Count = 1;
             tp.Luid = 0;
             tp.Attr = SE_PRIVILEGE_ENABLED;
-            retVal = LookupPrivilegeValue(
-                null, 
-                privilege, 
+            retVal = LookupPrivilegeValue
+                (
+                null,
+                privilege,
                 ref tp.Luid
                 );
-            retVal = AdjustTokenPrivileges(
-                htok, 
-                false, 
-                ref tp, 
-                0, 
-                IntPtr.Zero, 
+            retVal = AdjustTokenPrivileges
+                (
+                htok,
+                false,
+                ref tp,
+                0,
+                IntPtr.Zero,
                 IntPtr.Zero
                 );
             return retVal;
         }
-        catch (Exception ex)
+        catch 
+        (
+        Exception ex
+        )
         {
             throw ex;
         }
     }
-    public static bool RevokePrivilege(
+    public static bool RevokePrivilege
+        (
         string privilege
         )
     {
@@ -342,30 +324,34 @@ public class AdjustAccessToken
             TokPriv1Luid tp;
             IntPtr hproc = GetCurrentProcess();
             IntPtr htok = IntPtr.Zero;
-            retVal = OpenProcessToken(
-                hproc, 
-                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, 
+            retVal = OpenProcessToken
+                (
+                hproc,
+                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
                 ref htok
                 );
             tp.Count = 1;
             tp.Luid = 0;
             tp.Attr = SE_PRIVILEGE_DISABLED;
-            retVal = LookupPrivilegeValue(
-                null, 
-                privilege, 
+            retVal = LookupPrivilegeValue
+                (
+                null,
+                privilege,
                 ref tp.Luid
                 );
-            retVal = AdjustTokenPrivileges(
-                htok, 
-                false, 
-                ref tp, 
-                0, 
-                IntPtr.Zero, 
+            retVal = AdjustTokenPrivileges
+                (
+                htok,
+                false,
+                ref tp,
+                0,
+                IntPtr.Zero,
                 IntPtr.Zero
                 );
             return retVal;
         }
-        catch (
+        catch 
+        (
         Exception ex
         )
         {
@@ -377,24 +363,22 @@ public class AdjustAccessToken
 #endregion C# Token Privilege Method
 Add-Type $AdjustTokenPrivileges -PassThru
 
-Function Set-RegistryOwner # Uses the C# Token Privilege Method to grant ownership of protected registry keys
+Function Set-RegistryOwner
 {
 	[CmdletBinding()]
 	Param
 	(
-		[Parameter(Mandatory = $true)]
-		[string]$Hive,
-		[Parameter(Mandatory = $true)]
-		[string]$SubKey
+		[Parameter(Mandatory = $true)][string]$Hive,
+		[Parameter(Mandatory = $true)][string]$SubKey
 	)
 	
-	Begin
+	Begin # Grants the Access Token Privileges required to set full acesss and ownership on a protected registry hive/key.
 	{
 		[void][AdjustAccessToken]::GrantPrivilege("SeTakeOwnershipPrivilege") # Required to override access control permissions and take ownership of objects.
 		[void][AdjustAccessToken]::GrantPrivilege("SeRestorePrivilege") # Required to restore files and directories.
 		[void][AdjustAccessToken]::GrantPrivilege("SeBackupPrivilege") # Required to back-up files and directories.
 	}
-	Process
+	Process # Begins processing and applying registry hive and subkey access now that the proper Access Token Privileges have been granted.
 	{
 		Switch ($Hive.ToString().ToLower())
 		{
@@ -420,8 +404,8 @@ Function Set-RegistryOwner # Uses the C# Token Privilege Method to grant ownersh
 		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Variable designating whether access is Allowed or Denied on the object.
 		$Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Account, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
 		$ACL.SetAccessRule($Rule) # Sets the new access control rule.
-		$Key.SetAccessControl($ACL) # Again refreshes the new access control permissions on the Key to reflect the new object Rule.
-		$Key.Close() # Closes the registry Key once the ownership and access control have been changed.
+		$Key.SetAccessControl($ACL) # Sets the access control permissions to reflect the variables assigned to the object rule.
+		$Key.Close() # Since ownership has been granted, the Key is closed.
 		Switch ($Hive.ToString().ToLower())
 		{
 			"HKLM" {
@@ -440,7 +424,7 @@ Function Set-RegistryOwner # Uses the C# Token Privilege Method to grant ownersh
 		$ACL.SetOwner($TrustedInstaller)
 		$ACL | Set-Acl -Path $Key
 	}
-	End
+	End # Revokes the Access Token Privileges after the proper access control settings and ownership have been granted.
 	{
 		[void][AdjustAccessToken]::RevokePrivilege("SeTakeOwnershipPrivilege") # Revokes the Take Ownership Privilege.
 		[void][AdjustAccessToken]::RevokePrivilege("SeRestorePrivilege") # Revokes the Restore Privilege.
@@ -767,7 +751,7 @@ If ($UseWhiteList)
 
 If ($SelectApps -or $AllApps)
 {
-	$AppPackages = Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
+	Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
 		If ($SelectApps)
 		{
 			$AppSelect = Read-Host "Remove Provisioning Application Package:" $_.DisplayName "(Y/N)"
@@ -847,7 +831,7 @@ If ($OptimizeRegistry)
 	{
 		$SystemPrivacy = {
 			#****************************************************************
-			Write-Output "Disabling Cortana and Search Bar Web Connectivity." >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Cortana and Search Bar Web Connectivity." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowCortana" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowCortanaAboveLock" /t REG_DWORD /d "0" /f)
@@ -861,8 +845,8 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "HistoryViewEnabled" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "DeviceHistoryEnabled" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Telemetry and Data Collecting." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Telemetry and Data Collecting." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v "AllowTelemetry" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\DataCollection" /v "AllowTelemetry" /t REG_DWORD /d "0" /f)
@@ -874,79 +858,79 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableInventory" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\AppV\CEIP" /v "CEIPEnable" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" /v "CEIPEnable" /t REG_DWORD /d "0" /f)
-			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy" /v "TailoredExperiencesWithDiagnosticDataEnabled" /t REG_DWORD /d "2" /f)
+			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy" /v "TailoredExperiencesWithDiagnosticDataEnabled" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" /v "value" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows Update Peer-to-Peer Distribution." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows Update Peer-to-Peer Distribution." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v "DODownloadMode" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\DeliveryOptimization" /v "SystemSettingsDownloadMode" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows Auto-Update and Auto-Reboot." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" /v "UxOption" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" /v "NoAutoRebootWithLoggedOnUsers" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows' Peer-to-Peer Networking Service." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows' Peer-to-Peer Networking Service." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Peernet" /v "Disabled" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling 'Find My Device'." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling 'Find My Device'." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\FindMyDevice" /v "AllowFindMyDevice" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Enabling PIN requirement for pairing devices." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Enabling PIN requirement for pairing devices." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Connect" /v "RequirePinForPairing" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Home Group Services." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Home Group Services." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\HomeGroup" /v "DisableHomeGroup" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SYSTEM\ControlSet001\Services\HomeGroupListener" /v "Start" /t REG_DWORD /d "4" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SYSTEM\ControlSet001\Services\HomeGroupProvider" /v "Start" /t REG_DWORD /d "4" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Text Suggestions and Screen Monitoring." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Text Suggestions and Screen Monitoring." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" /v "AllowScreenMonitoring" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" /v "AllowTextSuggestions" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Steps Recorder." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Steps Recorder." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableUAR" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling App Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling App Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" /v "SensorPermissionState" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" /v "Value" /t REG_SZ /d "DENY" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" /v "Value" /t REG_SZ /d "DENY" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" /v "LetAppsAccessLocation" /t REG_DWORD /d "2" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling System Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling System Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableLocation" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableLocationScripting" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableSensors" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableWindowsLocationProvider" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling User Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling User Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableLocation" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableLocationScripting" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" /v "DisableSensors" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Error Reporting." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Error Reporting." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v "Disabled" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v "DontSendAdditionalData" /t REG_DWORD /d "1" /f)
@@ -955,32 +939,32 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Settings" /v "DisableSendGenericDriverNotFoundToWER" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Settings" /v "DisableSendRequestAdditionalSoftwareToWER" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling WiFi Sense." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling WiFi Sense." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" /v "value" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" /v "value" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" /v "AutoConnectAllowedOEM" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows Asking for Feedback." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows Asking for Feedback." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Siuf\Rules" /v "NumberOfSIUFInPeriod" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Siuf\Rules" /v "PeriodInNanoSeconds" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling the Password Reveal button." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling the Password Reveal button." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CredUI" /v "DisablePasswordReveal" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Non-Explicit App Synchronization." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Non-Explicit App Synchronization." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" /v "LetAppsSyncWithDevices" /t REG_DWORD /d "2" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Apps Accessing Phone, SMS/Text Messaging and Call History." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Apps Accessing Phone, SMS/Text Messaging and Call History." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
@@ -989,21 +973,21 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" /v "LetAppsAccessMessaging" /t REG_DWORD /d "2" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" /v "LetAppsAccessCallHistory" /t REG_DWORD /d "2" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Cross-Device Experiences." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Cross-Device Experiences." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" /v "UserAuthPolicy" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows Media Player Statistics Tracking." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows Media Player Statistics Tracking." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\MediaPlayer\Preferences" /v "UsageTracking" /t REG_DWORD /d "0" /f)
 			#****************************************************************
 		}
 		$SystemSettings = {
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Explorer Tips, Sync Notifications and Document Tracking." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Explorer Tips, Sync Notifications and Document Tracking." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowInfoTip" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "FolderContentsInfoTip" /t REG_DWORD /d "0" /f)
@@ -1018,8 +1002,8 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "ClearRecentDocsOnExit" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "ClearRecentProgForNewUserInStartMenu" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling System Advertisements and Windows Spotlight." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling System Advertisements and Windows Spotlight." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableSoftLanding" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsSpotlightFeatures" /t REG_DWORD /d "1" /f)
@@ -1033,24 +1017,24 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsSpotlightOnActionCenter" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsSpotlightWindowsWelcomeExperience" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Toast Notifications." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Toast Notifications." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" /v "NoToastApplicationNotification" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" /v "NoToastApplicationNotificationOnLockScreen" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Feature Advertisement Notifications." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Feature Advertisement Notifications." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "NoBalloonFeatureAdvertisements" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling System Tray Promotion Notifications." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling System Tray Promotion Notifications." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "NoSystraySystemPromotion" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" /v "SyncPolicy" /t REG_DWORD /d "5" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\Accessibility" /v "Enabled" /t REG_DWORD /d "0" /f)
@@ -1083,8 +1067,8 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" /v "DisableWebBrowserSettingSync" /t REG_DWORD /d "2" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" /v "DisableWebBrowserSettingSyncUserOverride" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Automatic Download of Bloatware Apps and Suggestions." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Automatic Download of Bloatware Apps and Suggestions." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v "FeatureManagementEnabled" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v "OemPreInstalledAppsEnabled" /t REG_DWORD /d "0" /f)
@@ -1099,30 +1083,30 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v "SubscribedContent-338389Enabled" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v "SubscribedContent-338393Enabled" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Windows 'Getting to Know Me.'" >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Windows 'Getting to Know Me.'" >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\InputPersonalization" /v "RestrictImplicitInkCollection" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\InputPersonalization" /v "RestrictImplicitTextCollection" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Notifications on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Notifications on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings" /v "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Reminders and Incoming VoIP Calls on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Reminders and Incoming VoIP Calls on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings" /v "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Lock Screen Camera and Overlays." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Lock Screen Camera and Overlays." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Personalization" /v "NoLockScreenCamera" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Personalization" /v "LockScreenOverlaysDisabled" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Preview Build Telemetry." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Preview Build Telemetry." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds" /v "AllowBuildPreview" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds" /v "EnableConfigFlighting" /t REG_DWORD /d "1" /f)
@@ -1131,14 +1115,14 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\PreviewBuilds" /v "EnableConfigFlighting" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\PreviewBuilds" /v "EnableExperimentation" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Map Auto Downloads." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Map Auto Downloads." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Maps" /v "AutoDownloadAndUpdateMapData" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\Maps" /v "AutoDownloadAndUpdateMapData" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Speech Model Updates." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Speech Model Updates." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Speech" /v "AllowSpeechModelUpdate" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Speech" /v "AllowSpeechModelUpdate" /t REG_DWORD /d "0" /f)
@@ -1146,81 +1130,81 @@ If ($OptimizeRegistry)
 		}
 		$UserExperience = {
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling First Log-on Animation." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling First Log-on Animation." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "EnableFirstLogonAnimation" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Changing Search Bar to Magnifying Glass Icon." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Changing Search Bar to Magnifying Glass Icon." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "SearchboxTaskbarMode" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Moving Drive Letter Before Drive Label." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Moving Drive Letter Before Drive Label." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowDriveLettersFirst" /t REG_DWORD /d "4" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Enabling Dark Theme for Settings and Modern Apps." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Enabling Dark Theme for Settings and Modern Apps." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "SystemUsesLightTheme" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "AppsUseLightTheme" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Increasing Taskbar Transparency." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Increasing Taskbar Transparency." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "UseOLEDTaskbarTransparency" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling 'Shortcut' text for Shortcuts." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling 'Shortcut' text for Shortcuts." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "link" /t REG_BINARY /d "00000000" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Enabling Explorer opens to This PC." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Enabling Explorer opens to This PC." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "LaunchTo" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing Windows Store Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing Windows Store Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "NoPinningStoreToTaskbar" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing Windows Mail Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing Windows Mail Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" /v "MailPin" /t REG_DWORD /d "2" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling the Windows Mail Application." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling the Windows Mail Application." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" /v "ManualLaunchAllowed" /t REG_DWORD /d "0" /f)
 			#****************************************************************
 			If ($Build -ge "16299")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing People Icon from Taskbar" >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing People Icon from Taskbar" >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" /v "PeopleBand" /t REG_DWORD /d "0" /f)
 				[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "HidePeopleBar" /t REG_DWORD /d "1" /f)
 			}
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling 'How do you want to open this file?' prompt." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling 'How do you want to open this file?' prompt." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" /v "NoUseStoreOpenWith" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" /v "NoNewAppAlert" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Switching to Smaller Control Panel Icons." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Switching to Smaller Control Panel Icons." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel" /v "StartupPage" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel" /v "AllItemsIconView" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Adding This PC Icon to Desktop." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Adding This PC Icon to Desktop." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" /v "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" /v "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" /t REG_DWORD /d "0" /f)
@@ -1232,31 +1216,31 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery" /v "Icon" /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,-110" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command" /ve /d "shutdown.exe -r -o -f -t 00" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Ink Workspace and Suggested Ink Workspace Apps." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Ink Workspace and Suggested Ink Workspace Apps." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\WindowsInkWorkspace" /v "AllowWindowsInkWorkspace" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\WindowsInkWorkspace" /v "AllowSuggestedAppsInWindowsInkWorkspace" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Live Tiles." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Live Tiles." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" /v "NoCloudApplicationNotification" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Connected Drive Autoplay and Autorun." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Connected Drive Autoplay and Autorun." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" /v "DisableAutoplay" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoDriveTypeAutoRun" /t REG_DWORD /d "255" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoAutorun" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Wallpaper .JPEG Quality Reduction." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Wallpaper .JPEG Quality Reduction." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Control Panel\Desktop" /v "JPEGImportQuality" /t REG_DWORD /d "100" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Enabling Developer Mode and Application Sideloading." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Enabling Developer Mode and Application Sideloading." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Appx" /v "AllowDevelopmentWithoutDevLicense" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Appx" /v "AllowAllTrustedApps" /t REG_DWORD /d "1" /f)
@@ -1267,8 +1251,8 @@ If ($OptimizeRegistry)
 			If ($Build -ge "16299")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing 'Edit with Paint 3D' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing 'Edit with Paint 3D' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3mf\Shell\3D Edit" /f)
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.bmp\Shell\3D Edit" /f)
@@ -1289,8 +1273,8 @@ If ($OptimizeRegistry)
 			ElseIf ($Build -le "15063")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing 'Edit with Paint 3D' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing 'Edit with Paint 3D' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3mf\Shell\3D Edit" /f)
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.bmp\Shell\3D Edit" /f)
@@ -1307,8 +1291,8 @@ If ($OptimizeRegistry)
 			If ($Build -ge "15063")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing '3D Print with 3D Builder' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing '3D Print with 3D Builder' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3ds\Shell\3D Print" /f)
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3mf\Shell\3D Print" /f)
@@ -1322,24 +1306,24 @@ If ($OptimizeRegistry)
 			ElseIf ($Build -lt "15063")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing '3D Print with 3D Builder' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing '3D Print with 3D Builder' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.bmp\Shell\T3D Print" /f)
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jpg\Shell\T3D Print" /f)
 				[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.png\Shell\T3D Print" /f)
 			}
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing 'Restore Previous Versions' Property Tab." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing 'Restore Previous Versions' Property Tab." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\CLSID\{450D8FBA-AD25-11D0-98A8-0800361B1103}\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing 'Restore Previous Versions' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing 'Restore Previous Versions' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\CLSID\{450D8FBA-AD25-11D0-98A8-0800361B1103}\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
@@ -1349,24 +1333,24 @@ If ($OptimizeRegistry)
 			If ($Build -ge "16299")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" /v "{e2bf9676-5f8f-435c-97eb-11607a5bedf7}" /t REG_SZ /d "" /f)
 			}
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing 'Give Access To' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing 'Give Access To' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" /v "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}" /t REG_SZ /d "" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing 'Cast To Device' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing 'Cast To Device' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" /v "{7AD84985-87B4-4a16-BE58-8B72A5B390F7}" /t REG_SZ /d "" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Hiding Recently and Frequently Used Items in Explorer." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Hiding Recently and Frequently Used Items in Explorer." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowRecent" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowFrequent" /t REG_DWORD /d "0" /f)
@@ -1374,8 +1358,8 @@ If ($OptimizeRegistry)
 			If ($Build -ge "16299")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" /v "ThisPCPolicy" /t REG_SZ /d "Hide" /f)
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" /v "ThisPCPolicy" /t REG_SZ /d "Hide" /f)
@@ -1395,8 +1379,8 @@ If ($OptimizeRegistry)
 			ElseIf ($Build -le "15063")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Removing all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Removing all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" /v "ThisPCPolicy" /t REG_SZ /d "Hide" /f)
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" /v "ThisPCPolicy" /t REG_SZ /d "Hide" /f)
@@ -1412,14 +1396,14 @@ If ($OptimizeRegistry)
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" /v "ThisPCPolicy" /t REG_SZ /d "Hide" /f)
 			}
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing Drives from the Navigation Pane." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Removing Drives from the Navigation Pane." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Cleaning up Control Panel CPL links." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Cleaning up Control Panel CPL links." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "DisallowCpl" /t REG_DWORD /d "1" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "1" /t REG_SZ /d "Microsoft.OfflineFiles" /f)
@@ -1452,42 +1436,42 @@ If ($OptimizeRegistry)
 			If ($Build -ge "16299")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Cleaning up Immersive Control Panel Settings Links." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Cleaning up Immersive Control Panel Settings Links." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "SettingsPageVisibility" /t REG_SZ /d "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps" /f)
 			}
 			ElseIf ($Build -eq "15063")
 			{
 				#****************************************************************
-				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-				Write-Output "Cleaning up Immersive Control Panel Settings Links." >> $WorkFolder\Registry-Optimizations.log
+				ECHO '' >> $WorkFolder\Registry-Optimizations.log
+				ECHO "Cleaning up Immersive Control Panel Settings Links." >> $WorkFolder\Registry-Optimizations.log
 				#****************************************************************
 				[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "SettingsPageVisibility" /t REG_SZ /d "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers" /f)
 			}
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Recent Document History." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Recent Document History." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRecentDocsHistory" /t REG_DWORD /d "1" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Disabling Automatic Sound Reduction." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Disabling Automatic Sound Reduction." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Multimedia\Audio" /v "UserDuckingPreference" /t REG_DWORD /d "3" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Enabling Component Clean-up with Reset Base." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Enabling Component Clean-up with Reset Base." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" /v "DisableResetbase" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Setting elevation allowing the removal of the 'DefaultUser0' ghost account." >> $WorkFolder\Registry-Optimizations.log
+			ECHO '' >> $WorkFolder\Registry-Optimizations.log
+			ECHO "Setting elevation allowing the removal of the 'DefaultUser0' ghost account." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			Set-RegistryOwner -Hive "HKLM" -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}"
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}" /v "AutoElevationAllowed" /t REG_DWORD /d "1" /f)
 		}
-		Write-Output ''
+		ECHO ''
 		Process-Log -Output "Optimizing the Image Registry." -LogPath $LogFile -Level Info
 		[void](Load-OfflineHives)
 		& $SystemPrivacy
@@ -1499,7 +1483,7 @@ If ($OptimizeRegistry)
 	}
 	Catch [System.Exception]
 	{
-		Write-Output ''
+		ECHO ''
 		Process-Log -Output "$ErrorMessage" -LogPath $LogFile -Level Error
 		Terminate-Script
 		Break
@@ -1543,16 +1527,16 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 			[void](New-Item -Path "$Software\Policies\Microsoft\Windows Defender\Spynet" -Force)
 			[void](New-Item -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Force)
 			[void](New-Item -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -PropertyType DWord -Value 1 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -PropertyType DWord -Value 2 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -PropertyType DWord -Value 1 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -PropertyType DWord -Value 1 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -PropertyType DWord -Value 1 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -PropertyType DWord -Value 2 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -PropertyType DWord -Value 2 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Type DWord -Value 0 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Type DWord -Value 2 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Type DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Type DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Type DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -Type DWord -Value 2 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -Type DWord -Value 0 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -Type DWord -Value 0 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -Type DWord -Value 2 -Force)
 		}
 		Else
 		{
@@ -1570,8 +1554,8 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 		If (!(Test-Path -Path "$Software\Policies\Microsoft\MRT"))
 		{
 			[void](New-Item -Path "$Software\Policies\Microsoft\MRT" -Force);
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -PropertyType DWord -Value 1 -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -PropertyType DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Type DWord -Value 1 -Force)
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Type DWord -Value 1 -Force)
 		}
 		Else
 		{
@@ -1623,64 +1607,64 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallab
 		[void](Load-OfflineHives)
 		If (!(Test-Path -Path "$Software\Policies\Microsoft\Windows\GameDVR"))
 		{
-			[void](New-Item -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Force)
-			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -PropertyType DWord -Value 0 -Force)
+			[void](New-Item -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Force);
+			[void](New-ItemProperty -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Type DWord -Value 0 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Force)
+			[void](Set-ItemProperty -Path "$Software\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Force);
 		}
 		If (!(Test-Path -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR"))
 		{
-			[void](New-Item -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Force)
-			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -PropertyType DWord -Value 0 -Force)
+			[void](New-Item -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Force);
+			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Type DWord -Value 0 -Force);
+			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Type DWord -Value 0 -Force);
+			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Type DWord -Value 0 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Force)
-			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Force)
-			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Force)
+			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Force);
+			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Force);
+			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Force);
 		}
 		If (!(Test-Path -Path "$CUSoftware\Microsoft\GameBar"))
 		{
-			[void](New-Item -Path "$CUSoftware\Microsoft\GameBar" -Force)
-			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "AllowAutoGameMode" -PropertyType DWord -Value 0 -Force)
+			[void](New-Item -Path "$CUSoftware\Microsoft\GameBar" -Force);
+			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Type DWord -Value 0 -Force);
+			[void](New-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "AllowAutoGameMode" -Type DWord -Value 0 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Force)
-			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Force)
+			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Force);
+			[void](Set-ItemProperty -Path "$CUSoftware\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Force);
 		}
 		If (!(Test-Path -Path "$CUSystem\GameConfigStore"))
 		{
-			[void](New-Item -Path "$CUSystem\GameConfigStore" -Force)
-			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -PropertyType DWord -Value 2 -Force)
-			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -PropertyType DWord -Value 2 -Force)
+			[void](New-Item -Path "$CUSystem\GameConfigStore" -Force);
+			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -Type DWord -Value 0 -Force);
+			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -Type DWord -Value 2 -Force);
+			[void](New-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Type DWord -Value 2 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Force)
-			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Force)
-			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Force)
+			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Force);
+			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Force);
+			[void](Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Force);
 		}
 		If ($Build -ge "16299" -and $DisableDefenderComplete -eq $true)
 		{
-			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender" -Force)
+			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender" -Force);
 		}
 		ElseIf ($Build -eq "15063" -and $DisableDefenderComplete -eq $true)
 		{
-			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender" -Force)
+			[void](Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender" -Force);
 		}
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\xbgm" -Name "Start" -Value 4 -Force)
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XblAuthManager" -Name "Start" -Value 4 -Force)
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XblGameSave" -Name "Start" -Value 4 -Force)
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\xboxgip" -Name "Start" -Value 4 -Force)
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XboxGipSvc" -Name "Start" -Value 4 -Force)
-		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XboxNetApiSvc" -Name "Start" -Value 4 -Force)
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\xbgm" -Name "Start" -Value 4 -Force);
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XblAuthManager" -Name "Start" -Value 4 -Force);
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XblGameSave" -Name "Start" -Value 4 -Force);
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\xboxgip" -Name "Start" -Value 4 -Force);
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XboxGipSvc" -Name "Start" -Value 4 -Force);
+		[void](Set-ItemProperty -Path "$System\ControlSet001\Services\XboxNetApiSvc" -Name "Start" -Value 4 -Force);
 		$DisableXboxComplete = $true
 	}
 	Catch [System.IO.IOException], [System.Exception]
@@ -1709,80 +1693,80 @@ If ($RegistryComplete -eq $true)
 		[void](Load-OfflineHives)
 		If (!(Test-Path -Path "$System\ControlSet001\Services\DiagTrack"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\DiagTrack" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\DiagTrack" -Name "Start" -PropertyType DWord -Value 4 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\DiagTrack" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\DiagTrack" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\DiagTrack" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\DiagTrack" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\dmwappushservice"))
-		{
-			[void](New-Item -Path "$System\ControlSet001\Services\dmwappushservice" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -PropertyType DWord -Value 4 -Force)
+		{;
+			[void](New-Item -Path "$System\ControlSet001\Services\dmwappushservice" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\dmwappushservice" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\dmwappushsvc"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\dmwappushsvc" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\dmwappushsvc" -Name "Start" -PropertyType DWord -Value 4 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\dmwappushsvc" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\dmwappushsvc" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\dmwappushsvc" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\dmwappushsvc" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Name "Start" -PropertyType DWord -Value 4 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\diagnosticshub.standardcollector.service" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\lfsvc"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\lfsvc" -Force)
-			[void](New-Item -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\lfsvc" -Name "Start" -PropertyType DWord -Value 4 -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -PropertyType DWord -Value 0 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\lfsvc" -Force);
+			[void](New-Item -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\lfsvc" -Name "Start" -Type DWord -Value 4 -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Force)
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Force);
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\PcaSvc"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\PcaSvc" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\PcaSvc" -Name "Start" -PropertyType DWord -Value 4 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\PcaSvc" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\PcaSvc" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\PcaSvc" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\PcaSvc" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\DoSvc"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\DoSvc" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\DoSvc" -Name "Start" -PropertyType DWord -Value 4 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\DoSvc" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\DoSvc" -Name "Start" -Type DWord -Value 4 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\DoSvc" -Name "Start" -Value 4 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\DoSvc" -Name "Start" -Value 4 -Force);
 		}
 		If (!(Test-Path -Path "$System\ControlSet001\Services\Remote Assistance"))
 		{
-			[void](New-Item -Path "$System\ControlSet001\Services\Remote Assistance" -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowToGetHelp" -PropertyType DWord -Value 0 -Force)
-			[void](New-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowFullControl" -PropertyType DWord -Value 0 -Force)
+			[void](New-Item -Path "$System\ControlSet001\Services\Remote Assistance" -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Force);
+			[void](New-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowFullControl" -Type DWord -Value 0 -Force);
 		}
 		Else
 		{
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowToGetHelp" -Value 0 -Force)
-			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowFullControl" -Value 0 -Force)
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowToGetHelp" -Value 0 -Force);
+			[void](Set-ItemProperty -Path "$System\ControlSet001\Services\Remote Assistance" -Name "fAllowFullControl" -Value 0 -Force);
 		}
 	}
 	Catch [System.IO.IOException], [System.Exception]
