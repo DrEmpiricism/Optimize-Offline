@@ -1,3 +1,11 @@
+## Version 3.0.1 ##
+
+Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
+
+Improved the validity script for resolvable paths to ensure they meet the criteria required for the script to successfully run.
+
+Added more detailed notes to further detail exactly what certain advanced functions and/or processes are doing.
+
 ## Version 3.0 ##
 
 Version 3.0 has been released and includes some significant updates, changes and modifications.
