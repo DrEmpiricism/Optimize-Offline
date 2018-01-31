@@ -20,7 +20,7 @@ Function Additional-Features
 		Applies an OfflineServicing answer file directly to the image.
 	
 	.PARAMETER Unattend
-		Adds the supplied unattend or autounattend answer file to the image.
+		Adds the supplied unattend.xml to the image.
 	
 	.PARAMETER GenuineTicket
 		Adds a supplied GenuineTicket.xml to the image for auto-activation.
@@ -29,10 +29,10 @@ Function Additional-Features
 		Downloads Steven Black's master Hosts File from GitHub and adds it to the image (https://github.com/StevenBlack/hosts).
 	
 	.PARAMETER Win32Calc
-		Applies the Windows 10 LTSB Win32 Calculator to the image. This is useful when removing the Calculator Provisionining Application Packages.
+		Applies the Windows 10 Enterprise 2016 LTSB Win32 Calculator to the image. This is useful when removing the Calculator Provisionining Application Packages.
 	
 	.PARAMETER SysPrep
-		Sets the image up for automatic booting into Audit System for System Preparation.
+		Sets the image up for automatic booting into Audit System for System Preparation and imaging.
 	
 	.NOTES
 		Image and package path variables can point to a single file or a directory of files. If a directory is detected, the script will recursively add those files to the image.
@@ -44,8 +44,8 @@ Function Additional-Features
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Additional-Features.ps1
-		Version:        2.0.2
-		Last updated:	01/30/2018
+		Version:        2.0.3
+		Last updated:	01/31/2018
 		===========================================================================
 #>
 	[CmdletBinding()]
@@ -67,12 +67,12 @@ Function Additional-Features
 	## *************************************************************************************************
 	
 	## Answer file variables.
-	$ComputerName = "THINK-LENOVO"
-	$Manufacturer = "Lenovo"
-	$Model = "ThinkPad"
-	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\THINKPAD_BADGE.bmp"
-	$Owner = "Omnic Tech"
-	$Organization = "Omnic Tech"
+	$ComputerName = "MY-PC"
+	$Manufacturer = "Gigabyte."
+	$Model = "GA‑Z170X‑Gaming G1"
+	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
+	$Owner = "My Name"
+	$Organization = "My Org"
 	
 	## *************************************************************************************************
 	## *                                      END VARIABLES.                                           *
@@ -90,8 +90,7 @@ Function Additional-Features
 	
 	If ($Unattend -and $SysPrep)
 	{
-		Write-Output ''
-		Write-Warning -Message "The -Unattend switch cannot be used together with the -SysPrep switch.`n`nDisabling the -SysPrep switch."
+		Write-Warning -Message "The -Unattend switch cannot be used together with the -SysPrep switch."
 		$SysPrep = $null
 		Start-Sleep 3
 	}
@@ -102,7 +101,7 @@ Function Additional-Features
 			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Adding 'Open with Notepad' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-			#****************************************************************		
+			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "notepad.exe,-2" /f)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "notepad.exe %1" /f)
 			#****************************************************************
@@ -460,7 +459,7 @@ EXIT
 	If ($Win32Calc)
 	{
 		$AddWin32Calc = {
-			If ((Test-Path -Path "$Win32CalcImagePath\Win32Calc.wim") -and (Test-Path -Path "$Win32CalcImagePath\Win32Calc_en-US.wim"))
+			If ((Test-Path -Path $Win32CalcImagePath\Win32Calc.wim) -and (Test-Path -Path $Win32CalcImagePath\Win32Calc_en-US.wim))
 			{
 				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 1 -CheckIntegrity -Verify)
 				[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 2 -CheckIntegrity -Verify)
@@ -720,8 +719,8 @@ Before generalizing the image, rename the SetupComplete.cmd.txt and OOBE.cmd.txt
 # SIG # Begin signature block
 # MIIJcwYJKoZIhvcNAQcCoIIJZDCCCWACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzXjZrSaZH+Ije7+IXFE1Thws
-# NVOgggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUN1AastFh0PKyrsdPqbmjdIiN
+# HB+gggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
 # MCkxJzAlBgNVBAMTHk9NTklDLlRFQ0gtQ0EgQ2VydGlmaWNhdGUgUm9vdDAeFw0x
 # NzExMDcwMzM4MjBaFw0zOTEyMzEyMzU5NTlaMCQxIjAgBgNVBAMTGU9NTklDLlRF
 # Q0ggUG93ZXJTaGVsbCBDU0MwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
@@ -759,14 +758,14 @@ Before generalizing the image, rename the SetupComplete.cmd.txt and OOBE.cmd.txt
 # qHcndUPZwjGCAkwwggJIAgEBMD0wKTEnMCUGA1UEAxMeT01OSUMuVEVDSC1DQSBD
 # ZXJ0aWZpY2F0ZSBSb290AhB0u1Cd2puAkkG+oZic5rsmMAkGBSsOAwIaBQCggeUw
 # GQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisG
-# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJBWIsqXdbdaVd6whHTXTDcUhlbUMIGE
+# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFBlI4mYLn2eHvZVwLiPm3wvmtYeWMIGE
 # BgorBgEEAYI3AgEMMXYwdKBygHAATwBwAHQAaQBtAGkAegBlAC0ATwBmAGYAbABp
 # AG4AZQAnAHMAIABhAGQAZABpAHQAaQBvAG4AYQBsACAAZgBlAGEAdAB1AHIAZQAn
 # AHMAIABmAHUAbgBjAHQAaQBvAG4AIABzAGMAcgBpAHAAdAAuMA0GCSqGSIb3DQEB
-# AQUABIIBADPaJXH3fcgesWfrxBkrlEt4JXeOXkrl2Jkb8aQbv72WP6koB07/sGSp
-# /+BZwRRAovQCx7ZdlggG9PjTMeb79J0JpmV/hsFZELYZuJdgdhFlCwdeDeO6KOye
-# uwEYUccXwVOk+G2WXlBLN88m09Q4q5YWrazm7vcKeeBZtWsde4dMjgR+zAK0avVz
-# JR+sQ+DNPR6yZox8wtpB/uUogONUukwZUgodZK+2Q0qS7XREkyK7cZm9PKTqkZeO
-# aaJoejqCmndQtUV1UyMlZdz0rh7+rVd1v0kCvv/Ktte9pQbAmeQlv6ycVWJI4Spq
-# yZcTKIBpokoD18Y1vJkvgSlC1ZJJQR4=
+# AQUABIIBAHzBnv06AGu1/79DkAuGag5Tgq3b+Y0VVIT7zRWEHi5kcZ1yv2fVWNK1
+# tRyVYfq6kvNe0Q5Ag7Ij2s9Mk2mGXEz2yE2dwRr81dFyGaFwJ6L2S21POd/gAzRN
+# GU41jYwKfTOR+Lg3HUcGjYkq9BvjGryinnxJ9mxXg8u78un1nS32lzymbimMeBHJ
+# n4d3bSbZHIS2OHOYHdmXbss7x9+fYCOD0HqHFlTILVMQDIGjTYTMLOhaXxjgtx8g
+# dTw8LpURwtZ6zpVYpgvKtn/o6ROFgjL6Z/NTDjRo6EVKwN655O/nw7Yp9eutcgwT
+# B2WNjOzW5Zl9hBDb+dcHH1B5NINAjeo=
 # SIG # End signature block
