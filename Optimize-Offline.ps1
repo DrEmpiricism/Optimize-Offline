@@ -25,46 +25,43 @@
 		The build number of the image.
 	
 	.PARAMETER SelectApps
-		Prompts the user to determine whether or not a Provisioning Application Package is removed or skipped.
+		Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.
 	
 	.PARAMETER AllApps
 		Automatically removes all Provisioning Application Packages.
 	
 	.PARAMETER UseWhiteList
-		Automatically removes all Provisioning Application Packages not included in the WhiteList.
+		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
 	.PARAMETER SystemApps
-		Removes the provisioning and installation of System Applications.
+		Automatically removes the provisioning and installation of System Applications.
 	
 	.PARAMETER OptimizeRegistry
-		Adds optimized entries and values to the image registry hives.
+		Automatically adds, removes or modifies multiple registry keys and values.
 	
 	.PARAMETER DisableFeatures
-		Disables all Windows Optional Features included in the DisableList.
+		Automatically disables all Windows Optional Features included in the FeatureDisableList.
 	
 	.PARAMETER RemovePackages
-		Removes all Windows Packages included in the RemovalList.
+		Automatically removes all Windows Packages included in the PackageRemovalList.
 	
 	.PARAMETER AddDrivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
-	.PARAMETER AddFeatures
-		Invokes the Additional-Features function script.
+	.PARAMETER AdditionalFeatures
+		Invokes the Additional-Features function to apply additional customizations and tweaks included in its argument string.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AddFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AdditionalFeatures
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AddFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AdditionalFeatures
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder" -AddFeatures
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder" -AdditionalFeatures
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -AddFeatures
-	
-	.NOTES
-		Be aware that removing the Provisioning Application Package "Microsoft.XBOX.TCUI, or removing the System Application "XboxCallableUI," will "break" the App Troubleshooter.
+		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -AdditionalFeatures
 	
 	.NOTES
 		===========================================================================
@@ -72,8 +69,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.2
-		Last updated:	01/30/2018
+		Version:        3.0.3
+		Last updated:	01/31/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -88,24 +85,26 @@ Param
 	[Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')][ValidateRange(1, 16)][int]$Index = 1,
 	[Parameter(Mandatory = $true,
 			   HelpMessage = 'The build number of the image.')][ValidateRange(15063, 16299)][int]$Build,
-	[Parameter(HelpMessage = 'Prompts the user to determine whether or not a Provisioning App Package is removed.')][Alias('Select')][switch]$SelectApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages.')][switch]$AllApps,
-	[Parameter(HelpMessage = 'Automatically removes all Provisioning App Packages not included in the WhiteList.')][Alias('WhiteList')][switch]$UseWhiteList,
-	[Parameter(HelpMessage = 'Removes the provisioning and installation of System Apps.')][Alias('SysApps')][switch]$SystemApps,
-	[Parameter(HelpMessage = 'Adds optimized entries and values to the image registry hives.')][Alias('RegEdit')][switch]$OptimizeRegistry,
-	[Parameter(HelpMessage = 'Disables all Windows Optional Features included in the DisableList.')][Alias('Features')][switch]$DisableFeatures,
-	[Parameter(HelpMessage = 'Removes all Windows Packages included in the RemovalList.')][Alias('Packages')][switch]$RemovePackages,
+	[Parameter(HelpMessage = 'Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.')][Alias('Select')][switch]$SelectApps,
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages.')][switch]$AllApps,
+	[Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages not WhiteListed.')][Alias('WhiteList')][switch]$UseWhiteList,
+	[Parameter(HelpMessage = 'Automatically removes the provisioning and installation of System Applications.')][Alias('SysApps')][switch]$SystemApps,
+	[Parameter(HelpMessage = 'Automatically adds, removes or modifies multiple registry keys and values.')][Alias('RegEdit')][switch]$OptimizeRegistry,
+	[Parameter(HelpMessage = 'Automatically disables all Windows Optional Features included in the FeatureDisableList.')][Alias('Features')][switch]$DisableFeatures,
+	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')][Alias('Packages')][switch]$RemovePackages,
 	[Parameter(Mandatory = $false,
 			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')][ValidateScript({ Test-Path $(Resolve-Path $_) })][Alias('Drivers')][string]$AddDrivers,
-	[Parameter(HelpMessage = 'Calls the Additional-Features function script.')][switch]$AddFeatures
+	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its argument string.')][switch]$AdditionalFeatures
 )
 
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
+## *                      ITEMS CAN SIMPLY BE COMMENTED OUT WITH THE # KEY.                        *
 ## *************************************************************************************************
 
-# Comment out any System Apps to keep, or add any others to remove. 
-# Adding ImmersiveControlPanel or ShellExperienceHost to this list will result in a NON-FUNCTIONAL final image.
+# The provisioning name of System Applications to remove if using the -SystemApps switch. 
+# NOTE: Adding the ImmersiveControlPanel or ShellExperienceHost to this list will result in a NON-FUNCTIONAL final image.
+# NOTE: Removing Cortana will render the search bar non-functional, but will not affect the final image.
 [string[]]$SystemAppsList = @(
 	"contactsupport"
 	"ContentDeliveryManager"
@@ -120,27 +119,27 @@ Param
 	"PPIProjection"
 	"SecHealthUI"
 	"SecureAssessmentBrowser"
-	"XboxGameCallableUI"
+	#"XboxGameCallableUI"
 )
 
-# Provisioning App Packages to keep if using the -UseWhiteList switch. Add the Apps' display name to the list.
+# Display names of Provisioning Application Packages to WhiteList if using the -UseWhiteList switch.
 [string[]]$AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
-	"Microsoft.WindowsCalculator"
-	"Microsoft.Xbox.TCUI"
+	#"Microsoft.WindowsCalculator"
+	#"Microsoft.Xbox.TCUI"
 	"Microsoft.StorePurchaseApp"
 	"Microsoft.WindowsStore"
 )
 
-# Features to be disabled if using the -DisableFeatures switch.
+# Wildcard names of Optional Features to disable if using the -DisableFeatures switch.
 [string[]]$FeatureDisableList = @(
 	"*WorkFolders-Client*"
 	"*WindowsMediaPlayer*"
 	"*Internet-Explorer*"
 )
 
-# Packages to be removed if using the -RemovePackages switch.
+# Wildcard names of OnDemand packages to be removed if using the -RemovePackages switch.
 [string[]]$PackageRemovalList = @(
 	"*ContactSupport*"
 	"*QuickAssist*"
@@ -148,15 +147,15 @@ Param
 	"*MediaPlayer*"
 )
 
-# The arguments to be used if the Additional-Features function script is called by using the -AddFeatures switch.
-$AdditionalFeatures = "-ContextMenu -SystemImages -NetFx3 -OfflineServicing -HostsFile -Win32Calc"
+# The arguments passed to the Additional-Features function if using the -AdditionalFeatures switch.
+$AddFeatures = "-ContextMenu -SystemImages -NetFx3 -OfflineServicing -HostsFile -Win32Calc"
 
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
 
 #region Helper Primary Functions
-Function Verify-Admin
+Function Verify-Admin # Verifies that the script is being run in an elevated shell by an Administrator.
 {
 	[CmdletBinding()]
 	Param ()
@@ -169,7 +168,7 @@ Function Verify-Admin
 	Start-Sleep 3
 }
 
-Function Process-Log
+Function Process-Log # Logs each process, any encountered errors and results to a .log file.
 {
 	[CmdletBinding()]
 	Param
@@ -336,9 +335,9 @@ public class AdjustAccessToken
 }
 "@
 #endregion C# Coded Token Privilege Method
-Add-Type $AdjustTokenPrivileges -PassThru # Add the C# Token Privilege Method as a .NET Framework class so it can be used within a function wrapper.
+Add-Type $AdjustTokenPrivileges -PassThru # Adds the Token Privilege Method as a .NET Framework class so it can be used within a function.
 
-Function Set-RegistryOwner
+Function Set-RegistryOwner # Changes the ownership and access control of protected registry keys and subkeys (those owned by TrustedInstaller) in order to add or remove values.
 {
 	[CmdletBinding()]
 	Param
@@ -370,17 +369,17 @@ Function Set-RegistryOwner
 		$ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control of the Key to a blank access control input-object.
 		$AdminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544") # Assigns the SID of the built-in Administrator to a new object.
 		$Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the build-in Administrator SID to its Windows Account Name (NTAccount).
-		$ACL.SetOwner($Account) # Sets the registry Key and SubKey owner to the built-in Administrator.
+		$ACL.SetOwner($Account) # Sets the ownership to the built-in Administrator.
 		$Key.SetAccessControl($ACL) # Sets the access control permissions to the built-in Administrator.
-		$ACL = $Key.GetAccessControl() # Refreshes the new access control input-object with its new owner and access control permissions.
-		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Variable designating the registry Key and SubKey rights.
-		$Inheritance = [System.Security.AccessControl.InheritanceFlags]"ContainerInherit" # Variable designating the flags that control object access control inheritance.
-		$Propagation = [System.Security.AccessControl.PropagationFlags]"None" # Variable designating the flags that control object access control propogation.
-		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Variable designating whether access is Allowed or Denied on the object.
+		$ACL = $Key.GetAccessControl() # Retrieves the access control information for the registry key/subkey.
+		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry Key and SubKey rights.
+		$Inheritance = [System.Security.AccessControl.InheritanceFlags]"ContainerInherit" # Designates the flags that control object access control inheritance.
+		$Propagation = [System.Security.AccessControl.PropagationFlags]"None" # Designates the flags that control object access control propogation.
+		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on the object.
 		$Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Account, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
 		$ACL.SetAccessRule($Rule) # Sets the new access control rule.
-		$Key.SetAccessControl($ACL) # Sets the access control permissions to reflect the variables assigned to the object rule.
-		$Key.Close() # Since ownership has been granted, the Key is closed.
+		$Key.SetAccessControl($ACL) # Sets the access control permissions to the object rule.
+		$Key.Close() # Closes the key/subkey.
 		Switch ($Hive.ToString().ToLower())
 		{
 			"HKLM" {
@@ -393,13 +392,13 @@ Function Set-RegistryOwner
 				$Key = "HKLM:\SOFTWARE\Classes\$SubKey"
 			}
 		}
-		# Returns the registry Key's and SubKey's owner and access control back to TrustedInstaller.
+		# Reverts the ownership and access control permissions back to the TrustedInstaller after the changes to the key/subkey have been made.
 		$TrustedInstaller = [System.Security.Principal.NTAccount]"NT SERVICE\TrustedInstaller"
 		$ACL = Get-Acl $Key
 		$ACL.SetOwner($TrustedInstaller)
 		$ACL | Set-Acl -Path $Key
 	}
-	End # Revokes the Access Token Privileges after the proper access control settings and ownership have been granted.
+	End # Revokes the Access Token Privileges since system-level access is no longer required.
 	{
 		[void][AdjustAccessToken]::RevokePrivilege("SeTakeOwnershipPrivilege") # Revokes the Take Ownership Privilege.
 		[void][AdjustAccessToken]::RevokePrivilege("SeRestorePrivilege") # Revokes the Restore Privilege.
@@ -444,7 +443,7 @@ Function Create-SaveDirectory
 	New-Item -ItemType Directory -Path $HOME\Desktop\Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"
 }
 
-Function Load-OfflineHives
+Function Load-OfflineHives # Loads the offline registry hives.
 {
 	[void](REG LOAD HKLM\WIM_HKLM_COMPONENTS "$MountFolder\Windows\system32\config\COMPONENTS")
 	[void](REG LOAD HKLM\WIM_HKLM_DRIVERS "$MountFolder\Windows\system32\config\DRIVERS")
@@ -455,7 +454,7 @@ Function Load-OfflineHives
 	[void](REG LOAD HKLM\WIM_HKU_DEFAULT "$MountFolder\Windows\System32\config\default")
 }
 
-Function Unload-OfflineHives
+Function Unload-OfflineHives # Unloads the offline registry hives.
 {
 	Start-Sleep 3
 	[System.GC]::Collect()
@@ -468,7 +467,7 @@ Function Unload-OfflineHives
 	[void](REG UNLOAD HKLM\WIM_HKU_DEFAULT)
 }
 
-Function Verify-OfflineHives
+Function Verify-OfflineHives # Verifies whether any offline registry hives are loaded.
 {
 	[CmdletBinding()]
 	Param ()
@@ -484,7 +483,7 @@ Function Verify-OfflineHives
 	) | % { $AllHivesLoaded = ((Test-Path -Path $_) -eq $true) }; Return $AllHivesLoaded
 }
 
-Function Terminate-Script
+Function Terminate-Script # Performs a roll-back and clean-up if a terminating error is encountered.
 {
 	[CmdletBinding()]
 	Param ()
@@ -2055,7 +2054,7 @@ DEL "%~f0"
 	& $SETUPCOMPLETE4
 }
 
-If ($AddFeatures)
+If ($AdditionalFeatures)
 {
 	Try
 	{
@@ -2063,7 +2062,7 @@ If ($AddFeatures)
 		Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
 		Start-Sleep 3
 		. .\Additional-Features.ps1
-		Invoke-Expression -Command "Additional-Features $AdditionalFeatures"
+		Invoke-Expression -Command "Additional-Features $AddFeatures"
 	}
 	Catch [System.IO.FileNotFoundException]
 	{
@@ -2178,8 +2177,8 @@ Else
 # SIG # Begin signature block
 # MIIJngYJKoZIhvcNAQcCoIIJjzCCCYsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUr81KzhdteSO5TL0IK+6NlyUH
-# hv+gggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUC7fhn1mfet/nr0hnbomMhRQ/
+# PVigggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
 # MCkxJzAlBgNVBAMTHk9NTklDLlRFQ0gtQ0EgQ2VydGlmaWNhdGUgUm9vdDAeFw0x
 # NzExMDcwMzM4MjBaFw0zOTEyMzEyMzU5NTlaMCQxIjAgBgNVBAMTGU9NTklDLlRF
 # Q0ggUG93ZXJTaGVsbCBDU0MwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
@@ -2217,15 +2216,15 @@ Else
 # qHcndUPZwjGCAncwggJzAgEBMD0wKTEnMCUGA1UEAxMeT01OSUMuVEVDSC1DQSBD
 # ZXJ0aWZpY2F0ZSBSb290AhB0u1Cd2puAkkG+oZic5rsmMAkGBSsOAwIaBQCgggEP
 # MBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgor
-# BgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRB93nDLEspYLMVZlKiPwfG9fDODzCB
+# BgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQAc+QWGZe0fBETLVpnRbFuFycfFDCB
 # rgYKKwYBBAGCNwIBDDGBnzCBnKCBmYCBlgBBACAAZgB1AGwAbAB5ACAAYQB1AHQA
 # bwBtAGEAdABlAGQAIABXAGkAbgBkAG8AdwBzACAAMQAwACAAUgBTADIAIABhAG4A
 # ZAAgAFIAUwAzACAAbwBmAGYAbABpAG4AZQAgAGkAbQBhAGcAZQAgAG8AcAB0AGkA
 # bQBpAHoAYQB0AGkAbwBuACAAcwBjAHIAaQBwAHQALjANBgkqhkiG9w0BAQEFAASC
-# AQBv5uh4Fm8Dg0MUmM4kbmSbiyyBTTgqucetQMSWMJCwLa5zIz7ZPKvhRY0C0oWn
-# jam5gLroNh5n5zCWeoaVuPd34LAbYgipiVArltE9u4c35dEmSh6b+crNoijatW/u
-# tfd16Qyt7+SvKOzZIq5LLU0AXpr191WhnHDyrBcgGjrKeC/xAua3Y2axOXiuyupa
-# zhK6fimzGkPeecg3BwYExajFvbcKKtgDvP+ah1bQQiGLjnG5DlmR0V6Nu+DWsHpH
-# uS+qLE4SPqPmVZU0B53YeT0pDu3Qc3XpVlokzW2VTZ61J4Sq0jYrJACe/Ma1vAgd
-# YX0JFeCmgwUBqJY44+ck8DS4
+# AQA01C/1hWtD2PGE/tEU9PzNRWl+A0uUx9Fv/TjlzaRYsn+lkO4sEsNIds70ku/N
+# Z0T8yDow/QqHAu7puH1dlekySk3lSCrRVtkU2Ct24DncO/bEEtCK2+jJVOAq8k3v
+# 0AxTBe1VdkHODMRONHay2SFaeaaJXnG2GrKRdvBylm1KmEp1duFrIhkccBsfpTAP
+# QWZQMGXoJSIIfJc3D69il6NaVNlBJUeXbZMAjbVvQGAFfsZOukDxpjJVSHJGIOaO
+# 2zaawJC2q3quxxRL7HZk3UEQaq56a+R7ZWGjmw7ik8oh9kURow2U1hM6D1JZsAFG
+# 0QX5xTIPnunJGg47FUEpU6ma
 # SIG # End signature block
