@@ -137,18 +137,18 @@ Function Additional-Features
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command" -Force) };
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Icon' -Value "cmd.exe" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'HasLUAShield' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'SeparatorAfter' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Position' -Value "Bottom" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Icon' -Value "cmd.exe" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'HasLUAShield' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'SeparatorAfter' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Position' -Value "Bottom" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Icon' -Value "cmd.exe" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'HasLUAShield' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'SeparatorAfter' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas' -Name 'Position' -Value "Bottom" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name '(default)' -Value "Elevated Command-Prompt" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Icon' -Value "cmd.exe" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'HasLUAShield' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'SeparatorAfter' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas' -Name 'Position' -Value "Bottom" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command' -Name '(default)' -Value "CMD /S /K PUSHD `"%V`"" -PropertyType String -Force);
 			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Adding 'Elevated PowerShell' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
@@ -157,36 +157,36 @@ Function Additional-Features
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Force) };
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name '(default)' -Value "Elevated PowerShell" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Icon' -Value "powershell.exe" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'HasLUAShield' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'SeparatorBefore' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell' -Name 'Position' -Value "Bottom" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command' -Name '(default)' -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -PropertyType String -Force);
 			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Adding 'Install CAB' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -Force) };
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name '(default)' -Value "Install" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name 'HasLUAShield' -Value "" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command' -Name '(default)' -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name '(default)' -Value "Install" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs' -Name 'HasLUAShield' -Value "" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command' -Name '(default)' -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -PropertyType String -Force);
 			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Adding 'Restart Explorer' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Force) };
 			If (!(Test-Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command")) { [void](New-Item "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Force) };
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'icon' -Value "explorer.exe" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'Position' -Value "bottom" -Type String -Force);
-			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command' -Name '(default)' -Value "Restart-Explorer.cmd" -Type String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'icon' -Value "explorer.exe" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer' -Name 'Position' -Value "bottom" -PropertyType String -Force);
+			[void](New-ItemProperty -Path 'HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command' -Name '(default)' -Value "Restart-Explorer.cmd" -PropertyType String -Force);
 		}
 		$AddVBSScripts = {
 			$ExtendedDiskVBS = @"
@@ -412,7 +412,7 @@ EXIT
 			{
 				[void](New-Item -Path "$MountFolder\Windows\Panther" -ItemType Directory -Force)
 			}
-			COPY -Path $UnattendPath\unattend.xml -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
+			Copy-Item -Path $UnattendPath\unattend.xml -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
 		}
 		Else
 		{
