@@ -1,4 +1,4 @@
-## Version 3.0.1 ##
+## Version 3.0.3 ##
 
 Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
 
@@ -7,6 +7,10 @@ Improved the validity script for resolvable paths to ensure they meet the criter
 Added more detailed notes to further detail exactly what certain advanced functions and/or processes are doing.
 
 Improved the Additional-Features function script in how it detected path types, added a few additional context menu additions and optimized some of the code that it generates for certain switches.
+
+Cleaned up the help files and parameter/switch notes and information.
+
+Changed the -AddFeatures switch to -AdditionalFeatures, as some were assuming the former switch was for adding features much like the -RemoveFeatures switch removes them.
 
 ## Version 3.0 ##
 
