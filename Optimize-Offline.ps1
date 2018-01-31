@@ -150,14 +150,14 @@ $PackageRemovalList = @(
 # The parameters passed to the Additional-Features function if using the -AdditionalFeatures switch.
 # To enable them, simply change the $null parameter value to $true.
 $AddFeatures = @{
-	ContextMenu	     = $true
+	ContextMenu	     = $null
 	NetFx3	             = $null
-	SystemImages         = $true
+	SystemImages         = $null
 	OfflineServicing     = $null
 	Unattend	     = $null
 	GenuineTicket	     = $null
-	HostsFile	     = $true
-	Win32Calc	     = $true
+	HostsFile	     = $null
+	Win32Calc	     = $null
 	SysPrep		     = $null
 }
 ## *************************************************************************************************
