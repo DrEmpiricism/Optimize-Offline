@@ -51,15 +51,15 @@ Function Additional-Features
 	[CmdletBinding()]
 	Param
 	(
-		[switch]$ContextMenu,
-		[switch]$NetFx3,
-		[switch]$SystemImages,
-		[switch]$OfflineServicing,
-		[switch]$Unattend,
-		[switch]$GenuineTicket,
-		[switch]$HostsFile,
-		[switch]$Win32Calc,
-		[switch]$SysPrep
+		[string]$ContextMenu,
+		[string]$NetFx3,
+		[string]$SystemImages,
+		[string]$OfflineServicing,
+		[string]$Unattend,
+		[string]$GenuineTicket,
+		[string]$HostsFile,
+		[string]$Win32Calc,
+		[string]$SysPrep
 	)
 	
 	## *************************************************************************************************
