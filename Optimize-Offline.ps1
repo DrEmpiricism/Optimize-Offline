@@ -49,7 +49,7 @@
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
 	.PARAMETER AdditionalFeatures
-		Invokes the Additional-Features function to apply additional customizations and tweaks included in its argument string.
+		Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AdditionalFeatures
@@ -94,9 +94,9 @@ Param
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')][Alias('Packages')][switch]$RemovePackages,
 	[Parameter(Mandatory = $false,
 			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')][ValidateScript({ Test-Path $(Resolve-Path $_) })][Alias('Drivers')][string]$AddDrivers,
-	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its argument string.')][switch]$AdditionalFeatures
+	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')][switch]$AdditionalFeatures
 )
-
+. .\Additional-Features.ps1
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
 ## *                      ITEMS CAN SIMPLY BE COMMENTED OUT WITH THE # KEY.                        *
@@ -105,7 +105,7 @@ Param
 # The provisioning name of System Applications to remove if using the -SystemApps switch. 
 # NOTE: Adding the ImmersiveControlPanel or ShellExperienceHost to this list will result in a NON-FUNCTIONAL final image.
 # NOTE: Removing Cortana will render the search bar non-functional, but will not affect the final image.
-[string[]]$SystemAppsList = @(
+$SystemAppsList = @(
 	"contactsupport"
 	"ContentDeliveryManager"
 	#"Cortana"
@@ -123,7 +123,7 @@ Param
 )
 
 # Display names of Provisioning Application Packages to WhiteList if using the -UseWhiteList switch.
-[string[]]$AppWhiteList = @(
+$AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
 	#"Microsoft.WindowsCalculator"
@@ -133,23 +133,33 @@ Param
 )
 
 # Wildcard names of Optional Features to disable if using the -DisableFeatures switch.
-[string[]]$FeatureDisableList = @(
+$FeatureDisableList = @(
 	"*WorkFolders-Client*"
 	"*WindowsMediaPlayer*"
 	"*Internet-Explorer*"
 )
 
 # Wildcard names of OnDemand packages to be removed if using the -RemovePackages switch.
-[string[]]$PackageRemovalList = @(
+$PackageRemovalList = @(
 	"*ContactSupport*"
 	"*QuickAssist*"
 	"*InternetExplorer*"
 	"*MediaPlayer*"
 )
 
-# The arguments passed to the Additional-Features function if using the -AdditionalFeatures switch.
-$AddFeatures = "-ContextMenu -SystemImages -NetFx3 -OfflineServicing -HostsFile -Win32Calc"
-
+# The parameters passed to the Additional-Features function if using the -AdditionalFeatures switch.
+# To enable them, simply change the $null parameter value to $true.
+$AddFeatures = @{
+	ContextMenu	     = $true
+	NetFx3	             = $null
+	SystemImages         = $true
+	OfflineServicing     = $null
+	Unattend	     = $null
+	GenuineTicket	     = $null
+	HostsFile	     = $true
+	Win32Calc	     = $true
+	SysPrep		     = $null
+}
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
@@ -2061,8 +2071,7 @@ If ($AdditionalFeatures)
 		Clear-Host
 		Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
 		Start-Sleep 3
-		. .\Additional-Features.ps1
-		Invoke-Expression -Command "Additional-Features $AddFeatures"
+		Additional-Features @AddFeatures
 	}
 	Catch [System.IO.FileNotFoundException]
 	{
