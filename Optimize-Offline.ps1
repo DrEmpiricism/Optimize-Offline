@@ -1007,10 +1007,10 @@ If ($OptimizeRegistry)
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling User Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\LocationAndSensors"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Error Reporting." >> $WorkFolder\Registry-Optimizations.log
@@ -1121,32 +1121,32 @@ If ($OptimizeRegistry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1
 		Force-MKDIR "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "DoNotShowFeedbackNotifications" -Value 1
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "ConfigureWindowsSpotlight" -Value 2
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "IncludeEnterpriseSpotlight" -Value 0
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "DisableTailoredExperiencesWithDiagnosticData" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "DisableThirdPartySuggestions" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightOnActionCenter" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightWindowsWelcomeExperience" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "ConfigureWindowsSpotlight" -Value 2
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "IncludeEnterpriseSpotlight" -Value 0
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableTailoredExperiencesWithDiagnosticData" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableThirdPartySuggestions" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightOnActionCenter" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightWindowsWelcomeExperience" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Toast Notifications." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CurrentVersion\PushNotifications"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotification" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotificationOnLockScreen" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotification" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotificationOnLockScreen" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Feature Advertisement Notifications." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer" -Name "NoBalloonFeatureAdvertisements" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoBalloonFeatureAdvertisements" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling System Tray Promotion Notifications." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer" -Name "NoSystraySystemPromotion" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoSystraySystemPromotion" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
@@ -1215,8 +1215,8 @@ If ($OptimizeRegistry)
 		#****************************************************************
 		Force-MKDIR "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\InputPersonalization"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Value 1
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\InputPersonalization"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Notifications on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
@@ -1307,8 +1307,8 @@ If ($OptimizeRegistry)
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Removing Windows Store Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Removing Windows Mail Icon from Taskbar." >> $WorkFolder\Registry-Optimizations.log
@@ -1330,8 +1330,8 @@ If ($OptimizeRegistry)
 			#****************************************************************
 			Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People"
 			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Value 0
-			Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer"
-			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Windows\Explorer" -Name "HidePeopleBar" -Value 1
+			Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HidePeopleBar" -Value 1
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1375,8 +1375,8 @@ If ($OptimizeRegistry)
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Live Tiles." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWAREP\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Connected Drive Autoplay and Autorun." >> $WorkFolder\Registry-Optimizations.log
