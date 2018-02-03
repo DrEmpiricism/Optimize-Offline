@@ -16,4 +16,4 @@ It is the responsibility of the end-user to be aware of what each parameter and 
 # What is the Additional-Features function script?
 Additional-Features is a function script that will be called within the main Optimize-Offline script if its switch is enabled.  This function script incorporates some additional device-specific optimizations like the addition or replacement of system images, the application of answer files, additional context menu features, etc.
 
-Be aware that the Additional-Features function script has its own set of switches, too, which can be enabled within the main Optimize-Offline script by editing the $AdditionalFeatures variable.
+Be aware that the Additional-Features function script has its own set of switches, too, which can be enabled within the main Optimize-Offline script by editing the $AddFeatures hashtable.
