@@ -1,3 +1,21 @@
+## 3.0.4 ##
+
+The registry tweaks have been rewritten to use PowerShell's native cmdlet, as well as a small function I made to create the required keys.
+
+A -Local switch has been added which will use the root path of the script ($PSScriptRoot) as the location it will mount and save the images to.
+
+This switch was added for those who do not want to use a primary SSD and would rather use a secondary HDD.
+
+Be warned that meddling in any of the temporary directories while the script is processing will likely corrupt the image, so it's best to leave them alone.
+
+The Additional-Features function parameters were changed from a string to a hashtable for easier on/off switching.
+
+The help information was cleaned up and more was included to detail what the functions do.
+
+Additional registry tweaks were added for performance and speed; likewise, a few more security-related values were also added.
+
+I am implementing a handful of advanced features for v4.0, which will be released as a full project.  All the cmdlets and modules for it are complete; I'm just finishing up some C# code that will be wrapped in it, too.
+
 ## Version 3.0.3 ##
 
 Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
