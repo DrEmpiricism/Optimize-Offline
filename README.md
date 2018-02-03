@@ -5,7 +5,6 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
 - Does not perform any changes to an installed or live system nor can it optimize a live system.
 - Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
-- Generates installation scripts (OOBE and SetupComplete) to accommodate offline changes.
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
 - Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
 - Adds removed System Applications' scheduled tasks to the SetupComplete script to be automatically disabled during Windows installation.
