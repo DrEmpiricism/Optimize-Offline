@@ -63,16 +63,16 @@ Function Additional-Features
 	)
 	
 	## *************************************************************************************************
-	## *          					THE VARIABLES BELOW CAN BE EDITED.          			           *
+	## *          			  THE VARIABLES BELOW CAN BE EDITED.                               *
 	## *************************************************************************************************
 	
 	## Answer file variables.
-	$ComputerName = "MY-PC"
-	$Manufacturer = "Gigabyte."
-	$Model = "GA‑Z170X‑Gaming G1"
-	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
-	$Owner = "My Name"
-	$Organization = "My Org"
+	$ComputerName = "W10-TEST"
+	$Manufacturer = "ACME INC"
+	$Model = "WarMachine"
+	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\DERP_BADGE.bmp"
+	$Owner = "Derpy"
+	$Organization = "CIA"
 	
 	## *************************************************************************************************
 	## *                                      END VARIABLES.                                           *
@@ -719,8 +719,8 @@ Before generalizing the image, rename the SetupComplete.cmd.txt and OOBE.cmd.txt
 # SIG # Begin signature block
 # MIIJcwYJKoZIhvcNAQcCoIIJZDCCCWACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUN1AastFh0PKyrsdPqbmjdIiN
-# HB+gggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUR2vB4f8uLPskGIF6/52U0gn1
+# E6ugggaRMIIDQjCCAi6gAwIBAgIQdLtQndqbgJJBvqGYnOa7JjAJBgUrDgMCHQUA
 # MCkxJzAlBgNVBAMTHk9NTklDLlRFQ0gtQ0EgQ2VydGlmaWNhdGUgUm9vdDAeFw0x
 # NzExMDcwMzM4MjBaFw0zOTEyMzEyMzU5NTlaMCQxIjAgBgNVBAMTGU9NTklDLlRF
 # Q0ggUG93ZXJTaGVsbCBDU0MwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
@@ -758,14 +758,14 @@ Before generalizing the image, rename the SetupComplete.cmd.txt and OOBE.cmd.txt
 # qHcndUPZwjGCAkwwggJIAgEBMD0wKTEnMCUGA1UEAxMeT01OSUMuVEVDSC1DQSBD
 # ZXJ0aWZpY2F0ZSBSb290AhB0u1Cd2puAkkG+oZic5rsmMAkGBSsOAwIaBQCggeUw
 # GQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisG
-# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFBlI4mYLn2eHvZVwLiPm3wvmtYeWMIGE
+# AQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDaz3s57LrHD9jqFSrs13zHRiQ63MIGE
 # BgorBgEEAYI3AgEMMXYwdKBygHAATwBwAHQAaQBtAGkAegBlAC0ATwBmAGYAbABp
 # AG4AZQAnAHMAIABhAGQAZABpAHQAaQBvAG4AYQBsACAAZgBlAGEAdAB1AHIAZQAn
 # AHMAIABmAHUAbgBjAHQAaQBvAG4AIABzAGMAcgBpAHAAdAAuMA0GCSqGSIb3DQEB
-# AQUABIIBAHzBnv06AGu1/79DkAuGag5Tgq3b+Y0VVIT7zRWEHi5kcZ1yv2fVWNK1
-# tRyVYfq6kvNe0Q5Ag7Ij2s9Mk2mGXEz2yE2dwRr81dFyGaFwJ6L2S21POd/gAzRN
-# GU41jYwKfTOR+Lg3HUcGjYkq9BvjGryinnxJ9mxXg8u78un1nS32lzymbimMeBHJ
-# n4d3bSbZHIS2OHOYHdmXbss7x9+fYCOD0HqHFlTILVMQDIGjTYTMLOhaXxjgtx8g
-# dTw8LpURwtZ6zpVYpgvKtn/o6ROFgjL6Z/NTDjRo6EVKwN655O/nw7Yp9eutcgwT
-# B2WNjOzW5Zl9hBDb+dcHH1B5NINAjeo=
+# AQUABIIBAFcWwWO112gVffRTpa67vNpByVwoK3F2Oqu0AmdrTbOs2FkmfwP8yPZ3
+# tQ9pTxRIEt84vqyucFXzUwg0g6OI/gq/gDzbkNrIGy9Rtoqf5faae4NvYpkgmu+M
+# LbQnJYpqePXpAjQblVjeCtcBKsXnF7E8mI7L550/Lctl5UnW/oHU/O7cgF7qEV6C
+# PhzkGFatrBtkHs8J94oCNPDmjfrOggVOfeY6YOBVZBIBlXPyu7/kRArx4By7yQxP
+# 1h4ow8SzxHE5uOilHCz4TtX5mYlToHSO7MfjIelA3d4wyMlziJ5vR9ZhCv8TQkO6
+# YyFnEs/vAUGWm2L3nb5Na61MYoSM6g0=
 # SIG # End signature block
