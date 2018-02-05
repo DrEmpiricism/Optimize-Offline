@@ -154,14 +154,14 @@ $PackageRemovalList = @(
 # The parameters passed to the Additional-Features function if using the -AdditionalFeatures switch.
 # Change the $null variable to $true to enable and vice versa to disable.
 $AddFeatures = @{
-	ContextMenu	     = $null
-	NetFx3	             = $null
-	SystemImages         = $null
+	ContextMenu	     = $true
+	NetFx3	             = $true
+	SystemImages         = $true
 	OfflineServicing     = $null
 	Unattend	     = $null
-	GenuineTicket	     = $null
-	HostsFile	     = $null
-	Win32Calc	     = $null
+	GenuineTicket	     = $true
+	HostsFile	     = $true
+	Win32Calc	     = $true
 	SysPrep		     = $null
 }
 
@@ -552,18 +552,21 @@ Function Terminate-Script # Performs a roll-back and clean-up if a terminating e
 	
 	Start-Sleep 3
 	Write-Output ''
-	Write-Verbose "Cleaning-up and terminating script. Please wait." -Verbose
+	Write-Verbose "Cleaning-up and terminating script." -Verbose
 	If (Verify-OfflineHives)
 	{
 		[void](Unload-OfflineHives)
 	}
 	[void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $TempFolder)
-	[void](Move-Item -Path $LogFile -Destination $HOME\Desktop\Optimize-Offline.log -Force)
-	[void](Remove-Item -Path $WorkFolder -Recurse -Force)
-	[void](Remove-Item -Path $TempFolder -Recurse -Force)
-	[void](Remove-Item -Path $ImageFolder -Recurse -Force)
-	[void](Remove-Item -Path $MountFolder -Recurse -Force)
-	[void](Clear-WindowsCorruptMountPoint)
+	
+	If ($Local)
+	{
+		[void](Move-Item -Path $LogFile -Destination $PSScriptRoot\Optimize-Offline.log -Force)
+	}
+	Else
+	{
+		[void](Move-Item -Path $LogFile -Destination $HOME\Desktop\Optimize-Offline.log -Force)
+	}
 }
 
 Function Force-MKDIR($Path)
@@ -608,28 +611,41 @@ If ($AllApps -and $UseWhiteList)
 
 If (Get-WindowsImage -Mounted)
 {
-	Write-Output ''
-	Write-Verbose "Active mount location detected. Performing clean-up." -Verbose
-	$GetMountedImage = Get-WindowsImage -Mounted
-	$QueryWIM = REG QUERY HKLM | FindStr 'WIM'
-	$QueryAppData = REG QUERY HKLM | FindStr 'AppData'
-	If ($QueryWIM -ne $null)
+	Try
 	{
-		[void]($QueryWIM.ForEach({ REG UNLOAD $_ }))
+		Write-Verbose "Active mount location detected. Performing clean-up." -Verbose
+		$ImageIsMounted = Get-WindowsImage -Mounted
+		$QueryWIM = REG QUERY HKLM | FINDSTR WIM
+		$QueryAppData = REG QUERY HKLM | FINDSTR AppData
+		$QueryOptimize = REG QUERY HKLM | FINDSTR Optimize
+		If ($QueryWIM)
+		{
+			[void]($QueryWIM.ForEach{ REG UNLOAD "$_" })
+		}
+		ElseIf ($QueryAppData)
+		{
+			[void]($QueryAppData.ForEach{ REG UNLOAD "$_" })
+		}
+		ElseIf ($QueryOptimize)
+		{
+			[void]($QueryOptimize.ForEach{ REG UNLOAD "$_" })
+		}
+		[void](Dismount-WindowsImage -Path $ImageIsMounted.MountPath -Discard)
+		[void](Clear-WindowsCorruptMountPoint)
+		[void](Remove-Item -Path $ImageIsMounted.MountPath -Recurse -Force)
+		[void](Remove-Item -Path $ImagePath -Recurse -Force)
+		Write-Output ''
+		Write-Output "Clean-up complete."
 	}
-	If ($QueryAppData -match "C:")
+	Catch
 	{
-		[void]($QueryAppData.ForEach({ REG UNLOAD $_ }))
+		Write-Output ''
+		Write-Warning "Clean-up did not successfully complete." -Verbose
 	}
-	[void](Dismount-WindowsImage -Path $GetMountedImage.MountPath -Discard)
-	[void](Remove-Item -Path $GetMountedImage.MountPath -Recurse -Force)
-	$ImageParentPath = Split-Path -Path $GetMountedImage.ImagePath -Parent
-	[void](Remove-Item -Path $ImageParentPath -Recurse -Force)
-	[void](Clear-WindowsCorruptMountPoint)
-	Write-Output ''
-	Write-Output "Clean-up complete."
-	Start-Sleep 3
-	Clear-Host
+	Finally
+	{
+		Start-Sleep 3
+	}
 }
 
 If (([IO.FileInfo]$ImagePath).Extension -like ".ISO")
@@ -1682,7 +1698,11 @@ If ($OptimizeRegistry)
 		Write-Output "Disabling Sticky Keys." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		Force-MKDIR "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "510"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "506"
+		Force-MKDIR "HKLM:\WIM_HKCU\Control Panel\Accessibility\Keyboard Response"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\Keyboard Response" -Name "Flags" -Value "122"
+		Force-MKDIR "HKLM:\WIM_HKCU\Control Panel\Accessibility\ToggleKeys"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\ToggleKeys" -Name "Flags" -Value "58"
 	}
 	Write-Output ''
 	Process-Log -Output "Enhancing system security, usability and performance with registry optimizations." -LogPath $LogFile -Level Info
@@ -2267,7 +2287,7 @@ If ($Error.Count.Equals(0))
 	Write-Output ''
 	Process-Log -Output "$Script completed with [0] errors." -LogPath $LogFile -Level Info
 	Move-Item -Path $LogFile -Destination $SaveFolder -Force
-	Write-Output ''
+	Break
 }
 Else
 {
@@ -2277,9 +2297,8 @@ Else
 	Write-Output ''
 	Write-Output "Newly optimized image has been saved to $SaveFolder."
 	Write-Output ''
-	Process-Log -Output "$Script completed with [$($Error.Count)] errors.`n`nErrorLog saved to $SaveFolder" -LogPath $LogFile -Level Warning
+	Process-Log -Output "$Script completed with [$($Error.Count)] errors." -LogPath $LogFile -Level Warning
 	Move-Item -Path $LogFile -Destination $SaveFolder -Force
-	Write-Output ''
 }
 # SIG # Begin signature block
 # MIIJngYJKoZIhvcNAQcCoIIJjzCCCYsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
