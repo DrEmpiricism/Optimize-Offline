@@ -1,4 +1,4 @@
-## 3.0.5 ##
+## 3.0.5 ## (02-05-18)
 
 Some minor registry settings have been made
 
@@ -8,7 +8,7 @@ This is an extremely minor update to accommodate the new -Local switch a bit bet
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-## 3.0.4 ##
+## 3.0.4 ## (02-03-18)
 
 The registry tweaks have been rewritten to use PowerShell's native cmdlet, as well as a small function I made to create the required keys.
 
@@ -28,7 +28,7 @@ I am implementing a handful of advanced features for v4.0, which will be release
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-## Version 3.0.3 ##
+## Version 3.0.3 ## (02-01-2018)
 
 Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
 
@@ -44,7 +44,7 @@ Changed the -AddFeatures switch to -AdditionalFeatures, as some were assuming th
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-## Version 3.0 ##
+## Version 3.0 ## (01-30-2018)
 
 Version 3.0 has been released and includes some significant updates, changes and modifications.
 
@@ -54,7 +54,7 @@ There's a new function that allows for ownership of registry keys and subkeys to
 
 There are additional services and drivers disabled through the offline registry hives.
 
-There are additional notes with some pertinent information regarding Provisioning Application Packages and Systep Applications.
+There are additional notes with some pertinent information regarding Provisioning Application Packages and System Applications.
 
 Re-wrote the process where System Applications are "de-provisioned" and removed.
 
