@@ -1108,7 +1108,7 @@ If ($OptimizeRegistry)
 	$DEVICE_EXPERIENCE = {
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Enabling the MeltDown (CVE-2017-5754 Compatibility Flag." >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Enabling the MeltDown (CVE-2017-5754) Compatibility Flag." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		Force-MKDIR "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "cadca5fe-87d3-4b96-b7fb-a231484277cc" -Value 0
