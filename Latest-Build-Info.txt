@@ -16,6 +16,8 @@ Additional registry tweaks were added for performance and speed; likewise, a few
 
 I am implementing a handful of advanced features for v4.0, which will be released as a full project.  All the cmdlets and modules for it are complete; I'm just finishing up some C# code that will be wrapped in it, too.
 
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## Version 3.0.3 ##
 
 Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
@@ -29,6 +31,8 @@ Improved the Additional-Features function script in how it detected path types, 
 Cleaned up the help files and parameter/switch notes and information.
 
 Changed the -AddFeatures switch to -AdditionalFeatures, as some were assuming the former switch was for adding features much like the -RemoveFeatures switch removes them.
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 ## Version 3.0 ##
 
