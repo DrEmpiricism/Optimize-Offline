@@ -155,13 +155,13 @@ $PackageRemovalList = @(
 # Change the $null variable to $true to enable and vice versa to disable.
 $AddFeatures = @{
 	ContextMenu	     = $true
-	NetFx3	             = $null
-	SystemImages         = $null
+	NetFx3	             = $true
+	SystemImages         = $true
 	OfflineServicing     = $null
 	Unattend	     = $null
-	GenuineTicket	     = $null
+	GenuineTicket	     = $true
 	HostsFile	     = $true
-	Win32Calc	     = $null
+	Win32Calc	     = $true
 	SysPrep		     = $null
 }
 
@@ -613,8 +613,10 @@ If (Get-WindowsImage -Mounted)
 {
 	Try
 	{
-		Write-Verbose "Active mount location detected. Performing clean-up." -Verbose
+		Write-Output ''
+		Write-Verbose "Current mount location detected. Performing clean-up." -Verbose
 		$ImageIsMounted = Get-WindowsImage -Mounted
+		$MountedImagePath = Split-Path -Path $ImageIsMounted.ImagePath -Parent
 		$QueryWIM = REG QUERY HKLM | FINDSTR WIM
 		$QueryAppData = REG QUERY HKLM | FINDSTR AppData
 		$QueryOptimize = REG QUERY HKLM | FINDSTR Optimize
@@ -633,7 +635,7 @@ If (Get-WindowsImage -Mounted)
 		[void](Dismount-WindowsImage -Path $ImageIsMounted.MountPath -Discard)
 		[void](Clear-WindowsCorruptMountPoint)
 		[void](Remove-Item -Path $ImageIsMounted.MountPath -Recurse -Force)
-		[void](Remove-Item -Path $ImagePath -Recurse -Force)
+		[void](Remove-Item -Path $MountedImagePath -Recurse -Force)
 		Write-Output ''
 		Write-Output "Clean-up complete."
 	}
@@ -645,6 +647,7 @@ If (Get-WindowsImage -Mounted)
 	Finally
 	{
 		Start-Sleep 3
+		Clear-Host
 	}
 }
 
