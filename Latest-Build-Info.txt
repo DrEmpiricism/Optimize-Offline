@@ -1,3 +1,13 @@
+## 3.0.5 ##
+
+Some minor registry settings have been made
+
+Made a few modifications to the cleaning-up of a current mount point and script termination.
+
+This is an extremely minor update to accommodate the new -Local switch a bit better.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.4 ##
 
 The registry tweaks have been rewritten to use PowerShell's native cmdlet, as well as a small function I made to create the required keys.
