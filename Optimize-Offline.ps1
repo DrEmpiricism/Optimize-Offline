@@ -1413,25 +1413,6 @@ If ($OptimizeRegistry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "JPEGImportQuality" -Value "100"
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Enabling Performance FX Visual Effects." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "DragFullWindows" -Value 0
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "MenuShowDelay" -Value 0
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90, 0x12, 0x03, 0x80, 0x10, 0x00, 0x00, 0x00))
-		Force-MKDIR "HKLM:\WIM_HKCU\Control Panel\Desktop\WindowMetrics"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0
-		Force-MKDIR "HKLM:\WIM_HKCU\Control Panel\Keyboard"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Keyboard" -Name "KeyboardDelay" -Value 0
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewAlphaSelect" -Value 0
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 0
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 0
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Value 3
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\DWM"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\DWM" -Name "EnableAeroPeek" -Value 0
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Enabling Photo-Viewer for .BMP, .GIF, .JPG, .PNG and .TIF" >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		ForEach ($ImageType in @("Paint.Picture", "giffile", "jpegfile", "pngfile"))
