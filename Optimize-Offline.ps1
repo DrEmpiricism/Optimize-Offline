@@ -155,11 +155,11 @@ $PackageRemovalList = @(
 # Change the $null variable to $true to enable and vice versa to disable.
 $AddFeatures = @{
 	ContextMenu	     = $true
-	NetFx3	             = $null
-	SystemImages         = $null
+	NetFx3	             = $true
+	SystemImages         = $true
 	OfflineServicing     = $null
 	Unattend	     = $null
-	GenuineTicket	     = $null
+	GenuineTicket	     = $true
 	HostsFile	     = $true
 	Win32Calc	     = $true
 	SysPrep		     = $null
@@ -914,8 +914,6 @@ If ($OptimizeRegistry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCloudSearch" -Value 0
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowIndexingEncryptedStoresOrItems" -Value 0
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "DisableWebSearch" -Value 1
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\SOFTWARE\InputPersonalization\TrainedDataStore"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\SOFTWARE\InputPersonalization\TrainedDataStore" -Name "HarvestContacts" -Value 0
 		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "HistoryViewEnabled" -Value 0
@@ -1052,7 +1050,6 @@ If ($OptimizeRegistry)
 		Force-MKDIR "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -Name "value" -Value 0
 		Force-MKDIR "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -Value 0
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1099,11 +1096,6 @@ If ($OptimizeRegistry)
 		#****************************************************************
 		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\MediaPlayer\Preferences"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\MediaPlayer\Preferences" -Name "UsageTracking" -Value 0
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0
 	}
 	$DEVICE_EXPERIENCE = {
 		#****************************************************************
@@ -1242,11 +1234,6 @@ If ($OptimizeRegistry)
 		#****************************************************************
 		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK" -Value 0
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Reminders and Incoming VoIP Calls on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK" -Value 0
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1394,8 +1381,8 @@ If ($OptimizeRegistry)
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Live Tiles." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1
+		Force-MKDIR "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Connected Drive Autoplay and Autorun." >> $WorkFolder\Registry-Optimizations.log
