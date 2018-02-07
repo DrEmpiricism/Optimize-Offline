@@ -749,7 +749,7 @@ Try
 {
 	Write-Output ''
 	Process-Log -Output "Mounting Image." -LogPath $LogFile -Level Info
-	[void](Mount-WindowsImage -ImagePath $ImageFile -Index $Index -Path $MountFolder -ScratchDirectory $TempFolder)
+	[void](Mount-WindowsImage -ImagePath $ImageFile -Index $Index -Path $MountFolder -ScratchDirectory $TempFolder -Optimize)
 	$ImageIsMounted = $true
 }
 Catch [System.Exception]
