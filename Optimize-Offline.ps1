@@ -72,8 +72,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.5
-		Last updated:	02/05/2018
+		Version:        3.0.6
+		Last updated:	02/07/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -558,14 +558,63 @@ Function Terminate-Script # Performs a roll-back and clean-up if a terminating e
 		[void](Unload-OfflineHives)
 	}
 	[void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $TempFolder)
-	
+	[void](Remove-Item -Path $WorkFolder -Recurse -Force)
+	[void](Remove-Item -Path $TempFolder -Recurse -Force)
+	[void](Remove-Item -Path $ImageFolder -Recurse -Force)
+	[void](Remove-Item -Path $MountFolder -Recurse -Force)
 	If ($Local)
 	{
 		[void](Move-Item -Path $LogFile -Destination $PSScriptRoot\Optimize-Offline.log -Force)
 	}
 	Else
 	{
-		[void](Move-Item -Path $LogFile -Destination $HOME\Desktop\Optimize-Offline.log -Force)
+		[void](Move-Item -Path $LogFile -Destination $Desktop\Optimize-Offline.log -Force)
+	}
+}
+
+Function Clean-CurrentMount #Attempts to dismount and clean-up the locations of a currently mounted image.
+{
+	Param ()
+	
+	Begin
+	{
+		$ErrorMessage = $_.Exception.Message
+	}
+	Process
+	{
+		Try
+		{
+			Write-Output ''
+			Write-Verbose "Current mount location detected. Performing clean-up." -Verbose
+			$ImageIsMounted = Get-WindowsImage -Mounted
+			$MountedImagePath = Split-Path -Path $ImageIsMounted.ImagePath -Parent
+			$QueryWIM = REG QUERY HKLM | FINDSTR WIM
+			$QueryAppData = REG QUERY HKLM | FINDSTR AppData
+			$QueryOptimize = REG QUERY HKLM | FINDSTR Optimize
+			If ($QueryWIM)
+			{
+				[void]($QueryWIM.ForEach{ REG UNLOAD "$_" })
+			}
+			ElseIf ($QueryAppData)
+			{
+				[void]($QueryAppData.ForEach{ REG UNLOAD "$_" })
+			}
+			ElseIf ($QueryOptimize)
+			{
+				[void]($QueryOptimize.ForEach{ REG UNLOAD "$_" })
+			}
+			[void](Dismount-WindowsImage -Path $ImageIsMounted.MountPath -Discard)
+			[void](Clear-WindowsCorruptMountPoint)
+			[void](Remove-Item -Path $ImageIsMounted.MountPath -Recurse -Force)
+			[void](Remove-Item -Path $MountedImagePath -Recurse -Force)
+			Write-Output ''
+			Write-Output "Clean-up complete."
+		}
+		Catch [System.Exception]
+		{
+			Write-Output ''
+			Write-Warning "Clean-up failed with error message: $ErrorMessage"
+		}
 	}
 }
 
@@ -586,6 +635,7 @@ $Script = "Optimize-Offline"
 $ErrorMessage = "$_.Exception.Message"
 $TimeStamp = Get-Date -Format "[MM-dd-yyyy hh:mm:ss]"
 $LogFile = "$env:TEMP\Optimize-Offline.log"
+$Desktop = [Environment]::GetFolderPath("Desktop")
 #endregion Script Variables
 
 If (!(Verify-Admin))
@@ -611,44 +661,9 @@ If ($AllApps -and $UseWhiteList)
 
 If (Get-WindowsImage -Mounted)
 {
-	Try
-	{
-		Write-Output ''
-		Write-Verbose "Current mount location detected. Performing clean-up." -Verbose
-		$ImageIsMounted = Get-WindowsImage -Mounted
-		$MountedImagePath = Split-Path -Path $ImageIsMounted.ImagePath -Parent
-		$QueryWIM = REG QUERY HKLM | FINDSTR WIM
-		$QueryAppData = REG QUERY HKLM | FINDSTR AppData
-		$QueryOptimize = REG QUERY HKLM | FINDSTR Optimize
-		If ($QueryWIM)
-		{
-			[void]($QueryWIM.ForEach{ REG UNLOAD "$_" })
-		}
-		ElseIf ($QueryAppData)
-		{
-			[void]($QueryAppData.ForEach{ REG UNLOAD "$_" })
-		}
-		ElseIf ($QueryOptimize)
-		{
-			[void]($QueryOptimize.ForEach{ REG UNLOAD "$_" })
-		}
-		[void](Dismount-WindowsImage -Path $ImageIsMounted.MountPath -Discard)
-		[void](Clear-WindowsCorruptMountPoint)
-		[void](Remove-Item -Path $ImageIsMounted.MountPath -Recurse -Force)
-		[void](Remove-Item -Path $MountedImagePath -Recurse -Force)
-		Write-Output ''
-		Write-Output "Clean-up complete."
-	}
-	Catch
-	{
-		Write-Output ''
-		Write-Warning "Clean-up did not successfully complete." -Verbose
-	}
-	Finally
-	{
-		Start-Sleep 3
-		Clear-Host
-	}
+	Clean-CurrentMount
+	Start-Sleep 3
+	Clear-Host
 }
 
 If (([IO.FileInfo]$ImagePath).Extension -like ".ISO")
@@ -735,8 +750,9 @@ Try
 	Write-Output ''
 	Process-Log -Output "Mounting Image." -LogPath $LogFile -Level Info
 	[void](Mount-WindowsImage -ImagePath $ImageFile -Index $Index -Path $MountFolder -ScratchDirectory $TempFolder)
+	$ImageIsMounted = $true
 }
-Catch [System.IO.IOException]
+Catch [System.Exception]
 {
 	Write-Output ''
 	Process-Log -Output "Failed to mount the Windows Image." -LogPath $LogFile -Level Error
@@ -744,7 +760,7 @@ Catch [System.IO.IOException]
 	Break
 }
 
-Try
+If ($ImageIsMounted -eq $true)
 {
 	[void](Load-OfflineHives)
 	$WIMProperties = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion"
@@ -765,23 +781,18 @@ Try
 	Else
 	{
 		Write-Output ''
-		Write-Warning "The image build [$($WIMProperties.CurrentBuildNumber)] is not supported."
+		Process-Log -Output "The image build [$($WIMProperties.CurrentBuildNumber)] is not supported." -LogPath $LogFile -Level Error
+		Terminate-Script
 		Break
 	}
 }
-Catch [System.Exception]
-{
-	Write-Output ''
-	Process-Log -Output "Image build [$($WIMProperties.CurrentBuildNumber)] is not supported." -LogPath $LogFile -Level Error
-	Terminate-Script
-	Break
-}
-Finally
+
+If (Verify-OfflineHives)
 {
 	[void](Unload-OfflineHives)
 }
 
-Try
+If ($ImageIsMounted -eq $true)
 {
 	Process-Log -Output "Verifying image health." -LogPath $LogFile -Level Info
 	$ScriptStartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
@@ -795,23 +806,10 @@ Try
 	Else
 	{
 		Write-Output ''
-		Write-Warning "The image has been flagged for corruption. Further servicing is required before the image can be optimized."
+		Process-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -LogPath $LogFile -Level Error
+		Terminate-Script
 		Break
 	}
-}
-Catch [System.IO.IOException]
-{
-	Write-Output ''
-	Process-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
-	Terminate-Script
-	Break
-}
-Catch [System.Exception]
-{
-	Write-Output ''
-	Process-Log -Output "Script terminated due to image corruption." -LogPath $LogFile -Level Error
-	Terminate-Script
-	Break
 }
 
 If ($UseWhiteList)
@@ -835,7 +833,7 @@ If ($SelectApps -or $AllApps)
 				[void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder)
 				$AppSelect = ''
 			}
-			Else
+			ElseIf ($AppSelect -eq "n")
 			{
 				Process-Log -Output "Skipping Provisioning Application Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
 				$AppSelect = ''
@@ -1753,7 +1751,7 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 		) | % { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 }
 		$DisableDefenderComplete = $true
 	}
-	Catch [System.IO.IOException], [System.Exception]
+	Catch [System.Exception]
 	{
 		Write-Output ''
 		Process-Log -Output "Failed to disable remaining SecHealthUI services and drivers." -LogPath $LogFile -Level Error
@@ -1764,6 +1762,13 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 	{
 		[void](Unload-OfflineHives)
 	}
+}
+
+If ($DisableDefenderComplete -eq $true -and $Build -ge "16299")
+{
+	Write-Output ''
+	Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
+	[void](Disable-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $TempFolder)
 }
 
 If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallableUI")
@@ -1804,7 +1809,7 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallab
 		) | % { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 }
 		$DisableXboxComplete = $true
 	}
-	Catch [System.IO.IOException], [System.Exception]
+	Catch [System.Exception]
 	{
 		Write-Output ''
 		Process-Log -Output "Failed to disable remaining Xbox services and drivers." -LogPath $LogFile -Level Error
@@ -1831,19 +1836,14 @@ If ($RegistryComplete -eq $true)
 			"lfsvc"
 			"PcaSvc"
 			"DoSvc"
-		)
-		ForEach ($SVC in $SPYWARE_SVCS)
-		{
-			Force-MKDIR "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$SVC"
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$SVC" -Name "Start" -Value 4
-		}
+		) | % { Force-MKDIR "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_"; Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 }
 		Force-MKDIR "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0
 		Force-MKDIR "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\Remote Assistance"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\Remote Assistance" -Name "fAllowToGetHelp" -Value 0
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\Remote Assistance" -Name "fAllowFullControl" -Value 0
 	}
-	Catch [System.IO.IOException], [System.Exception]
+	Catch [System.Exception]
 	{
 		Write-Output ''
 		Process-Log -Output "Failed to disable Telemetry, Location, Compatibility Assistance and Delivery Optimization services and drivers." -LogPath $LogFile -Level Error
@@ -1856,13 +1856,6 @@ If ($RegistryComplete -eq $true)
 	}
 }
 
-If ($DisableDefenderComplete -eq $true -and $Build -ge "16299")
-{
-	Write-Output ''
-	Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
-	[void](Disable-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $TempFolder)
-}
-
 If ($DisableFeatures)
 {
 	Write-Output ''
@@ -1870,7 +1863,7 @@ If ($DisableFeatures)
 	$WindowsFeatures = Get-WindowsOptionalFeature -Path $MountFolder
 	ForEach ($Feature in $FeatureDisableList)
 	{
-		[void]($WindowsFeatures.Where({ $_.FeatureName -like $Feature }) | Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $TempFolder)
+		[void]($WindowsFeatures.Where{ $_.FeatureName -like $Feature } | Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $TempFolder)
 	}
 }
 
@@ -1881,7 +1874,7 @@ If ($RemovePackages)
 	$WindowsPackages = Get-WindowsPackage -Path $MountFolder
 	ForEach ($Package in $PackageRemovalList)
 	{
-		[void]($WindowsPackages.Where({ $_.PackageName -like $Package }) | Remove-WindowsPackage -Path $MountFolder -ScratchDirectory $TempFolder)
+		[void]($WindowsPackages.Where{ $_.PackageName -like $Package } | Remove-WindowsPackage -Path $MountFolder -ScratchDirectory $TempFolder)
 	}
 }
 
@@ -2192,7 +2185,7 @@ Try
 		Start-Sleep 3
 	}
 }
-Catch [System.IO.IOException]
+Catch [System.Exception]
 {
 	Write-Output ''
 	Process-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
@@ -2258,7 +2251,7 @@ If ($Error.Count.Equals(0))
 	Write-Output ''
 	Process-Log -Output "$Script completed with [0] errors." -LogPath $LogFile -Level Info
 	Move-Item -Path $LogFile -Destination $SaveFolder -Force
-	Break
+	Write-Output ''
 }
 Else
 {
@@ -2270,6 +2263,7 @@ Else
 	Write-Output ''
 	Process-Log -Output "$Script completed with [$($Error.Count)] errors." -LogPath $LogFile -Level Warning
 	Move-Item -Path $LogFile -Destination $SaveFolder -Force
+	Write-Output ''
 }
 # SIG # Begin signature block
 # MIIJngYJKoZIhvcNAQcCoIIJjzCCCYsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
