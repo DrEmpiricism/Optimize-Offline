@@ -155,13 +155,13 @@ $PackageRemovalList = @(
 # Change the $null variable to $true to enable and vice versa to disable.
 $AddFeatures = @{
 	ContextMenu	     = $true
-	NetFx3	             = $true
-	SystemImages         = $true
+	NetFx3	             = $null
+	SystemImages         = $null
 	OfflineServicing     = $null
 	Unattend	     = $null
-	GenuineTicket	     = $true
+	GenuineTicket	     = $null
 	HostsFile	     = $true
-	Win32Calc	     = $true
+	Win32Calc	     = $null
 	SysPrep		     = $null
 }
 
