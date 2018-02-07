@@ -1,3 +1,12 @@
+## 3.0.6 ## (02-07-18)
+
+Assorted code changes.
+Removed a registry entry that would occasionally cause a hang during the installation of the image.
+Optimized the various processes.
+Increased mounting speed.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.5 ## (02-05-18)
 
 Some minor registry settings have been made
