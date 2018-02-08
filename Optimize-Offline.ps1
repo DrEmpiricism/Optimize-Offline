@@ -69,8 +69,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.5
-		Last updated:	02/05/2018
+		Version:        3.0.7
+		Last updated:	02/08/2018
 		===========================================================================
 #>
 [CmdletBinding()]
