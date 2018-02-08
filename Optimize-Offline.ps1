@@ -814,7 +814,7 @@ If ($SelectApps -or $AllApps)
 				[void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder)
 				$AppSelect = ''
 			}
-			ElseIf ($AppSelect -eq "n")
+			Else
 			{
 				Process-Log -Output "Skipping Provisioning Application Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
 				$AppSelect = ''
