@@ -1,4 +1,5 @@
 ## 3.0.8 ## (02-08-18)
+
 The Assorted-Features secondary function script has been removed temporaritly as it's being merged into the full project that will be released within a few weeks.
 
 A few registry settings' values were changed; a handful were removed and syntax on service removal was modified.
