@@ -48,9 +48,6 @@
 	.PARAMETER AddDrivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
-	.PARAMETER AdditionalFeatures
-		Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.
-	
 	.PARAMETER Local
 		This will set the mount and save locations to the root path of the script allowing the end-user to use an alternate drive as the location for all processing, which is SSD optimal.
 	
@@ -65,15 +62,15 @@
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -AdditionalFeatures -Local
-
+	
 	.NOTES
 		===========================================================================
 		Created on:   	11/30/2017
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.6
-		Last updated:	02/07/2018
+		Version:        3.0.5
+		Last updated:	02/05/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -97,7 +94,6 @@ Param
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')][Alias('Packages')][switch]$RemovePackages,
 	[Parameter(Mandatory = $false,
 			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')][ValidateScript({ Test-Path $(Resolve-Path $_) })][Alias('Drivers')][string]$AddDrivers,
-	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')][switch]$AdditionalFeatures,
 	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script')][switch]$Local
 )
 . .\Additional-Features.ps1
@@ -147,24 +143,9 @@ $FeatureDisableList = @(
 $PackageRemovalList = @(
 	"*ContactSupport*"
 	"*QuickAssist*"
-	"*InternetExplorer*"
-	"*MediaPlayer*"
+	#"*InternetExplorer*"
+	#"*MediaPlayer*"
 )
-
-# The parameters passed to the Additional-Features function if using the -AdditionalFeatures switch.
-# Change the $null variable to $true to enable and vice versa to disable.
-$AddFeatures = @{
-	ContextMenu	     = $true
-	NetFx3	             = $null
-	SystemImages         = $null
-	OfflineServicing     = $null
-	Unattend	     = $null
-	GenuineTicket	     = $null
-	HostsFile	     = $true
-	Win32Calc	     = $null
-	SysPrep		     = $null
-}
-
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
@@ -572,7 +553,7 @@ Function Terminate-Script # Performs a roll-back and clean-up if a terminating e
 	}
 }
 
-Function Clean-CurrentMount #Attempts to dismount and clean-up the locations of a currently mounted image.
+Function Clean-CurrentMount # Attempts to dismount and clean-up the locations of a currently mounted image.
 {
 	Param ()
 	
@@ -2146,27 +2127,6 @@ DEL "%~f0"
 	& $SETUPCOMPLETE4
 }
 
-If ($AdditionalFeatures)
-{
-	Try
-	{
-		Clear-Host
-		Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
-		Start-Sleep 3
-		Additional-Features @AddFeatures
-	}
-	Catch [System.IO.FileNotFoundException]
-	{
-		Write-Output ''
-		Process-Log -Output "Additional-Features function script not found." -LogPath $LogFile -Level Error
-	}
-}
-
-If (Verify-OfflineHives)
-{
-	[void](Unload-OfflineHives)
-}
-
 Try
 {
 	Clear-Host
@@ -2213,7 +2173,7 @@ Try
 {
 	Write-Output ''
 	Process-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
-	[void](Export-WindowsImage -CheckIntegrity -CompressionType maximum -SourceImagePath $ImageFile -SourceIndex $Index -DestinationImagePath $WorkFolder\install.wim -ScratchDirectory $TempFolder)
+	[void](Export-WindowsImage -CheckIntegrity -CompressionType Maximum -SourceImagePath $ImageFile -SourceIndex $Index -DestinationImagePath $WorkFolder\install.wim -ScratchDirectory $TempFolder)
 }
 Catch [System.IO.IOException], [System.Exception]
 {
