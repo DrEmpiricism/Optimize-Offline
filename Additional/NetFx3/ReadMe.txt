@@ -1,2 +1,0 @@
-- Add the .CAB files for the NetFx3 package(s) here to be added to the image.  Ensure the .CAB files are for the specific build being optimized.
-- The .CAB files can be found in the sxs directory on the Windows installation media.
