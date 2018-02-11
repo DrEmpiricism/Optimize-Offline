@@ -1,10 +1,10 @@
-## 3.0.8 ## (02-08-18)
+## 3.0.8 ## (02-11-18)
 
-The Assorted-Features secondary function script has been removed temporaritly as it's being merged into the full project that will be released within a few weeks.
+The Assorted-Features secondary function script has been removed temporarily as it's being merged into the full project (v4.0) that will be released within a few weeks.
 
 A few registry settings' values were changed; a handful were removed and syntax on service removal was modified.
 
-4.0 will be coming soon; possibly with a GUI version.
+Changed some variables and function names to reflect the proper Powershell verb list.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
