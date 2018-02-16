@@ -105,7 +105,16 @@ Param
 	[switch]$DisableFeatures,
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')]
 	[Alias('Packages')]
-	[switch]$RemovePackages
+	[switch]$RemovePackages,
+	[Parameter(Mandatory = $false,
+			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
+	[Alias('Drivers')]
+	[string]$AddDrivers,
+	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')]
+	[switch]$AdditionalFeatures,
+	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script')]
+	[switch]$Local
 )
 
 ## *************************************************************************************************
@@ -137,9 +146,9 @@ $SystemAppsList = @(
 $AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
-	#"Microsoft.WindowsCalculator"
+	"Microsoft.WindowsCalculator"
 	"Microsoft.Xbox.TCUI"
-	"Microsoft.WindowsCamera"
+	#"Microsoft.WindowsCamera"
 	"Microsoft.StorePurchaseApp"
 	"Microsoft.WindowsStore"
 )
@@ -155,8 +164,8 @@ $FeatureDisableList = @(
 $PackageRemovalList = @(
 	"*ContactSupport*"
 	"*QuickAssist*"
-	"*InternetExplorer*"
-	"*MediaPlayer*"
+	#"*InternetExplorer*"
+	#"*MediaPlayer*"
 )
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
@@ -242,10 +251,9 @@ Function Process-Log
 		}
 		"$DateFormat $LevelPrefix $Output" | Out-File -FilePath $LogPath -Append
 	}
-	End { }
 }
 
-#region C# Coded Token Privilege Method
+#region C# Token Privilege Method
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -361,7 +369,7 @@ public class AdjustAccessToken
     }
 }
 "@
-#endregion C# Coded Token Privilege Method
+#endregion C# Token Privilege Method
 
 Function Set-RegistryOwner # Changes the ownership and access control of protected registry keys and subkeys (those owned by TrustedInstaller) in order to add or remove values.
 {
@@ -540,8 +548,6 @@ Function Unload-OfflineHives
 
 Function Verify-OfflineHives
 {
-	Param ()
-	
 	$HivePaths = @(
 		"HKLM:\WIM_HKLM_COMPONENTS"
 		"HKLM:\WIM_HKLM_DRIVERS"
@@ -571,7 +577,7 @@ Function Terminate-Script # Performs a roll-back and clean-up if a terminating e
 	[void](Remove-Item -Path $MountFolder -Recurse -Force)
 	If ($Local)
 	{
-		[void](Move-Item -Path $LogFile -Destination $PSScriptRoot\Optimize-Offline.log -Force)
+		[void](Move-Item -Path $LogFile -Destination $RootPath\Optimize-Offline.log -Force)
 	}
 	Else
 	{
@@ -764,28 +770,28 @@ Catch [System.IO.IOException]
 	Break
 }
 
-If ($ImageIsMounted -eq $true)
+If ($ImageIsMounted.Equals($true))
 {
 	[void](Load-OfflineHives)
-	$WIMProperties = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion"
-	If ($WIMProperties.CurrentBuildNumber -eq "15063")
+	$WIMVersion = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+	If ($WIMVersion.CurrentBuildNumber -eq "15063")
 	{
 		Write-Output ''
-		Write-Output "The image build [$($WIMProperties.CurrentBuildNumber)] is supported."
+		Write-Output "The image build [$($WIMVersion.CurrentBuildNumber)] is supported."
 		Start-Sleep 3
 		Write-Output ''
 	}
-	ElseIf ($WIMProperties.CurrentBuildNumber -eq "16299")
+	ElseIf ($WIMVersion.CurrentBuildNumber -ge "16273")
 	{
 		Write-Output ''
-		Write-Output "The image build [$($WIMProperties.CurrentBuildNumber)] is supported."
+		Write-Output "The image build [$($WIMVersion.CurrentBuildNumber)] is supported."
 		Start-Sleep 3
 		Write-Output ''
 	}
 	Else
 	{
 		Write-Output ''
-		Process-Log -Output "The image build [$($WIMProperties.CurrentBuildNumber)] is not supported." -LogPath $LogFile -Level Error
+		Process-Log -Output "The image build [$($WIMVersion.CurrentBuildNumber)] is not supported." -LogPath $LogFile -Level Error
 		Terminate-Script
 		Break
 	}
@@ -796,7 +802,7 @@ If (Verify-OfflineHives)
 	[void](Unload-OfflineHives)
 }
 
-If ($ImageIsMounted -eq $true)
+If ($ImageIsMounted.Equals($true))
 {
 	Process-Log -Output "Verifying image health." -LogPath $LogFile -Level Info
 	$ScriptStartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
@@ -1288,7 +1294,7 @@ If ($OptimizeRegistry)
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" /v "ManualLaunchAllowed" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			If ($Build -ge "16299")
+			If ($Build -ge "16273")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1375,7 +1381,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\Appx" /v "AllowAllTrustedApps" /t REG_DWORD /d "1" /f)
 		}
 		$USABILITY_AND_CLEANUP = {
-			If ($Build -ge "16299")
+			If ($Build -ge "16273")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1457,7 +1463,7 @@ If ($OptimizeRegistry)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			#****************************************************************
-			If ($Build -ge "16299")
+			If ($Build -ge "16273")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1482,7 +1488,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowRecent" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowFrequent" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			If ($Build -ge "16299")
+			If ($Build -ge "16273")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1560,7 +1566,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "25" /t REG_SZ /d "Microsoft.WorkFolders" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "26" /t REG_SZ /d "Microsoft.WindowsAnytimeUpgrade" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "27" /t REG_SZ /d "Microsoft.Language" /f)
-			If ($Build -ge "16299")
+			If ($Build -ge "16273")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1646,7 +1652,7 @@ If ($SystemApps)
 	$SystemAppsComplete = $true
 }
 
-If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
+If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("SecHealthUI"))
 {
 	Try
 	{
@@ -1676,11 +1682,11 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 		{
 			[void](Remove-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth")
 		}
-		If ($Build -ge "16299" -and $RegistryComplete -eq $true)
+		If ($Build -ge "16273" -and $RegistryComplete.Equals($true))
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender"
 		}
-		ElseIf ($Build -eq "15063" -and $RegistryComplete -eq $true)
+		ElseIf ($Build.Equals("15063") -and $RegistryComplete.Equals($true))
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;windowsdefender"
 		}
@@ -1696,7 +1702,7 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 	Catch [System.Exception]
 	{
 		Write-Output ''
-		Process-Log -Output "Failed to disable remaining SecHealthUI services and drivers." -LogPath $LogFile -Level Error
+		Process-Log -Output "Failed to disable remaining Windows Defender services and drivers." -LogPath $LogFile -Level Error
 		Terminate-Script
 		Break
 	}
@@ -1706,14 +1712,14 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 	}
 }
 
-If ($DisableDefenderComplete -eq $true -and $Build -ge "16299")
+If ($DisableDefenderComplete.Equals($true) -and $Build -ge "16273")
 {
 	Write-Output ''
 	Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
 	[void](Disable-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $TempFolder)
 }
 
-If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallableUI")
+If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("XboxGameCallableUI"))
 {
 	Try
 	{
@@ -1737,11 +1743,11 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallab
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -Value 0
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2
-		If ($Build -ge "16299" -and $DisableDefenderComplete -eq $true)
+		If ($Build -ge "16273" -and $DisableDefenderComplete.Equals($true))
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender"
 		}
-		ElseIf ($Build -eq "15063" -and $DisableDefenderComplete -eq $true)
+		ElseIf ($Build.Equals("15063") -and $DisableDefenderComplete.Equals($true))
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender"
 		}
@@ -1768,7 +1774,7 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallab
 	}
 }
 
-If ($RegistryComplete -eq $true)
+If ($RegistryComplete.Equals($true))
 {
 	Try
 	{
@@ -1832,7 +1838,7 @@ If ($RemovePackages)
 	}
 }
 
-If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true)
+If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true))
 {
 	$SETUPCOMPLETE1 = {
 		$SetupCompleteStr1 = @"
@@ -1902,7 +1908,7 @@ DEL "%~f0"
 	}
 	& $SETUPCOMPLETE1
 }
-ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true)
+ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true))
 {
 	$SETUPCOMPLETE2 = {
 		$SetupCompleteStr2 = @"
@@ -1966,7 +1972,7 @@ DEL "%~f0"
 	}
 	& $SETUPCOMPLETE2
 }
-ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true)
+ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true)
 {
 	$SETUPCOMPLETE3 = {
 		$SetupCompleteStr3 = @"
@@ -2095,7 +2101,7 @@ Try
 		Start-Sleep 3
 	}
 }
-Catch [System.IO.IOException]
+Catch [System.Exception]
 {
 	Write-Output ''
 	Process-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
@@ -2111,10 +2117,10 @@ Try
 	}
 	[void](Dismount-WindowsImage -Path $MountFolder -Save -CheckIntegrity -ScratchDirectory $TempFolder)
 }
-Catch [System.IO.IOException], [System.Exception]
+Catch [System.Exception]
 {
 	Write-Output ''
-	Process-Log -Output "An I/O error occured while trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
+	Process-Log -Output "An error occured while trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
 	Terminate-Script
 	Break
 }
@@ -2125,10 +2131,10 @@ Try
 	Process-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
 	[void](Export-WindowsImage -CheckIntegrity -CompressionType maximum -SourceImagePath $ImageFile -SourceIndex $Index -DestinationImagePath $WorkFolder\install.wim -ScratchDirectory $TempFolder)
 }
-Catch [System.IO.IOException], [System.Exception]
+Catch [System.Exception]
 {
 	Write-Output ''
-	Process-Log -Output "An I/O error occured while trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
+	Process-Log -Output "An error occured while trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
 	Terminate-Script
 	Break
 }
