@@ -45,20 +45,17 @@
 	.PARAMETER RemovePackages
 		Automatically removes all Windows Packages included in the PackageRemovalList.
 	
-	.PARAMETER AddDrivers
-		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
+	.EXAMPLE
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder"
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -Local
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -Local
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder"
-	
-	.EXAMPLE
-		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -Local
+		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Local
 	
 	.NOTES
 		===========================================================================
@@ -108,12 +105,7 @@ Param
 	[switch]$DisableFeatures,
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')]
 	[Alias('Packages')]
-	[switch]$RemovePackages,
-	[Parameter(Mandatory = $false,
-			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
-	[Alias('Drivers')]
-	[string]$AddDrivers
+	[switch]$RemovePackages
 )
 
 ## *************************************************************************************************
@@ -2083,27 +2075,6 @@ DEL "%~f0"
 		}
 	}
 	& $SETUPCOMPLETE4
-}
-
-If ($AdditionalFeatures)
-{
-	Try
-	{
-		Clear-Host
-		Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
-		Start-Sleep 3
-		Additional-Features @AddFeatures
-	}
-	Catch [System.IO.FileNotFoundException]
-	{
-		Write-Output ''
-		Process-Log -Output "Additional-Features function script not found." -LogPath $LogFile -Level Error
-	}
-}
-
-If (Verify-OfflineHives)
-{
-	[void](Unload-OfflineHives)
 }
 
 Try
