@@ -48,20 +48,17 @@
 	.PARAMETER AddDrivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
-	.PARAMETER AdditionalFeatures
-		Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.
+	.EXAMPLE
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AdditionalFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -Local
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -AdditionalFeatures -Local
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder" -AdditionalFeatures
-	
-	.EXAMPLE
-		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -AdditionalFeatures -Local
+		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -Local
 	
 	.NOTES
 		===========================================================================
@@ -70,7 +67,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.0.7.2
-		Last updated:	  02/12/2018
+		Last updated:	  02/16/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -116,11 +113,9 @@ Param
 			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
 	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
 	[Alias('Drivers')]
-	[string]$AddDrivers,
-	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')]
-	[switch]$AdditionalFeatures
+	[string]$AddDrivers
 )
-. .\Additional-Features.ps1
+
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
 ## *                      ITEMS CAN SIMPLY BE COMMENTED OUT WITH THE # KEY.                        *
@@ -171,20 +166,6 @@ $PackageRemovalList = @(
 	"*InternetExplorer*"
 	"*MediaPlayer*"
 )
-
-# The parameters passed to the Additional-Features function if using the -AdditionalFeatures switch.
-# To enable them, simply change the $null parameter value to $true.
-$AddFeatures = @{
-	ContextMenu	     = $true
-	NetFx3	             = $null
-	SystemImages         = $true
-	OfflineServicing     = $null
-	Unattend	     = $null
-	GenuineTicket	     = $null
-	HostsFile	     = $true
-	Win32Calc	     = $true
-	SysPrep		     = $null
-}
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
