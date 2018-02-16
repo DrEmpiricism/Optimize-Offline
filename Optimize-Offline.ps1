@@ -44,6 +44,9 @@
 	
 	.PARAMETER RemovePackages
 		Automatically removes all Windows Packages included in the PackageRemovalList.
+		
+	.PARAMETER Local
+		Sets the mount and save locations to the root path of the script.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages
@@ -64,7 +67,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.0.7.2
-		Last updated:	  02/16/2018
+		Last updated:	02/16/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -106,14 +109,7 @@ Param
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')]
 	[Alias('Packages')]
 	[switch]$RemovePackages,
-	[Parameter(Mandatory = $false,
-			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
-	[Alias('Drivers')]
-	[string]$AddDrivers,
-	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')]
-	[switch]$AdditionalFeatures,
-	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script')]
+	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script.')]
 	[switch]$Local
 )
 
