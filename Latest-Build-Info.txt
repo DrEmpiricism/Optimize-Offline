@@ -1,14 +1,12 @@
-## 3.0.7.2 ## (02-12-18)
+## 3.0.7.2 ## (02-17-18)
 
 - After running the script through SAPIEN, logging its performance, it was clear there was an enormous process overhead with the registry optimizations whilst using the Powershell cmdlets (similar to using repetitive "Try/Catch" blocks).  Because of this, the script run times were unacceptable.
 
-- To remedy this, I have reverted most registry values back to their legacy strings using REG.EXE.  The only exceptions are those large registry entries where looping can be utilized (ForEach).
+- To remedy this, many registry values have been reverted back to their legacy strings.  The only exceptions are those large registry entries where looping can be utilized (ForEach).
 
-- The script now processes as fast as it did before and the load times of fresh OS installations are unbelievable.
+- The script now processes extremely quickly and the outfile WIM loads very quickly, too.
 
-- I will be working on a handful of registry cmdlets and modules that I started a few months back but never completed - that use various APIs to access the registry and do not rely on either REG.EXE or Powershell.
-
-- Changes to the script in this version are some contextual changes, mostly.  The updates are small at the moment due to working on v4.0
+- The -AddDrivers switch has been re-added, so drivers can now be injected into the WIM file.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
