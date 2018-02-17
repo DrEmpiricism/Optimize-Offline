@@ -46,19 +46,20 @@
 		Automatically removes all Windows Packages included in the PackageRemovalList.
 		
 	.PARAMETER Local
-		Sets the mount and save locations to the root path of the script.
+		Sets the mount and save locations to the root path of the script, allowing one to use a secondary HDD for local optimization processing as opposed to the primary drive.
+		This is optimal for users who have a primary SSD.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -Local
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "E:\DriverFolder" -Local
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Local
+		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SysApps -RegEdit -Features -Packages -Drivers "E:\DriverFolder\OEM12.inf" -Local
 	
 	.NOTES
 		===========================================================================
@@ -67,7 +68,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.0.7.2
-		Last updated:	02/16/2018
+		Last updated:	02/17/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -109,10 +110,14 @@ Param
 	[Parameter(HelpMessage = 'Automatically removes all Windows Packages included in the PackageRemovalList.')]
 	[Alias('Packages')]
 	[switch]$RemovePackages,
+	[Parameter(Mandatory = $false,
+			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
+	[Alias('Drivers')]
+	[string]$AddDrivers,
 	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script.')]
 	[switch]$Local
 )
-
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
 ## *                      ITEMS CAN SIMPLY BE COMMENTED OUT WITH THE # KEY.                        *
@@ -142,7 +147,7 @@ $SystemAppsList = @(
 $AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
 	"Microsoft.Windows.Photos"
-	"Microsoft.WindowsCalculator"
+	#"Microsoft.WindowsCalculator"
 	"Microsoft.Xbox.TCUI"
 	#"Microsoft.WindowsCamera"
 	"Microsoft.StorePurchaseApp"
@@ -398,20 +403,20 @@ Function Set-RegistryOwner # Changes the ownership and access control of protect
 				$Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::TakeOwnership)
 			}
 		}
-		$ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control of the Key to a blank access control input-object.
+		$ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control to a blank access control object.
 		$AdminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544") # Assigns the SID of the built-in Administrator to a new object.
-		$Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the build-in Administrator SID to its Windows Account Name (NTAccount).
+		$Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the built-in Administrator SID to its Windows Account Name (NTAccount).
 		$ACL.SetOwner($Account) # Sets the ownership to the built-in Administrator.
 		$Key.SetAccessControl($ACL) # Sets the access control permissions to the built-in Administrator.
 		$ACL = $Key.GetAccessControl() # Retrieves the access control information for the registry key/subkey.
-		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry Key and SubKey rights.
+		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry hive and subkey rights.
 		$Inheritance = [System.Security.AccessControl.InheritanceFlags]"ContainerInherit" # Designates the flags that control object access control inheritance.
 		$Propagation = [System.Security.AccessControl.PropagationFlags]"None" # Designates the flags that control object access control propogation.
-		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on the object.
+		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on an object.
 		$Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Account, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
 		$ACL.SetAccessRule($Rule) # Sets the new access control rule.
 		$Key.SetAccessControl($ACL) # Sets the access control permissions to the object rule.
-		$Key.Close() # Closes the key/subkey.
+		$Key.Close() # Closes the key.
 		Switch ($Hive.ToString().ToLower())
 		{
 			"HKLM" {
@@ -424,7 +429,7 @@ Function Set-RegistryOwner # Changes the ownership and access control of protect
 				$Key = "HKLM:\SOFTWARE\Classes\$SubKey"
 			}
 		}
-		# Reverts the ownership and access control permissions back to the TrustedInstaller after the changes to the key/subkey have been made.
+		# Reverts the ownership and access control permissions back to the TrustedInstaller after the changes to the hive and subkey have been made.
 		$TrustedInstaller = [System.Security.Principal.NTAccount]"NT SERVICE\TrustedInstaller"
 		$ACL = Get-Acl $Key
 		$ACL.SetOwner($TrustedInstaller)
@@ -645,8 +650,7 @@ Function Force-MKDIR
 
 If (!(Verify-Admin))
 {
-	Write-Warning -Message "Administrative access is required. Please re-launch PowerShell with elevation and re-run $Script."
-	Break
+	Throw "Administrative access is required. Please re-launch PowerShell with elevation."
 }
 
 If ($SelectApps -and $AllApps)
@@ -1831,6 +1835,29 @@ If ($RemovePackages)
 	ForEach ($Package in $PackageRemovalList)
 	{
 		[void]($WindowsPackages.Where{ $_.PackageName -like $Package } | Remove-WindowsPackage -Path $MountFolder -ScratchDirectory $TempFolder)
+	}
+}
+
+If ($AddDrivers)
+{
+	If ((Test-Path -Path $AddDrivers -PathType Container) -eq $true)
+	{
+		Write-Output ''
+		Process-Log -Output "Injecting driver packages into the image." -LogPath $LogFile -Level Info
+		[void](Add-WindowsDriver -Path $MountFolder -Driver $AddDrivers -Recurse -ForceUnsigned)
+		Get-WindowsDriver -Path $MountFolder | Format-List | Out-File $WorkFolder\DriverPackageList.txt -Force
+	}
+	ElseIf ((Test-Path -Path $AddDrivers -PathType Leaf) -eq $true -and ([IO.FileInfo]$AddDrivers).Extension -like ".INF")
+	{
+		Write-Output ''
+		Process-Log -Output "Injecting driver package into the image." -LogPath $LogFile -Level Info
+		[void](Add-WindowsDriver -Path $MountFolder -Driver $AddDrivers -ForceUnsigned)
+		Get-WindowsDriver -Path $MountFolder | Format-List | Out-File $WorkFolder\DriverPackageList.txt -Force
+	}
+	Else
+	{
+		Write-Output ''
+		Process-Log -Output "$AddDrivers is not a valid driver package path." -LogPath $LogFile -Level Error
 	}
 }
 
