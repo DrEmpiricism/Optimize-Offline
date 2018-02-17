@@ -19,7 +19,7 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "%DriverPath%"
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -AllApps -SystemApps -OptimizeRegistry -DisableFeatures -RemovePackages -AddDrivers "%DriverPath%" -Local
 )
 PAUSE
 EXIT
