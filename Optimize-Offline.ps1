@@ -45,6 +45,9 @@
 	.PARAMETER RemovePackages
 		Automatically removes all Windows Packages included in the PackageRemovalList.
 		
+	.PARAMETER AddDrivers
+		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
+		
 	.PARAMETER Local
 		Sets the mount and save locations to the root path of the script, allowing one to use a secondary HDD for local optimization processing as opposed to the primary drive.
 		This is optimal for users who have a primary SSD.
