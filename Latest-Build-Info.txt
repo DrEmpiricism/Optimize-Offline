@@ -1,3 +1,14 @@
+## 3.0.7.3 ## (02-27-18)
+
+- Made some changes to operational variables to further filter unsupported builds.
+
+- Severely reduced the amount of services set to be disabled during start-up in order to give more flexibility to those also running online optimization tools and scripts.
+
+- Improved driver injection package detection.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
 ## 3.0.7.2 ## (02-17-18)
 
 - After running the script through SAPIEN, logging its performance, it was clear there was an enormous process overhead with the registry optimizations whilst using the Powershell cmdlets (similar to using repetitive "Try/Catch" blocks).  Because of this, the script run times were unacceptable.
