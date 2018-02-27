@@ -70,8 +70,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.7.2
-		Last updated:	02/17/2018
+		Version:        3.0.7.3
+		Last updated:	02/27/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -152,6 +152,7 @@ $AppWhiteList = @(
 	"Microsoft.Windows.Photos"
 	#"Microsoft.WindowsCalculator"
 	"Microsoft.Xbox.TCUI"
+	"Microsoft.XboxIdentityProvider"
 	#"Microsoft.WindowsCamera"
 	"Microsoft.StorePurchaseApp"
 	"Microsoft.WindowsStore"
@@ -170,6 +171,7 @@ $PackageRemovalList = @(
 	"*QuickAssist*"
 	#"*InternetExplorer*"
 	#"*MediaPlayer*"
+	#"*Hello-Face*"
 )
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
@@ -255,9 +257,10 @@ Function Process-Log
 		}
 		"$DateFormat $LevelPrefix $Output" | Out-File -FilePath $LogPath -Append
 	}
+	End { }
 }
 
-#region C# Token Privilege Method
+#region C# Coded Token Privilege Method
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -373,7 +376,7 @@ public class AdjustAccessToken
     }
 }
 "@
-#endregion C# Token Privilege Method
+#endregion C# Coded Token Privilege Method
 
 Function Set-RegistryOwner # Changes the ownership and access control of protected registry keys and subkeys (those owned by TrustedInstaller) in order to add or remove values.
 {
@@ -406,20 +409,20 @@ Function Set-RegistryOwner # Changes the ownership and access control of protect
 				$Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::TakeOwnership)
 			}
 		}
-		$ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control to a blank access control object.
+		$ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control of the Key to a blank access control input-object.
 		$AdminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544") # Assigns the SID of the built-in Administrator to a new object.
-		$Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the built-in Administrator SID to its Windows Account Name (NTAccount).
+		$Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the build-in Administrator SID to its Windows Account Name (NTAccount).
 		$ACL.SetOwner($Account) # Sets the ownership to the built-in Administrator.
 		$Key.SetAccessControl($ACL) # Sets the access control permissions to the built-in Administrator.
 		$ACL = $Key.GetAccessControl() # Retrieves the access control information for the registry key/subkey.
-		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry hive and subkey rights.
+		$Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry Key and SubKey rights.
 		$Inheritance = [System.Security.AccessControl.InheritanceFlags]"ContainerInherit" # Designates the flags that control object access control inheritance.
 		$Propagation = [System.Security.AccessControl.PropagationFlags]"None" # Designates the flags that control object access control propogation.
-		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on an object.
+		$Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on the object.
 		$Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Account, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
 		$ACL.SetAccessRule($Rule) # Sets the new access control rule.
 		$Key.SetAccessControl($ACL) # Sets the access control permissions to the object rule.
-		$Key.Close() # Closes the key.
+		$Key.Close() # Closes the key/subkey.
 		Switch ($Hive.ToString().ToLower())
 		{
 			"HKLM" {
@@ -432,7 +435,7 @@ Function Set-RegistryOwner # Changes the ownership and access control of protect
 				$Key = "HKLM:\SOFTWARE\Classes\$SubKey"
 			}
 		}
-		# Reverts the ownership and access control permissions back to the TrustedInstaller after the changes to the hive and subkey have been made.
+		# Reverts the ownership and access control permissions back to the TrustedInstaller after the changes to the key/subkey have been made.
 		$TrustedInstaller = [System.Security.Principal.NTAccount]"NT SERVICE\TrustedInstaller"
 		$ACL = Get-Acl $Key
 		$ACL.SetOwner($TrustedInstaller)
@@ -552,6 +555,8 @@ Function Unload-OfflineHives
 
 Function Verify-OfflineHives
 {
+	Param ()
+	
 	$HivePaths = @(
 		"HKLM:\WIM_HKLM_COMPONENTS"
 		"HKLM:\WIM_HKLM_DRIVERS"
@@ -581,7 +586,7 @@ Function Terminate-Script # Performs a roll-back and clean-up if a terminating e
 	[void](Remove-Item -Path $MountFolder -Recurse -Force)
 	If ($Local)
 	{
-		[void](Move-Item -Path $LogFile -Destination $RootPath\Optimize-Offline.log -Force)
+		[void](Move-Item -Path $LogFile -Destination $PSScriptRoot\Optimize-Offline.log -Force)
 	}
 	Else
 	{
@@ -653,7 +658,8 @@ Function Force-MKDIR
 
 If (!(Verify-Admin))
 {
-	Throw "Administrative access is required. Please re-launch PowerShell with elevation."
+	Write-Warning -Message "Administrative access is required. Please re-launch PowerShell with elevation and re-run $Script."
+	Break
 }
 
 If ($SelectApps -and $AllApps)
@@ -773,7 +779,7 @@ Catch [System.IO.IOException]
 	Break
 }
 
-If ($ImageIsMounted.Equals($true))
+If ($ImageIsMounted -eq $true)
 {
 	[void](Load-OfflineHives)
 	$WIMVersion = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion"
@@ -805,11 +811,11 @@ If (Verify-OfflineHives)
 	[void](Unload-OfflineHives)
 }
 
-If ($ImageIsMounted.Equals($true))
+If ($ImageIsMounted -eq $true)
 {
 	Process-Log -Output "Verifying image health." -LogPath $LogFile -Level Info
-	$ScriptStartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
-	If ($ScriptStartHealthCheck.ImageHealthState -eq "Healthy")
+	$StartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
+	If ($StartHealthCheck.ImageHealthState -eq "Healthy")
 	{
 		Write-Output ''
 		Write-Output "The image is healthy."
@@ -1068,7 +1074,6 @@ If ($OptimizeRegistry)
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\MediaPlayer\Preferences" /v "UsageTracking" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
@@ -1297,7 +1302,7 @@ If ($OptimizeRegistry)
 			#****************************************************************
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" /v "ManualLaunchAllowed" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			If ($Build -ge "16273")
+			If ($Build -ge "16299")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1384,7 +1389,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\Appx" /v "AllowAllTrustedApps" /t REG_DWORD /d "1" /f)
 		}
 		$USABILITY_AND_CLEANUP = {
-			If ($Build -ge "16273")
+			If ($Build -ge "16299")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1466,7 +1471,7 @@ If ($OptimizeRegistry)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			[void](REG DELETE "HKLM\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}" /f)
 			#****************************************************************
-			If ($Build -ge "16273")
+			If ($Build -ge "16299")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1491,7 +1496,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowRecent" /t REG_DWORD /d "0" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "ShowFrequent" /t REG_DWORD /d "0" /f)
 			#****************************************************************
-			If ($Build -ge "16273")
+			If ($Build -ge "16299")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1569,7 +1574,7 @@ If ($OptimizeRegistry)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "25" /t REG_SZ /d "Microsoft.WorkFolders" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "26" /t REG_SZ /d "Microsoft.WindowsAnytimeUpgrade" /f)
 			[void](REG ADD "HKLM\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl" /v "27" /t REG_SZ /d "Microsoft.Language" /f)
-			If ($Build -ge "16273")
+			If ($Build -ge "16299")
 			{
 				#****************************************************************
 				Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1655,7 +1660,7 @@ If ($SystemApps)
 	$SystemAppsComplete = $true
 }
 
-If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("SecHealthUI"))
+If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "SecHealthUI")
 {
 	Try
 	{
@@ -1685,11 +1690,11 @@ If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("SecHealthUI
 		{
 			[void](Remove-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth")
 		}
-		If ($Build -ge "16273" -and $RegistryComplete.Equals($true))
+		If ($Build -ge "16299" -and $RegistryComplete -eq $true)
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender"
 		}
-		ElseIf ($Build.Equals("15063") -and $RegistryComplete.Equals($true))
+		ElseIf ($Build -eq "15063" -and $RegistryComplete -eq $true)
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;windowsdefender"
 		}
@@ -1705,7 +1710,7 @@ If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("SecHealthUI
 	Catch [System.Exception]
 	{
 		Write-Output ''
-		Process-Log -Output "Failed to disable remaining Windows Defender services and drivers." -LogPath $LogFile -Level Error
+		Process-Log -Output "Failed to disable remaining SecHealthUI services and drivers." -LogPath $LogFile -Level Error
 		Terminate-Script
 		Break
 	}
@@ -1715,14 +1720,14 @@ If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("SecHealthUI
 	}
 }
 
-If ($DisableDefenderComplete.Equals($true) -and $Build -ge "16273")
+If ($DisableDefenderComplete -eq $true -and $Build -ge "16299")
 {
 	Write-Output ''
 	Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
 	[void](Disable-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $TempFolder)
 }
 
-If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("XboxGameCallableUI"))
+If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "XboxGameCallableUI")
 {
 	Try
 	{
@@ -1746,11 +1751,11 @@ If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("XboxGameCal
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_Enabled" -Value 0
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2
 		Set-ItemProperty -Path "$CUSystem\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2
-		If ($Build -ge "16273" -and $DisableDefenderComplete.Equals($true))
+		If ($Build -ge "16299" -and $DisableDefenderComplete -eq $true)
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsdefender"
 		}
-		ElseIf ($Build.Equals("15063") -and $DisableDefenderComplete.Equals($true))
+		ElseIf ($Build -eq "15063" -and $DisableDefenderComplete -eq $true)
 		{
 			Set-ItemProperty -Path "$Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender"
 		}
@@ -1777,7 +1782,7 @@ If ($SystemAppsComplete.Equals($true) -and $SystemAppsList.Contains("XboxGameCal
 	}
 }
 
-If ($RegistryComplete.Equals($true))
+If ($RegistryComplete -eq $true)
 {
 	Try
 	{
@@ -1843,14 +1848,14 @@ If ($RemovePackages)
 
 If ($AddDrivers)
 {
-	If ((Test-Path -Path $AddDrivers -PathType Container) -eq $true)
+	If ((Test-Path -Path $AddDrivers -PathType Container) -and (Get-ChildItem -Path $AddDrivers -Recurse -Include "*.inf"))
 	{
 		Write-Output ''
 		Process-Log -Output "Injecting driver packages into the image." -LogPath $LogFile -Level Info
 		[void](Add-WindowsDriver -Path $MountFolder -Driver $AddDrivers -Recurse -ForceUnsigned)
 		Get-WindowsDriver -Path $MountFolder | Format-List | Out-File $WorkFolder\DriverPackageList.txt -Force
 	}
-	ElseIf ((Test-Path -Path $AddDrivers -PathType Leaf) -eq $true -and ([IO.FileInfo]$AddDrivers).Extension -like ".INF")
+	ElseIf ((Test-Path -Path $AddDrivers -PathType Leaf) -and ([IO.FileInfo]$AddDrivers).Extension -like ".inf")
 	{
 		Write-Output ''
 		Process-Log -Output "Injecting driver package into the image." -LogPath $LogFile -Level Info
@@ -1864,7 +1869,7 @@ If ($AddDrivers)
 	}
 }
 
-If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true))
+If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true)
 {
 	$SETUPCOMPLETE1 = {
 		$SetupCompleteStr1 = @"
@@ -1893,26 +1898,6 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefresh" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Shell\FamilySafetyRefresh" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "File History (maintenance mode)" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\FileHistory\File History (maintenance mode)" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL  
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticResolver" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
@@ -1934,7 +1919,7 @@ DEL "%~f0"
 	}
 	& $SETUPCOMPLETE1
 }
-ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true))
+ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true)
 {
 	$SETUPCOMPLETE2 = {
 		$SetupCompleteStr2 = @"
@@ -1963,26 +1948,6 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefresh" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Shell\FamilySafetyRefresh" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "File History (maintenance mode)" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\FileHistory\File History (maintenance mode)" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL  
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticResolver" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL /F /Q "%WINDIR%\system32\sysprep\unattend.xml" >NUL
@@ -1998,7 +1963,7 @@ DEL "%~f0"
 	}
 	& $SETUPCOMPLETE2
 }
-ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true)
+ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true)
 {
 	$SETUPCOMPLETE3 = {
 		$SetupCompleteStr3 = @"
@@ -2027,26 +1992,6 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefresh" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Shell\FamilySafetyRefresh" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "File History (maintenance mode)" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\FileHistory\File History (maintenance mode)" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL  
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticResolver" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
@@ -2109,12 +2054,33 @@ DEL "%~f0"
 	& $SETUPCOMPLETE4
 }
 
+If ($AdditionalFeatures)
+{
+	Try
+	{
+		Clear-Host
+		Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
+		Start-Sleep 3
+		Additional-Features @AddFeatures
+	}
+	Catch [System.IO.FileNotFoundException]
+	{
+		Write-Output ''
+		Process-Log -Output "Additional-Features function script not found." -LogPath $LogFile -Level Error
+	}
+}
+
+If (Verify-OfflineHives)
+{
+	[void](Unload-OfflineHives)
+}
+
 Try
 {
 	Clear-Host
 	Process-Log -Output "Verifying the image health before finalizing." -LogPath $LogFile -Level Info
-	$ScriptEndHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
-	If ($ScriptEndHealthCheck.ImageHealthState -eq "Healthy")
+	$EndHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
+	If ($EndHealthCheck.ImageHealthState -eq "Healthy")
 	{
 		Write-Output ''
 		Write-Output "The image is healthy."
@@ -2127,7 +2093,7 @@ Try
 		Start-Sleep 3
 	}
 }
-Catch [System.Exception]
+Catch [System.IO.IOException]
 {
 	Write-Output ''
 	Process-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
@@ -2143,10 +2109,10 @@ Try
 	}
 	[void](Dismount-WindowsImage -Path $MountFolder -Save -CheckIntegrity -ScratchDirectory $TempFolder)
 }
-Catch [System.Exception]
+Catch [System.IO.IOException], [System.Exception]
 {
 	Write-Output ''
-	Process-Log -Output "An error occured while trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
+	Process-Log -Output "An I/O error occured while trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
 	Terminate-Script
 	Break
 }
@@ -2157,10 +2123,10 @@ Try
 	Process-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
 	[void](Export-WindowsImage -CheckIntegrity -CompressionType maximum -SourceImagePath $ImageFile -SourceIndex $Index -DestinationImagePath $WorkFolder\install.wim -ScratchDirectory $TempFolder)
 }
-Catch [System.Exception]
+Catch [System.IO.IOException], [System.Exception]
 {
 	Write-Output ''
-	Process-Log -Output "An error occured while trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
+	Process-Log -Output "An I/O error occured while trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
 	Terminate-Script
 	Break
 }
