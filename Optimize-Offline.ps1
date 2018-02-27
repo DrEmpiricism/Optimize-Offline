@@ -91,7 +91,7 @@ Param
 	[int]$Index = 1,
 	[Parameter(Mandatory = $true,
 			   HelpMessage = 'The build number of the image.')]
-	[ValidateRange(15063, 16299)]
+	[ValidateRange(15063, 16273)]
 	[int]$Build,
 	[Parameter(HelpMessage = 'Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.')]
 	[Alias('Select')]
