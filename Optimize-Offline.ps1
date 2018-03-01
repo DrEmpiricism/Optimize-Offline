@@ -1876,20 +1876,6 @@ DEL "%~f0"
 	& $SETUPCOMPLETE4
 }
 
-
-If ($AdditionalFeatures)
-{
-	Clear-Host
-	Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
-	Start-Sleep 3
-	Additional-Features @AddFeatures
-}
-
-If (Verify-OfflineHives)
-{
-	[void](Unload-OfflineHives)
-}
-
 Try
 {
 	Clear-Host
