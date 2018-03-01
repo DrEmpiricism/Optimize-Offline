@@ -1,3 +1,17 @@
+## 3.0.7.4 ## (03-01-2018)
+
+- The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable array variables and are no longer controlled with switches.
+- In order to prevent them from running completely, you can comment out the variable with a # right before '[string[]]'.
+- The only exception is the AppWhiteList, which is enabled by using its respective switch when calling the script.
+- This was changed to reduce the amount of switch requirements, and because using a switch while also having to edit a variable are counter-productive.  As such, one can comment out or uncomment out/add what they require and the script will rely on a simple check of the array contents when processing.
+
+- Multiple overly-sensitive registry settings have been removed, primarily those that dealt with locking down system and store apps, which could reduce functionality on manufactured devices that rely on their personal software and apps to interact across the hardware of a device.
+
+- Combined multiple separate processes into a parent process to prevent reduntant processes taking place like registry hive loading and unloading.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
 ## 3.0.7.3 ## (02-27-18)
 
 - Made some changes to operational variables to further filter unsupported builds.
