@@ -1,3 +1,14 @@
+## 3.0.7.5 ## (03-07-2018)
+
+- Firewall rules for blocking Cortana's transmission of data has been added to the registry.  The search function remains 100% operational, as these entries simply prevent her "listening" UI from accessing the internet.
+
+- Multiple syntax changes within the registry optimizations.
+
+- Renamed the -AddDrivers parameter to just -Drivers, -UseWhiteList to -WhiteListApps and the registry optimization switch to -SetRegistry.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
 ## 3.0.7.5 ## (03-01-2018)
 
 - The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays and are no longer controlled with switches.
