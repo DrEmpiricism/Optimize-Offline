@@ -813,11 +813,6 @@ If ($AllApps)
 	}
 }
 
-If ($WhiteListApps -or $SelectApps)
-{
-	(Get-AppxProvisionedPackage -Path $MountFolder).ForEach('DisplayName') | Out-File -FilePath $WorkFolder\AppxPackageList.txt
-}
-
 If ($SetRegistry)
 {
 	#region Registry Optimizations
@@ -827,7 +822,7 @@ If ($SetRegistry)
 		Process-Log -Output "Enhancing system security, usability and performance with registry optimizations." -LogPath $LogFile -Level Info
 		[void](Load-OfflineHives)
 		#****************************************************************
-		Write-Output "Disabling Cortana and blocking its outgoing network traffic." >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Disabling Cortana and its outgoing network traffic." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Value 0 
@@ -883,7 +878,7 @@ If ($SetRegistry)
 		Set-ItemProperty @CortanaPackage
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Search Bar Web Connectivity." >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Disabling Search Bar Web Connectivity." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0 
@@ -967,33 +962,17 @@ If ($SetRegistry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisableUAR" -Value 1 
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Non-Explicit App Synchronization." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" 
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling System Location Services and Sensors." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
-		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}"
-		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}"
-		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}"
-		New-Container "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" -Name "Value" -Value "Deny" 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -Name "Value" -Value "Deny" 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -Name "Value" -Value "Deny" 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -Name "Value" -Value "Deny" 
 		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 
-		New-Container "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1
+		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Error Reporting." >> $WorkFolder\Registry-Optimizations.log
@@ -1031,18 +1010,6 @@ If ($SetRegistry)
 		#****************************************************************
 		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CredUI"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CredUI" -Name "DisablePasswordReveal" -Value 1 
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Cross-Device Experiences." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 
-		#****************************************************************
-		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
-		#****************************************************************
-		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Windows Media Player Statistics Tracking." >> $WorkFolder\Registry-Optimizations.log
@@ -1237,13 +1204,16 @@ If ($SetRegistry)
 		Write-Output "Enabling Dark Theme for Settings and Modern Apps." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
+		New-Container "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Increasing Taskbar Transparency." >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Increasing Taskbar and Theme Transparency." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "UseOLEDTaskbarTransparency" -Value 1 
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "UseOLEDTaskbarTransparency" -Value 1
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Value 1
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling 'Shortcut' text for Shortcuts." >> $WorkFolder\Registry-Optimizations.log
@@ -1430,7 +1400,7 @@ If ($SetRegistry)
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.stl\Shell\3D Edit"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tif\Shell\3D Edit"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit"
-			) | % { Remove-Item $_ -Recurse -Force  }
+			) | % { Remove-Item $_ -Recurse -Force }
 		}
 		ElseIf ($Build -lt "16273")
 		{
@@ -1450,7 +1420,7 @@ If ($SetRegistry)
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.png\Shell\3D Edit"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tif\Shell\3D Edit"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit"
-			) | % { Remove-Item $_ -Recurse -Force  }
+			) | % { Remove-Item $_ -Recurse -Force }
 		}
 		If ($Build -ge "15063")
 		{
@@ -1467,7 +1437,7 @@ If ($SetRegistry)
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.ply\Shell\3D Print"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.stl\Shell\3D Print"
 				"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.wrl\Shell\3D Print"
-			) | % { Remove-Item $_ -Recurse -Force  }
+			) | % { Remove-Item $_ -Recurse -Force }
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1482,7 +1452,7 @@ If ($SetRegistry)
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{450D8FBA-AD25-11D0-98A8-0800361B1103}\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}"
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}"
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}"
-		) | % { Remove-Item $_ -Recurse -Force  }
+		) | % { Remove-Item $_ -Recurse -Force }
 		#****************************************************************
 		If ($Build -ge "16273")
 		{
@@ -1538,7 +1508,7 @@ If ($SetRegistry)
 		{
 			#****************************************************************
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-			Write-Output "Removing all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
+			Write-Output "Hiding all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" 
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" 
@@ -1630,7 +1600,7 @@ If ($SetRegistry)
 				$ImmersiveLinks3 = @{
 					Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
 					Name   = "SettingsPageVisibility"
-					Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender"
+					Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsdefender"
 				}
 				Set-ItemProperty @ImmersiveLinks3				 
 			}
@@ -1639,7 +1609,7 @@ If ($SetRegistry)
 				$ImmersiveLinks4 = @{
 					Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
 					Name   = "SettingsPageVisibility"
-					Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;windowsinsider;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking"
+					Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking"
 				}
 				Set-ItemProperty @ImmersiveLinks4				 
 			}
@@ -1810,7 +1780,7 @@ If ($DisableDefenderComplete -eq $true -and $Build -ge "16273")
 	[void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
 }
 
-If ($SystemAppsList -contains "XboxGameCallableUI")
+If ($SystemAppsList -contains "XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.PackageName -like "*Xbox*" }).Count -lt "5"))
 {
 	Write-Output ''
 	Process-Log -Output "Disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Info
@@ -1854,7 +1824,6 @@ If ($FeatureDisableList.Count -gt "0")
 		}
 		[void]($WindowsFeatures.Where{ $_.FeatureName -like $Feature } | Disable-WindowsOptionalFeature @DisableFeature)
 	}
-	(Get-WindowsOptionalFeature -Path $MountFolder).ForEach('FeatureName') | Out-File -FilePath $WorkFolder\OptionalFeatureList.txt
 }
 
 If ($PackageRemovalList.Count -gt "0")
@@ -1871,7 +1840,6 @@ If ($PackageRemovalList.Count -gt "0")
 		}
 		[void]($WindowsPackages.Where{ $_.PackageName -like $Package } | Remove-WindowsPackage @RemovePackage)
 	}
-	(Get-WindowsPackage -Path $MountFolder).ForEach('PackageName') | Out-File -FilePath $WorkFolder\OnDemandPackageList.txt
 }
 
 If ($Drivers)
@@ -1928,22 +1896,21 @@ DEL /F /Q "%WINDIR%\system32\sysprep\unattend.xml" >NUL
 DEL /F /Q "%WINDIR%\panther\unattend.xml" >NUL
 DEL "%~f0"
 "@
+	If ($SystemAppsList -contains "SecHealthUI")
+	{
+		$SetupCompleteStr = $SetupCompleteStr.TrimEnd('DEL "%~f0"')
+		$SetupCompleteStr += 'REGSVR32 /S /U "%ProgramFiles%\Windows Defender\shellext.dll" >NUL'
+		$SetupCompleteStr += "`nTASKKILL /F /IM MSASCuiL.exe >NUL`n"
+		$SetupCompleteStr += 'DEL "%~f0"'
+	}
 	New-Container -Path "$MountFolder\Windows\Setup\Scripts"
 	$SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
 	Set-Content -Path $SetupCompleteScript -Value $SetupCompleteStr -Encoding ASCII -Force
 }
 
-If ($RegistryComplete -eq $true)
+If ($SystemAppsComplete -eq $true)
 {
 	& $SETUPCOMPLETE
-}
-
-If ($AdditionalFeatures)
-{
-	Clear-Host
-	Process-Log -Output "Invoking the Additional-Features function script." -LogPath $LogFile -Level Info
-	Start-Sleep 3
-	Additional-Features @AddFeatures
 }
 
 Try
