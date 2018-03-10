@@ -1,3 +1,18 @@
+## 3.0.7.7 ## (03-09-2018)
+
+- SetupComplete.cmd has been removed from the script. Instead, the script will check if there's a folder called "Setup" in the root directory of the script, then check that folder for any .cmd scripts. If any are found, it will recursively add them to \Windows\Setup\Scripts (where all startup scripts go). This way, if any scripts should be added to the image, one simply just needs to make a "Setup" folder in the script's root directory and place their scripts in there.
+
+- If no Setup folder is found, the script continues to finalize and dismount. 
+
+- No output is performed, and the scripts it finds are added silently.
+
+- Added a few checks for what Provisioned Application Packages were removed from the image to then further disable other features (like Xbox bloat). Previously, it just checked if the XboxCallableUI was among the system apps removed.
+
+The GUI project of this script should be out of its beta stage soon.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
 ## 3.0.7.5 ## (03-07-2018)
 
 - Firewall rules for blocking Cortana's transmission of data has been added to the registry.  The search function remains 100% operational, as these entries simply prevent her "listening" UI from accessing the internet.
