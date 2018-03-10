@@ -33,31 +33,30 @@
 	.PARAMETER WhiteListApps
 		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
+	.PARAMETER SetRegistry
+		Sets optimized registry values into the offline registry hives.
+	
 	.PARAMETER Drivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
 	.PARAMETER Local
-		Uses the local directory of the script as its working location, as opposed to a temporary directory. This way one can run it on any drive - physical or USB - as opposed to
-		their primary drive.
-		
-	.PARAMETER SetRegistry
-		Performs multiple registry optimizations.
+		Sets the mount and save locations to the root path of the script
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -AddDrivers "E:\DriverFolder" -AdditionalFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -Drivers "E:\DriverFolder" -SetRegistry
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 16299 -SelectApps -AddDrivers "E:\DriverFolder" -AdditionalFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SetRegistry
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -UseWhiteList -Drivers "E:\DriverFolder" -AdditionalFeatures
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -WhiteListApps -Drivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -Drivers "E:\DriverFolder\OEM12.inf" -AdditionalFeatures
-
+		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
+	
 	.NOTES
-		The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable array variables.
-		In order to prevent them from running completely, you can comment out the variable with a # right before '[string[]]'.
+		The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
+		They can be commented out with the pound (#) symbol to omit them from whatever process they're apart of.
 		The only exception is the AppWhiteList, which is enabled by using its respective switch when calling the script.
 	
 	.NOTES
@@ -66,8 +65,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.7.6
-		Last updated:	03/07/2018
+		Version:        3.0.7.7
+		Last updated:	03/09/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -97,15 +96,14 @@ param
 	[Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages not WhiteListed.')]
 	[Alias('WhiteList')]
 	[switch]$WhiteListApps,
+	[Parameter(HelpMessage = 'Sets optimized registry values into the offline registry hives.')]
+	[switch]$SetRegistry,
 	[Parameter(Mandatory = $false,
 			   HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
 	[ValidateScript({ Test-Path $(Resolve-Path $_) })]
 	[string]$Drivers,
-	[Parameter(HelpMessage = 'Invokes the Additional-Features function to apply additional customizations and tweaks included in its parameter hashtable.')]
-	[switch]$AdditionalFeatures,
 	[Parameter(HelpMessage = 'Sets the mount and save locations to the root path of the script')]
-	[switch]$Local,
-	[switch]$SetRegistry
+	[switch]$Local
 )
 ## *************************************************************************************************
 ## *          THE FIELDS BELOW CAN BE EDITED TO FURTHER ACCOMMODATE REMOVAL REQUIREMENTS.          *
@@ -171,7 +169,6 @@ $PackageRemovalList = @(
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
 
-
 #region Script Variables
 $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
 $Host.UI.RawUI.WindowTitle = "Optimizing image."
@@ -194,13 +191,6 @@ Function Verify-Admin
 	Return $IsAdmin
 	Write-Output ''
 	Start-Sleep 3
-}
-
-Function Pause-Script
-{
-	Write-Output ''
-	Write-Host "When ready, press any key to continue." -ForegroundColor Green
-	[void][Console]::ReadKey($true)
 }
 
 Function Process-Log
@@ -723,7 +713,7 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -like ".WIM")
 	$CheckBuild = (Get-WindowsImage -ImagePath $ImageFile -Index $Index -LogPath $DISMLog)
 }
 
-If ($CheckBuild.Build -lt "16273")
+If ($CheckBuild.Build -lt "15063")
 {
 	Remove-Item -Path $MountFolder -Recurse -Force
 	Remove-Item -Path $ImageFolder -Recurse -Force
@@ -1865,52 +1855,10 @@ If ($Drivers)
 	}
 }
 
-$SETUPCOMPLETE = {
-	$SetupCompleteStr = @"
-SET DEFAULTUSER0="defaultuser0"
-
-FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "s-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
-GOTO :CONTINUE
-
-:QUERY_REGISTRY
-FOR /F "TOKENS=3" %%G IN ('REG QUERY %1 /v ProfileImagePath') DO SET PROFILEPATH=%%G
-FOR /F "TOKENS=3 delims=\" %%E IN ('ECHO %PROFILEPATH%') DO SET PROFILENAME=%%E
-FOR /F "TOKENS=1 delims=." %%F IN ('ECHO %PROFILENAME%') DO SET SCANREGISTRY=%%F
-ECHO %DEFAULTUSER0%|FIND /I "%SCANREGISTRY%"
-IF %ERRORLEVEL% EQU 1 GOTO :CONTINUE
-RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
-REG DELETE /F %1 >NUL 
-IF EXIST "%SYSTEMDRIVE%\Users\%PROFILENAME%" GOTO :RETRY_DIR_REMOVE
-GOTO :CONTINUE
-
-:RETRY_DIR_REMOVE
-TAKEOWN /F "%PROFILENAME%" >NUL
-TIMEOUT /T 2 >NUL
-ICACLS "%PROFILENAME%" /GRANT *S-1-1-0:F >NUL
-TIMEOUT /T 2 >NUL
-RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
-GOTO :CONTINUE
-
-:CONTINUE
-DEL /F /Q "%WINDIR%\system32\sysprep\unattend.xml" >NUL
-DEL /F /Q "%WINDIR%\panther\unattend.xml" >NUL
-DEL "%~f0"
-"@
-	If ($SystemAppsList -contains "SecHealthUI")
-	{
-		$SetupCompleteStr = $SetupCompleteStr.TrimEnd('DEL "%~f0"')
-		$SetupCompleteStr += 'REGSVR32 /S /U "%ProgramFiles%\Windows Defender\shellext.dll" >NUL'
-		$SetupCompleteStr += "`nTASKKILL /F /IM MSASCuiL.exe >NUL`n"
-		$SetupCompleteStr += 'DEL "%~f0"'
-	}
-	New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-	$SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
-	Set-Content -Path $SetupCompleteScript -Value $SetupCompleteStr -Encoding ASCII -Force
-}
-
-If ($SystemAppsComplete -eq $true)
+If (Test-Path -Path "$PSScriptRoot\Setup" -Filter "*.cmd")
 {
-	& $SETUPCOMPLETE
+	New-Container "$MountFolder\Windows\Setup\Scripts"
+	Copy-Item -Path "$PSScriptRoot\Setup\*" -Filter "*.cmd" -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse -Force
 }
 
 Try
