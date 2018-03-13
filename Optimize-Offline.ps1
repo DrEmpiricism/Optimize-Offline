@@ -268,12 +268,24 @@ Function Process-Log
 	}
 }
 
-#region C# Coded Token Privilege Method
-Add-Type @"
+Function Set-RegistryOwner # Changes the ownership and access control of protected registry keys and subkeys in order to add or remove values.
+{
+	[CmdletBinding()]
+	Param
+	(
+		[Parameter(Mandatory = $true)]
+		[string]$Hive,
+		[Parameter(Mandatory = $true)]
+		[string]$SubKey
+	)
+	
+	Begin # Grants the Access Token Privileges required to set full acesss and ownership on a protected registry hive/subkey.
+	{
+		#region C# Process Privilege Method
+		Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-
-public class AdjustAccessToken
+public sealed class AdjustAccessToken
 {
     [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
     internal static extern bool AdjustTokenPrivileges(
@@ -290,8 +302,7 @@ public class AdjustAccessToken
     internal static extern bool OpenProcessToken(
         IntPtr h,
         int acc,
-        ref IntPtr
-        phtok
+        ref IntPtr phtok
         );
     [DllImport("advapi32.dll", SetLastError = true)]
     internal static extern bool LookupPrivilegeValue(
@@ -310,7 +321,7 @@ public class AdjustAccessToken
     internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
     internal const int TOKEN_QUERY = 0x00000008;
     internal const int TOKEN_ADJUST_PRIVILEGES = 0x00000020;
-    public static bool GrantPrivilege(string privilege)
+    public static void GrantPrivilege(string privilege)
     {
         try
         {
@@ -339,14 +350,13 @@ public class AdjustAccessToken
                 IntPtr.Zero,
                 IntPtr.Zero
                 );
-            return retVal;
         }
         catch(Exception ex)
         {
             throw ex;
         }
     }
-    public static bool RevokePrivilege(string privilege)
+    public static void RevokePrivilege(string privilege)
     {
         try
         {
@@ -375,7 +385,6 @@ public class AdjustAccessToken
                 IntPtr.Zero,
                 IntPtr.Zero
                 );
-            return retVal;
         }
         catch(Exception ex)
         {
@@ -384,24 +393,9 @@ public class AdjustAccessToken
     }
 }
 "@
-#endregion C# Coded Token Privilege Method
-
-Function Set-RegistryOwner # Changes the ownership and access control of protected registry keys and subkeys (those owned by TrustedInstaller) in order to add or remove values.
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true)]
-		[string]$Hive,
-		[Parameter(Mandatory = $true)]
-		[string]$SubKey
-	)
-	
-	Begin # Grants the Access Token Privileges required to set full acesss and ownership on a protected registry hive/subkey.
-	{
-		[void][AdjustAccessToken]::GrantPrivilege("SeTakeOwnershipPrivilege") # Required to override access control permissions.
-		[void][AdjustAccessToken]::GrantPrivilege("SeRestorePrivilege") # Required to set Owner Permissions.
-		[void][AdjustAccessToken]::GrantPrivilege("SeBackupPrivilege") # Required to bypass Traverse Checking.
+		#endregion C# Process Privilege Method
+		[AdjustAccessToken]::GrantPrivilege("SeTakeOwnershipPrivilege") # Grants the privilege to override access control permissions.
+		[AdjustAccessToken]::GrantPrivilege("SeRestorePrivilege") # Grants the privilege to restore ownership permissions.
 	}
 	Process # Begins processing and applying registry hive and subkey access now that the proper Access Token Privileges have been granted.
 	{
@@ -443,17 +437,15 @@ Function Set-RegistryOwner # Changes the ownership and access control of protect
 				$Key = "HKLM:\SOFTWARE\Classes\$SubKey"
 			}
 		}
-		# Restores the ownership and access control permissions back to the TrustedInstaller after the changes to the subkey have been made.
-		$TrustedInstaller = [System.Security.Principal.NTAccount]"NT SERVICE\TrustedInstaller"
 		$ACL = Get-Acl $Key
+		$TrustedInstaller = [System.Security.Principal.NTAccount]"NT SERVICE\TrustedInstaller"
 		$ACL.SetOwner($TrustedInstaller)
-		$ACL | Set-Acl -Path $Key
+		Set-Acl -Path $Key -AclObject $ACL # Restores the ownership and access control permissions after the changes to the subkey have been made.
 	}
-	End # Revokes the Access Token Privileges since system-level access is no longer required.
+	End
 	{
-		[void][AdjustAccessToken]::RevokePrivilege("SeTakeOwnershipPrivilege")
-		[void][AdjustAccessToken]::RevokePrivilege("SeRestorePrivilege")
-		[void][AdjustAccessToken]::RevokePrivilege("SeBackupPrivilege")
+		[AdjustAccessToken]::RevokePrivilege("SeTakeOwnershipPrivilege")
+		[AdjustAccessToken]::RevokePrivilege("SeRestorePrivilege")
 	}
 }
 
