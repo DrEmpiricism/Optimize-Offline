@@ -171,7 +171,7 @@ $PackageRemovalList = @(
 )
 
 ##*=============================================
-##* INACTIVE
+##* ADDITIONAL-FEATURES FUNCTION SCRIPT PARAMS
 ##*=============================================
 $AddFeatures = @{
 	ContextMenu	       = $true
