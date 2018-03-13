@@ -1400,95 +1400,24 @@ If ($SetRegistry)
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Enabling Photo-Viewer for .BMP, .GIF, .JPG, .PNG and .TIF" >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Restoring Windows Photo Viewer." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\DefaultIcon"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\image\shell\Image Preview\command"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\image\shell\Image Preview\DropTarget"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open" -Name "MuiVerb" -Value "@photoviewer.dll,-3043"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap" -Name "FriendlyTypeName" -Value "@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3056"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\imageres.dll,-70"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Bitmap\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF" -Name "EditFlags" -Value 65536
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF" -Name "FriendlyTypeName" -Value "@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3055"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\imageres.dll,-72"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg" -Name "EditFlags" -Value 65536
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg" -Name "FriendlyTypeName" -Value "@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3055"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\imageres.dll,-72"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Jpeg\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif" -Name "FriendlyTypeName" -Value "@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3057"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\imageres.dll,-83"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Gif\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png" -Name "FriendlyTypeName" -Value "@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3057"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\imageres.dll,-71"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Png\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp" -Name "EditFlags" -Value 65536
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp" -Name "ImageOptionFlags" -Value 1
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\wmphoto.dll,-400"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc.Wdp\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\image\shell\Image Preview\command" -Name "(default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\image\shell\Image Preview\DropTarget" -Name "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Value ""
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities" -Name "ApplicationDescription" -Value "@%ProgramFiles%\\Windows Photo Viewer\\photoviewer.dll,-3069"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities" -Name "ApplicationName" -Value "@%ProgramFiles%\\Windows Photo Viewer\\photoviewer.dll,-3009"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".jpg" -Value "PhotoViewer.FileAssoc.Jpeg"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".wdp" -Value "PhotoViewer.FileAssoc.Wdp"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".jfif" -Value "PhotoViewer.FileAssoc.JFIF"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".dib" -Value "PhotoViewer.FileAssoc.Bitmap"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".png" -Value "PhotoViewer.FileAssoc.Png"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".jxr" -Value "PhotoViewer.FileAssoc.Wdp"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".bmp" -Value "PhotoViewer.FileAssoc.Bitmap"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".jpe" -Value "PhotoViewer.FileAssoc.Jpeg"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".jpeg" -Value "PhotoViewer.FileAssoc.Jpeg"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".gif" -Value "PhotoViewer.FileAssoc.Gif"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".tif" -Value "PhotoViewer.FileAssoc.Tiff"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name ".tiff" -Value "PhotoViewer.FileAssoc.Tiff"
+		$ImageTypes = @(
+			".bmp"
+			".gif"
+			".jfif"
+			".jpeg"
+			".jpg"
+			".png"
+			".tif"
+			".tiff"
+			".wdp"
+		) | % {
+			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_";
+			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids";
+			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff";
+			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value (New-Object Byte[] 0)
+		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Removing 'Restore Previous Versions' from the Property Tab and Context Menu." >> $WorkFolder\Registry-Optimizations.log
