@@ -1,3 +1,17 @@
+## 3.0.7.8 ## (03-13-2018)
+
+- Re-incorporated the AdditionalFeatures function script. Its parameters can be set by editing its hashtable within the main Optimize-Offline script.
+
+- Re-created the Win32 Calc WIMs using Windows 10 Enterprise LTSB 2016. They are compressed using non-solid LZMS "recovery" compression.
+
+- Be aware of image requirements before trying to apply SystemImages to the image.
+
+- The SetupComplete.cmd is now appended using the .NET Stringbuilder. The script does not search for a Setup folder in its root directory any longer.
+
+- The incorporation of the default Windows Photo Viewer should be fixed now and working as intended.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.7.7 ## (03-09-2018)
 
 - SetupComplete.cmd has been removed from the script. Instead, the script will check if there's a folder called "Setup" in the root directory of the script, then check that folder for any .cmd scripts. If any are found, it will recursively add them to \Windows\Setup\Scripts (where all startup scripts go). This way, if any scripts should be added to the image, one simply just needs to make a "Setup" folder in the script's root directory and place their scripts in there.
@@ -12,7 +26,6 @@ The GUI project of this script should be out of its beta stage soon.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-
 ## 3.0.7.5 ## (03-07-2018)
 
 - Firewall rules for blocking Cortana's transmission of data has been added to the registry.  The search function remains 100% operational, as these entries simply prevent her "listening" UI from accessing the internet.
@@ -22,7 +35,6 @@ The GUI project of this script should be out of its beta stage soon.
 - Renamed the -AddDrivers parameter to just -Drivers, -UseWhiteList to -WhiteListApps and the registry optimization switch to -SetRegistry.
 
 --------------------------------------------------------------------------------------------------------------------------------
-
 
 ## 3.0.7.5 ## (03-01-2018)
 
@@ -40,7 +52,6 @@ The GUI project of this script should be out of its beta stage soon.
 - Renamed the -AddDrivers parameter to just -Drivers, -UseWhiteList to -WhiteListApps and the registry optimization switch to -SetRegistry.
 
 --------------------------------------------------------------------------------------------------------------------------------
-
 
 ## 3.0.7.3 ## (02-27-18)
 
