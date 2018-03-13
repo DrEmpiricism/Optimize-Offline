@@ -116,7 +116,7 @@ param
 ## *************************************************************************************************
 
 ##*=============================================
-##* SYSTEM APPS TO BE REMOVED
+##* SYSTEM APPS TO BE REMOVED.
 ##*=============================================
 $SystemAppsList = @(
 	"contactsupport"
@@ -136,7 +136,7 @@ $SystemAppsList = @(
 )
 
 ##*=============================================
-##* APPX PACKAGES TO KEEP. NO WILDCARDS
+##* APPX PACKAGES TO KEEP. NO WILDCARDS.
 ##*=============================================
 $AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
@@ -171,7 +171,7 @@ $PackageRemovalList = @(
 )
 
 ##*=============================================
-##* ADDITIONAL-FEATURES FUNCTION SCRIPT PARAMS
+##* ADDITIONAL-FEATURES FUNCTION SCRIPT PARAMS.
 ##*=============================================
 $AddFeatures = @{
 	ContextMenu	       = $true
