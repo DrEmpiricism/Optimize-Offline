@@ -8,7 +8,9 @@
 
 - The SetupComplete.cmd is now appended using the .NET Stringbuilder. The script does not search for a Setup folder in its root directory any longer.
 
-- The incorporation of the default Windows Photo Viewer should be fixed now and working as intended.
+- The default Windows Photo Viewer now displays as it should.
+
+- The C# Process Privilege method and the Set-RegistryOwner function have been updated.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
