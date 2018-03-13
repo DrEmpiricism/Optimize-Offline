@@ -67,19 +67,12 @@
 	## *************************************************************************************************
 	
 	## Answer file variables.
-	#$ComputerName = "MY-PC"
-	#$Manufacturer = "Gigabyte."
-	#$Model = "GA‑Z170X‑Gaming G1"
-	#$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
-	#$Owner = "My Name"
-	#$Organization = "My Org"
-
-	$ComputerName = "ZEN-TEST"
-	$Manufacturer = "Omnic Tech"
-	$Model = "Workstation"
-	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\OMNIC_BADGE.bmp"
-	$Owner = "Omnic Tech"
-	$Organization = "Omnic Tech"
+	$ComputerName = "MY-PC"
+	$Manufacturer = "Gigabyte."
+	$Model = "GA‑Z170X‑Gaming G1"
+	$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
+	$Owner = "My Name"
+	$Organization = "My Org"
 	
 	## *************************************************************************************************
 	## *                                      END VARIABLES.                                           *
