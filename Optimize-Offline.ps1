@@ -119,7 +119,7 @@ param
 ##* SYSTEM APPS TO BE REMOVED.
 ##*=============================================
 $SystemAppsList = @(
-	"contactsupport"
+	#"contactsupport"
 	"ContentDeliveryManager"
 	#"Cortana"
 	"HolographicFirstRun"
@@ -136,7 +136,7 @@ $SystemAppsList = @(
 )
 
 ##*=============================================
-##* APPX PACKAGES TO KEEP. NO WILDCARDS.
+##* APPX PACKAGES TO KEEP BY DISPLAY NAME.
 ##*=============================================
 $AppWhiteList = @(
 	"Microsoft.DesktopAppInstaller"
@@ -175,13 +175,13 @@ $PackageRemovalList = @(
 ##*=============================================
 $AddFeatures = @{
 	ContextMenu	       = $true
-	NetFx3			   = $null
-	SystemImages       = $null
-	OfflineServicing   = $null
-	Unattend		   = $null
-	GenuineTicket	   = $null
-	HostsFile		   = $true
-	Win32Calc		   = $true
+	NetFx3		       = $null
+	SystemImages           = $null
+	OfflineServicing       = $null
+	Unattend	       = $null
+	GenuineTicket	       = $null
+	HostsFile	       = $true
+	Win32Calc	       = $true
 	SysPrep		       = $null
 }
 ## *************************************************************************************************
@@ -609,7 +609,7 @@ Function Clean-CurrentMount # Attempts to dismount and clean-up the locations of
 		$HivesToUnload = [void](REG QUERY HKLM | FINDSTR /V "\BCD00000000 \DRIVERS \HARDWARE \SAM \SECURITY \SOFTWARE \SYSTEM")
 		If ($HivesToUnload -ne $null)
 		{
-			$null = [void]($HivesToUnload.ForEach{ REG UNLOAD $_ })
+			[void]($HivesToUnload.ForEach{ REG UNLOAD $_ })
 		}
 		[void](Dismount-WindowsImage -Path $MountPath -Discard)
 		[void](Clear-WindowsCorruptMountPoint)
@@ -1741,10 +1741,10 @@ If ($DisableDefenderComplete -eq $true -and $Build -ge "16273")
 	Write-Output ''
 	Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
 	$DisableDefenderFeature = @{
-		Path			  = $MountFolder
-		FeatureName	      = "Windows-Defender-Default-Definitions"
+		Path		  = $MountFolder
+		FeatureName	  = "Windows-Defender-Default-Definitions"
 		ScratchDirectory  = $TempFolder
-		LogPath		      = $DISMLog
+		LogPath		  = $DISMLog
 	}
 	[void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
 }
@@ -1787,9 +1787,9 @@ If ($FeatureDisableList.Count -gt "0")
 	ForEach ($Feature in $FeatureDisableList)
 	{
 		$DisableFeature = @{
-			Path			  = $MountFolder
+			Path	          = $MountFolder
 			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
+			LogPath		  = $DISMLog
 		}
 		[void]($WindowsFeatures.Where{ $_.FeatureName -like $Feature } | Disable-WindowsOptionalFeature @DisableFeature)
 	}
@@ -1803,9 +1803,9 @@ If ($PackageRemovalList.Count -gt "0")
 	ForEach ($Package in $PackageRemovalList)
 	{
 		$RemovePackage = @{
-			Path			  = $MountFolder
+			Path	          = $MountFolder
 			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
+			LogPath		  = $DISMLog
 		}
 		[void]($WindowsPackages.Where{ $_.PackageName -like $Package } | Remove-WindowsPackage @RemovePackage)
 	}
@@ -1982,12 +1982,12 @@ Try
 	Process-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
 	$ExportImage = @{
 		CheckIntegrity	      = $true
-		CompressionType	      = 'Maximum'
+		CompressionType	      = "Maximum"
 		SourceImagePath	      = $ImageFile
-		SourceIndex		      = $Index
+		SourceIndex	      = $Index
 		DestinationImagePath  = "$WorkFolder\install.wim"
-		ScratchDirectory	  = $TempFolder
-		LogPath			      = $DISMLog
+		ScratchDirectory      = $TempFolder
+		LogPath		      = $DISMLog
 	}
 	[void](Export-WindowsImage @ExportImage)
 }
