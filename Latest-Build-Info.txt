@@ -16,6 +16,8 @@
 
 - Incoporated value type when setting an item property in the registry.
 
+- The Additional-Features function script has had some very minor changes, though nothing that modifies any of its processed modifications.
+
 --------------------------------------------------------------------------------------------------------------------------------
 
 ## 3.0.7.8 ## (03-13-2018)
