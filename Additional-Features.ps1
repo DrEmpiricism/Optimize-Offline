@@ -62,23 +62,16 @@ Function Additional-Features {
     )
 	
     ## *************************************************************************************************
-    ## *          			          THE VARIABLES BELOW CAN BE EDITED.          	                   *
+    ## *          		      THE VARIABLES BELOW CAN BE EDITED.          	               *
     ## *************************************************************************************************
 	
     ## Answer file variables.
-    #$ComputerName = "MY-PC"
-    #$Manufacturer = "Gigabyte."
-    #$Model = "GA‑Z170X‑Gaming G1"
-    #$SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
-    #$Owner = "My Name"
-    #$Organization = "My Org"
-
-    $ComputerName = "ZEN-THINKPAD"
-    $Manufacturer = "Lenovo"
-    $Model = "ThinkPad"
-    $SystemLogo = "%WINDIR%\System32\oobe\info\logo\THINKPAD_BADGE.bmp"
-    $Owner = "Omnic Tech"
-    $Organization = "Omnic Tech"
+    $ComputerName = "MY-PC"
+    $Manufacturer = "Gigabyte."
+    $Model = "GA‑Z170X‑Gaming G1"
+    $SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
+    $Owner = "My Name"
+    $Organization = "My Org"
 	
     ## *************************************************************************************************
     ## *                                      END VARIABLES.                                           *
