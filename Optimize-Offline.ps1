@@ -1105,12 +1105,8 @@ If ($SetRegistry) {
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
         Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
         #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP"
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP\SettingsPage"
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "CdpSessionUserAuthzPolicy" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "NearShareChannelUserAuthzPolicy" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP\SettingsPage" -Name "RomeSdkChannelUserAuthzPolicy" -Value 2 -Type DWord
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
         #****************************************************************
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
         Write-Output "Disabling Other Devices Non-Explicitly Accessing This Device." >> $WorkFolder\Registry-Optimizations.log
