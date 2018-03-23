@@ -1,20 +1,24 @@
-## 3.0.8.1 ## (03-22-2018)
+## 3.0.8.2 ## (03-23-2018)
 
 - More Scheduled Tasks have been added to be automatically disabled during installation.
 
 - Added the disabling of two additional Windows Defender services and drivers.
 
-- Incorporated multiple additional registry entries that further prevent spyware and tracking.
+- Incorporated multiple additional registry entries that further prevent spyware, logging and tracking.
+
+- Increased the restritiveness of Apps' access to the device.
 
 - Added the removal of Skype Component Packages, so long as the Skype Provisioned App Package has been removed during the running process.
 
 - Added the removal of HomeGroup Component Packages.
 
-- Added the disabling of a few Provisoned App Services if it's determined their corresponding Provisoned App Packages have been removed.
+- Added the disabling of Provisoned App Services if it's determined their corresponding Provisoned App Packages have been removed.
 
 - Corrected some syntax errors that were being parsed to SetupComplete.cmd
 
 - Incoporated value type when setting an item property in the registry.
+
+- Combined a handful of similar registry process together.
 
 - The Additional-Features function script has had some very minor changes, though nothing that modifies any of its processed modifications.
 
