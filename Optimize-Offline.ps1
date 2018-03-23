@@ -67,8 +67,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.8.1
-		Last updated:	03/22/2018
+		Version:        3.0.8.2
+		Last updated:	03/23/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -1188,11 +1188,11 @@ If ($SetRegistry)
 			"9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5" # Email
 			"E390DF20-07DF-446D-B962-F5C953062741" # Tasks
 			"D89823BA-7180-4B81-B50C-7E471E6121A3" # Calendar
-			#"C1D23ACC-752B-43E5-8448-8D0E519CD6D6" # Account Info
+			"C1D23ACC-752B-43E5-8448-8D0E519CD6D6" # Account Info
 			"992AFA70-6F47-4148-B3E9-3003349C1548" # Messaging
 			"A8804298-2D5F-42E3-9531-9C8C39EB29CE" # Radios
-			#"52079E78-A92B-413F-B213-E8FE35712E72" # App Notifications
-			#"2297E4E2-5DBE-466D-A12B-0F8286F0D9CA" # App Diagnostics
+			"52079E78-A92B-413F-B213-E8FE35712E72" # App Notifications
+			"2297E4E2-5DBE-466D-A12B-0F8286F0D9CA" # App Diagnostics
 			"LooselyCoupled"
 		) | % {
 			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\$_";
