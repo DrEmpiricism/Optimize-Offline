@@ -1090,8 +1090,10 @@ If ($SetRegistry)
 		Write-Output "Disabling Toast Notifications." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotification" -Value 1 -Type DWord
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotificationOnLockScreen" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotification" `
+						 -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotificationOnLockScreen" `
+						 -Value 1 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Feature Advertisement Notifications." >> $WorkFolder\Registry-Optimizations.log
@@ -1124,7 +1126,6 @@ If ($SetRegistry)
 		}
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync"
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSync" -Value 2 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSyncUserOverride" -Value 1 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSync" -Value 2 -Type DWord
@@ -1144,60 +1145,40 @@ If ($SetRegistry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSyncUserOverride" -Value 1 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSync" -Value 2 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSyncUserOverride" -Value 1 -Type DWord
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-		Write-Output "Disabling Apps Non-Explicitly Accessing This Device." >> $WorkFolder\Registry-Optimizations.log
+		Write-Output "Disabling Location Sensors and App Syncronization." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		$APP_ACCESS = @(
-			"LetAppsAccessPhone"
-			"LetAppsAccessMessaging"
-			"LetAppsAccessCallHistory"
-			"LetAppsAccessLocation"
-			"LetAppsAccessCalendar"
-			"LetAppsAccessCamera"
-			"LetAppsAccessMicrophone"
-			"LetAppsAccessMotion"
-			"LetAppsAccessNotifications"
-			"LetAppsAccessRadios"
-			"LetAppsAccessTrustedDevices"
-		) | % { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name $_ -Value 2 -Type DWord }
+		[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
+		[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
+		[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
+		[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}";
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}";
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass";
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors";
-		New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration";
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord;
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord;
-		$DEVICE_GUID = @(
-			"BFA794E4-F964-4FDB-90F6-51056BFE4B44" # Location
-			"E6AD100E-5F4E-44CD-BE0F-2265D88D14F5" # Location
-			"E5323777-F976-4f5b-9B55-B94699C46E44" # Camera
-			"2EEF81BE-33FA-4800-9670-1CD474972C3F" # Microphone
-			"8BC668CF-7728-45BD-93F8-CF2B3B41D7AB" # Call History
-			"9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5" # Email
-			"E390DF20-07DF-446D-B962-F5C953062741" # Tasks
-			"D89823BA-7180-4B81-B50C-7E471E6121A3" # Calendar
-			"C1D23ACC-752B-43E5-8448-8D0E519CD6D6" # Account Info
-			"992AFA70-6F47-4148-B3E9-3003349C1548" # Messaging
-			"A8804298-2D5F-42E3-9531-9C8C39EB29CE" # Radios
-			"52079E78-A92B-413F-B213-E8FE35712E72" # App Notifications
-			"2297E4E2-5DBE-466D-A12B-0F8286F0D9CA" # App Diagnostics
-			"LooselyCoupled"
-		) | % {
-			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\$_";
-			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\$_" -Name "Value" -Value "Deny" -Type String
-		}
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+		New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
+						 -Name "SensorPermissionState" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
+						 -Name "SensorPermissionState" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
@@ -1209,7 +1190,15 @@ If ($SetRegistry)
 		Write-Output "Disabling SmartScreen." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer"
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Typing Data Telemetry." >> $WorkFolder\Registry-Optimizations.log
@@ -1254,8 +1243,10 @@ If ($SetRegistry)
 		Write-Output "Disabling Notifications on Lock Screen." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK" -Value 0 -Type DWord
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK" `
+						 -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK" `
+						 -Value 0 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Lock Screen Camera and Overlays." >> $WorkFolder\Registry-Optimizations.log
@@ -1291,6 +1282,7 @@ If ($SetRegistry)
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds"
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds" -Name "AllowBuildPreview" -Value 0 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds" -Name "EnableConfigFlighting" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds" -Name "EnableExperimentation" -Value 0 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Changing Search Bar to Magnifying Glass Icon." >> $WorkFolder\Registry-Optimizations.log
@@ -1423,7 +1415,8 @@ If ($SetRegistry)
 		Write-Output "Disabling Live Tiles." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications"
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" `
+						 -Value 1 -Type DWord
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Disabling Connected Drive Autoplay and Autorun." >> $WorkFolder\Registry-Optimizations.log
@@ -1519,7 +1512,8 @@ If ($SetRegistry)
 			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_";
 			New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids";
 			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String;
-			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value (New-Object Byte[] 0) -Type Binary
+			Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" `
+							 -Value (New-Object Byte[] 0) -Type Binary
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1543,19 +1537,22 @@ If ($SetRegistry)
 			Write-Output "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
 			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked"
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{E2BF9676-5F8F-435C-97EB-11607A5BEDF7}" -Value "" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{E2BF9676-5F8F-435C-97EB-11607A5BEDF7}" `
+							 -Value "" -Type String
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Removing 'Give Access To' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked"
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{F81E9010-6EA4-11CE-A7FF-00AA003CA9F6}" -Value "" -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{F81E9010-6EA4-11CE-A7FF-00AA003CA9F6}" `
+						 -Value "" -Type String
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Removing 'Cast To Device' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
 		#****************************************************************
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{7AD84985-87B4-4a16-BE58-8B72A5B390F7}" -Value "" -Type String 
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{7AD84985-87B4-4a16-BE58-8B72A5B390F7}" `
+						 -Value "" -Type String
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 		Write-Output "Hiding Recently and Frequently Used Items in Explorer." >> $WorkFolder\Registry-Optimizations.log
@@ -1571,20 +1568,34 @@ If ($SetRegistry)
 			#****************************************************************
 			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag"
 			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag"
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
 		}
 		ElseIf ($Build -lt "16273")
 		{
@@ -1592,18 +1603,30 @@ If ($SetRegistry)
 			Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 			Write-Output "Hiding all User Folders from This PC." >> $WorkFolder\Registry-Optimizations.log
 			#****************************************************************
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
+			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" `
+							 -Name "ThisPCPolicy" -Value "Hide" -Type String
 		}
 		#****************************************************************
 		Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -1825,169 +1848,6 @@ If ($SystemAppsList.Count -gt "0")
 	}
 	[void](Unload-OfflineHives)
 	$SystemAppsComplete = $true
-}
-
-Try
-{
-	$WIMInfo = (Get-WindowsImage -ImagePath $ImageFile -Index $Index)
-	$BuildNumber = "$($WimInfo.Build)" + ".$($WimInfo.SPBuild)"
-	$ImageName = $WIMInfo.ImageName
-	$Version = $WIMInfo.Version
-	$HomeGroupPackages = {
-		[void](Load-OfflineHives)
-		Set-RegistryOwner -Hive HKLM `
-						  -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-Package~31bf3856ad364e35~amd64~~$Version"
-		Set-RegistryOwner -Hive HKLM `
-						  -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-		$HomeGroupVisibility = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "Visibility"
-			Value = 1
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @HomeGroupVisibility
-		$HomeGroupDefVis = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "DefVis"
-			Value = 2
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @HomeGroupDefVis
-		$HomeGroupRemoveOwners = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-Package~31bf3856ad364e35~amd64~~$Version\Owners"
-			Force = $true
-		}
-		Remove-Item @HomeGroupRemoveOwners
-		$HomeGroupWOW64Visibility = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "Visibility"
-			Value = 1
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @HomeGroupWOW64Visibility
-		$HomeGroupWOW64DefVis = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "DefVis"
-			Value = 2
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @HomeGroupWOW64DefVis
-		$HomeGroupRemoveWOW64Owners = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Shell-HomeGroup-WOW64-Package~31bf3856ad364e35~amd64~~$Version\Owners"
-			Force = $true
-		}
-		Remove-Item @HomeGroupRemoveWOW64Owners
-		[void](Unload-OfflineHives)
-		$RemoveHomeGroupPackage = @{
-			Path			  = $MountFolder
-			PackageName	      = "Microsoft-Windows-Shell-HomeGroup-Package~31bf3856ad364e35~amd64~~$Version"
-			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
-		}
-		[void](Remove-WindowsPackage @RemoveHomeGroupPackage)
-		$RemoveHomeGroupWOW64Package = @{
-			Path			  = $MountFolder
-			PackageName	      = "Microsoft-Windows-Shell-HomeGroup-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
-		}
-		[void](Remove-WindowsPackage @RemoveHomeGroupWOW64Package)
-	}
-	$SkypePackages = {
-		[void](Load-OfflineHives)
-		Set-RegistryOwner -Hive HKLM `
-						  -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-Package~31bf3856ad364e35~amd64~~$Version"
-		Set-RegistryOwner -Hive HKLM `
-						  -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-		$SkypeVisibility = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "Visibility"
-			Value = 1
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @SkypeVisibility
-		$SkypeDefVis = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "DefVis"
-			Value = 2
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @SkypeDefVis
-		$SkypeRemoveOwners = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-Package~31bf3856ad364e35~amd64~~$Version\Owners"
-			Force = $true
-		}
-		Remove-Item @SkypeRemoveOwners
-		$SkypeWOW64Visibility = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "Visibility"
-			Value = 1
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @SkypeWOW64Visibility
-		$SkypeWOW64DefVis = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			Name  = "DefVis"
-			Value = 2
-			Type  = "DWord"
-			ErrorAction = "Stop"
-		}
-		Set-ItemProperty @SkypeWOW64DefVis
-		$SkypeRemoveWOW64Owners = @{
-			Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages\Microsoft-Windows-Skype-ORTC-WOW64-Package~31bf3856ad364e35~amd64~~$Version\Owners"
-			Force = $true
-		}
-		Remove-Item @SkypeRemoveWOW64Owners
-		[void](Unload-OfflineHives)
-		$SkypeRemovePackage = @{
-			Path			  = $MountFolder
-			PackageName	      = "Microsoft-Windows-Skype-ORTC-Package~31bf3856ad364e35~amd64~~$Version"
-			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
-		}
-		[void](Remove-WindowsPackage @SkypeRemovePackage)
-		$SkypeRemoveWOW64Package = @{
-			Path			  = $MountFolder
-			PackageName	      = "Microsoft-Windows-Skype-ORTC-WOW64-Package~31bf3856ad364e35~amd64~~$Version"
-			ScratchDirectory  = $TempFolder
-			LogPath		      = $DISMLog
-		}
-		[void](Remove-WindowsPackage @SkypeRemoveWOW64Package)
-	}
-	If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.SkypeApp" }).Count.Equals(0))
-	{
-		Write-Output ''
-		Process-Log -Output "Removing leftover components from removed packages." -LogPath $LogFile -Level Info
-		& $HomeGroupPackages
-		& $SkypePackages
-	}
-	Else
-	{
-		Write-Output ''
-		Process-Log -Output "Removing leftover components from removed packages." -LogPath $LogFile -Level Info
-		& $HomeGroupPackages
-	}
-}
-Catch
-{
-	Write-Output ''
-	Process-Log -Output "An error occurred removing leftover components from removed packages." -LogPath $LogFile -Level Error
-	Terminate-Script
-	Break
-}
-Finally
-{
-	$WIMInfo = ''
-	$BuildNumber = ''
-	$ImageName = ''
-	$Version = ''
 }
 
 Try
@@ -2368,6 +2228,129 @@ DEL "%~f0"
 Finally
 {
 	[void]($SB.Clear())
+}
+
+Try
+{
+	If ($AddFeatures.HostsFile -ne $true)
+	{
+		Write-Output ''
+		Process-Log -Output "Disabling Data Collecting with the default Hosts file." -LogPath $LogFile -Level Info
+		$HostsFileContent = Get-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Force
+		Copy-Item -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Destination "$MountFolder\Windows\System32\drivers\etc\hosts.bak" -Force
+		Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value "`r`n# Entries created by the Optimize-Offline PowerShell Script." -Force
+		$DisableHosts = @(
+			"a-0001.a-msedge.net"
+			"a-0002.a-msedge.net"
+			"a-0003.a-msedge.net"
+			"a-0004.a-msedge.net"
+			"a-0005.a-msedge.net"
+			"a-0006.a-msedge.net"
+			"a-0007.a-msedge.net"
+			"a-0008.a-msedge.net"
+			"a-0009.a-msedge.net"
+			"a-msedge.net"
+			"a.ads1.msn.com"
+			"a.ads2.msads.net"
+			"a.ads2.msn.com"
+			"a.rad.msn.com"
+			"ac3.msn.com"
+			"ad.doubleclick.net"
+			"adnexus.net"
+			"adnxs.com"
+			"ads.msn.com"
+			"ads1.msads.net"
+			"ads1.msn.com"
+			"aidps.atdmt.com"
+			"aka-cdn-ns.adtech.de"
+			"az361816.vo.msecnd.net"
+			"az512334.vo.msecnd.net"
+			"b.ads1.msn.com"
+			"b.ads2.msads.net"
+			"b.rad.msn.com"
+			"bs.serving-sys.com"
+			"c.atdmt.com"
+			"c.msn.com"
+			"ca.telemetry.microsoft.com"
+			"cache.datamart.windows.com"
+			"cdn.atdmt.com"
+			"cds26.ams9.msecn.net"
+			"choice.microsoft.com"
+			"choice.microsoft.com.nsatc.net"
+			"compatexchange.cloudapp.net"
+			"corp.sts.microsoft.com"
+			"corpext.msitadfs.glbdns2.microsoft.com"
+			"cs1.wpc.v0cdn.net"
+			"db3aqu.atdmt.com"
+			"df.telemetry.microsoft.com"
+			"diagnostics.support.microsoft.com"
+			"ec.atdmt.com"
+			"fe2.update.microsoft.com.akadns.net"
+			"fe3.delivery.dsp.mp.microsoft.com.nsatc.net"
+			"feedback.microsoft-hohm.com"
+			"feedback.search.microsoft.com"
+			"feedback.windows.com"
+			"flex.msn.com"
+			"g.msn.com"
+			"h1.msn.com"
+			"i1.services.social.microsoft.com"
+			"i1.services.social.microsoft.com.nsatc.net"
+			"lb1.www.ms.akadns.net"
+			"live.rads.msn.com"
+			"m.adnxs.com"
+			"msedge.net"
+			"msftncsi.com"
+			"msnbot-65-55-108-23.search.msn.com"
+			"msntest.serving-sys.com"
+			"oca.telemetry.microsoft.com"
+			"oca.telemetry.microsoft.com.nsatc.net"
+			"pre.footprintpredict.com"
+			"preview.msn.com"
+			"rad.live.com"
+			"rad.msn.com"
+			"redir.metaservices.microsoft.com"
+			"reports.wes.df.telemetry.microsoft.com"
+			"schemas.microsoft.akadns.net"
+			"secure.adnxs.com"
+			"secure.flashtalking.com"
+			"services.wes.df.telemetry.microsoft.com"
+			"settings-sandbox.data.microsoft.com"
+			"settings-win.data.microsoft.com"
+			"sls.update.microsoft.com.akadns.net"
+			"spynet2.microsoft.com"
+			"spynetalt.microsoft.com"
+			"sqm.df.telemetry.microsoft.com"
+			"sqm.telemetry.microsoft.com"
+			"sqm.telemetry.microsoft.com.nsatc.net"
+			"ssw.live.com"
+			"static.2mdn.net"
+			"statsfe1.ws.microsoft.com"
+			"statsfe2.update.microsoft.com.akadns.net"
+			"statsfe2.ws.microsoft.com"
+			"survey.watson.microsoft.com"
+			"telecommand.telemetry.microsoft.com"
+			"telecommand.telemetry.microsoft.com.nsatc.net"
+			"telemetry.appex.bing.net"
+			"telemetry.microsoft.com"
+			"telemetry.urs.microsoft.com"
+			"vortex-bn2.metron.live.com.nsatc.net"
+			"vortex-cy2.metron.live.com.nsatc.net"
+			"vortex-sandbox.data.microsoft.com"
+			"vortex-win.data.microsoft.com"
+			"vortex.data.microsoft.com"
+			"watson.live.com"
+			"watson.microsoft.com"
+			"watson.ppe.telemetry.microsoft.com"
+			"watson.telemetry.microsoft.com"
+			"watson.telemetry.microsoft.com.nsatc.net"
+			"wes.df.telemetry.microsoft.com"
+			"www.msftncsi.com"
+		) | % { Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value $_.Replace($_, "0.0.0.0 $($_)") -Force }
+	}
+}
+Finally
+{
+	Start-Sleep 3
 }
 
 If ($AdditionalFeatures)
