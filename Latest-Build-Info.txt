@@ -2,15 +2,15 @@
 
 - More Scheduled Tasks have been added to be automatically disabled during installation.
 
+- Incorprated an array of spying and telemetry resolvable DNS names that get formatted and applied to the default Hosts file. Prior to applying any changes, the OEM Hosts file is backed up to the same location at "hosts.bak". These entries are only added if the script detects the full Hosts file, that gets web invoked and applied within the Additional-Features function script, has its $AddFeatures hashtable parameter NOT set to $true. Moreover, it's still recommended to use the full Hosts file, as it includes over 85k additional entries and is updated weekly. 
+
 - Added the disabling of two additional Windows Defender services and drivers.
 
 - Incorporated multiple additional registry entries that further prevent spyware, logging and tracking.
 
 - Increased the restritiveness of Apps' access to the device.
 
-- Added the removal of Skype Component Packages, so long as the Skype Provisioned App Package has been removed during the running process.
-
-- Added the removal of HomeGroup Component Packages.
+- Removed a few registry properties that delt with a few very picky device sensors. A few of the device sensors must be applied once the image is in an online state because it requires the GUID of user applying them for them to function.
 
 - Added the disabling of Provisoned App Services if it's determined their corresponding Provisoned App Packages have been removed.
 
