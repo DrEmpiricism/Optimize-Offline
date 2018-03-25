@@ -68,7 +68,7 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.8.4
+		Version:        3.0.8.3
 		Last updated:	03/25/2018
 		===========================================================================
 #>
