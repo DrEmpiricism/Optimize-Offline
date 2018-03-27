@@ -1,3 +1,11 @@
+## 3.0.8.4 ## (03-27-2018)
+
+- The main script has primarily just had a few updates with the functions it uses.
+
+- The Additional-Features function script has been updated.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.3 ## (03-25-2018)
 
 - I have updated the Hosts file the script applies with updated resolvable DNS names (as of a today, actually). That said, I still recommend to instead have the script apply the full Hosts file from Steven Black's weekly updated repository, especially if you do a lot of web browsing.
