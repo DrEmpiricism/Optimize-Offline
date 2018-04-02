@@ -1,3 +1,11 @@
+## 3.0.8.5 ## (04-02-2018)
+
+- Fixed it so 'Share' and 'Cast to Device' context menu options are also removed from build RS2.
+
+- The Additional-Features function script has been updated.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.4 ## (03-27-2018)
 
 - The main script has primarily just had a few updates with the functions it uses.
