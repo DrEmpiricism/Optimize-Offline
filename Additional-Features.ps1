@@ -43,8 +43,8 @@ Function Additional-Features {
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Additional-Features.ps1
-		Version:        2.0.5
-		Last updated:	03/27/2018
+		Version:        2.0.6
+		Last updated:	04/02/2018
 		===========================================================================
 #>
     [CmdletBinding()]
@@ -61,22 +61,8 @@ Function Additional-Features {
         [string]$SysPrep
     )
 	
-##*=============================================
-##* THE VARIABLES BELOW CAN BE EDITED
-##*=============================================
-	
-    ## Answer file variables.
-    $ComputerName = "MY-PC"
-    $Manufacturer = "Gigabyte"
-    $Model = "GA‑Z170X‑Gaming G1"
-    $SystemLogo = "%WINDIR%\System32\oobe\info\logo\GIGABYTE_BADGE.bmp"
-    $Owner = "My Name"
-    $Organization = "My Org"
+    $ComputerName = "*"
     
-##*=============================================
-##* END VARIABLES
-##*=============================================
-	
     $ProgressPreference = "SilentlyContinue"
     $NetFX3PackagePath = "$PSScriptRoot\Additional\NetFx3"
     $WallpaperPath = "$PSScriptRoot\Additional\Images\Wallpaper"
@@ -90,9 +76,9 @@ Function Additional-Features {
     Function Set-FileOwnership($Path) {
         Invoke-Expression -Command ('TAKEOWN /F $Path /A')
         $ACL = Get-Acl -Path $Path
-        $Admin = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
-        $User = $Admin.Translate([System.Security.Principal.NTAccount])
-        $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule($User, "FullControl", "None", "None", "Allow")
+        $SID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
+        $Admin = $SID.Translate([System.Security.Principal.NTAccount])
+        $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, "FullControl", "None", "None", "Allow")
         $ACL.AddAccessRule($Rule)
         $ACL | Set-Acl -Path $Path
     }
@@ -122,7 +108,7 @@ Function Additional-Features {
     If ($ContextMenu) {
         Write-Output ''
         Write-Output "Adding Context Menu features."
-        [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
+        [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software")
         Start-Sleep 3
         #****************************************************************
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
@@ -221,7 +207,7 @@ Function Additional-Features {
         [System.GC]::Collect()
         [void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
         Start-Sleep 3
-        $ExtendedDiskVBS = @"
+        $ExtendedDiskStr = @'
 If WScript.Arguments.length =0 Then
   Set Cleanup1 = CreateObject("Shell.Application")
   Cleanup1.ShellExecute "wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1
@@ -229,8 +215,8 @@ Else
    Set Cleanup2 = WScript.CreateObject("WSCript.shell")
    Cleanup2.run ("cmd.exe /c cleanmgr /sageset:65535 & cleanmgr /sagerun:65535"), 0
 End If
-"@
-        $RestorePointVBS = @"
+'@
+        $RestorePointStr = @'
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
     Set colOS = objWMI.ExecQuery("Select * from Win32_OperatingSystem")
@@ -269,8 +255,8 @@ Sub CreateSRP
 		End If
 	End If
 End Sub
-"@
-        $RestartExplorerCMD = @"
+'@
+        $RestartExplorerStr = @'
 @ECHO OFF
 ECHO:
 ECHO Killing Explorer.exe
@@ -280,18 +266,18 @@ ECHO:
 ECHO Ready to restart Explorer.exe
 TIMEOUT /T -1
 START "Starting Explorer.exe" Explorer.exe
-TIMEOUT /T 8 /NOBREAK >NUL
+TIMEOUT /T 5 /NOBREAK >NUL
 ECHO:
 ECHO Explorer.exe has started successfully.
-TIMEOUT /T 5 /NOBREAK >NUL
+TIMEOUT /T 3 /NOBREAK >NUL
 EXIT
-"@
-        $CreateExtendedDiskVBS = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
-        Set-Content -Path $CreateExtendedDiskVBS -Value $ExtendedDiskVBS -Force
-        $CreateRestorePointVBS = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
-        Set-Content -Path $CreateRestorePointVBS -Value $RestorePointVBS -Force
-        $CreateRestartExplorerScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Restart-Explorer.cmd"
-        Set-Content -Path $CreateRestartExplorerScript -Value $RestartExplorerCMD -Encoding ASCII -Force
+'@
+        $ExtendedDiskScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
+        Set-Content -Path $ExtendedDiskScript -Value $ExtendedDiskStr -Force
+        $RestorePointScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
+        Set-Content -Path $RestorePointScript -Value $RestorePointStr -Force
+        $RestartExplorerScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Restart-Explorer.cmd"
+        Set-Content -Path $RestartExplorerScript -Value $RestartExplorerStr -Encoding ASCII -Force
     }
 	
     If ($NetFx3) {
@@ -303,7 +289,7 @@ EXIT
         }
         Else {
             Write-Output ''
-            Write-Warning -Message "$NetFX3PackagePath contains no valid .CAB files."
+            Write-Warning "$NetFX3PackagePath contains no valid .CAB files."
             Start-Sleep 3
         }
     }
@@ -311,34 +297,38 @@ EXIT
     If ($SystemImages) {
         Write-Output ''
         Write-Output "Adding or replacing System Images."
-        Start-Sleep 3
-        [void](Set-FolderOwnership "$MountFolder\Windows\Web\Screen")
-        Copy-Item -Path "$LockScreenPath\*" -Destination "$MountFolder\Windows\Web\Screen" -Recurse -Force
-        Copy-Item -Path "$WallpaperPath\*" -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -Force
-        New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo"
-        Copy-Item -Path "$SystemLogoPath\*" -Filter "*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -Force
-        [void](Set-FolderOwnership "$MountFolder\ProgramData\Microsoft\User Account Pictures")
-        Copy-Item -Path "$AccountPicturePath\*" -Destination "$MountFolder\ProgramData\Microsoft\User Account Pictures" -Recurse -Force
+		Start-Sleep 3
+		If ((Get-ChildItem -Path $LockScreenPath -Recurse) -ne $null)
+		{
+			[void](Set-FolderOwnership "$MountFolder\Windows\Web\Screen")
+			Copy-Item -Path "$LockScreenPath\*" -Destination "$MountFolder\Windows\Web\Screen" -Recurse -Force
+		}
+		If ((Get-ChildItem -Path $WallpaperPath -Recurse) -ne $null)
+		{
+			Copy-Item -Path "$WallpaperPath\*" -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -Force
+		}
+		If ((Get-ChildItem -Path $SystemLogoPath -Recurse) -ne $null)
+		{
+			New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo"
+			Copy-Item -Path "$SystemLogoPath\*" -Filter "*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -Force
+		}
+		If ((Get-ChildItem -Path $AccountPicturePath -Recurse) -ne $null)
+		{
+			[void](Set-FolderOwnership "$MountFolder\ProgramData\Microsoft\User Account Pictures")
+			Copy-Item -Path "$AccountPicturePath\*" -Destination "$MountFolder\ProgramData\Microsoft\User Account Pictures" -Recurse -Force
+		}
     }
 	
     If ($OfflineServicing) {
         Write-Output ''
         Write-Output "Applying an OfflineServicing answer file to the image."
         Start-Sleep 3
-        $OfflineServicingTemplate = @"
+        $OfflineServicingStr = @"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="offlineServicing">
         <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <OEMInformation>
-                <HelpCustomized>false</HelpCustomized>
-                <Logo>$SystemLogo</Logo>
-                <Manufacturer>$Manufacturer</Manufacturer>
-                <Model>$Model</Model>
-            </OEMInformation>
             <ComputerName>$ComputerName</ComputerName>
-            <RegisteredOrganization>$Organization</RegisteredOrganization>
-            <RegisteredOwner>$Owner</RegisteredOwner>
             <DoNotCleanTaskBar>false</DoNotCleanTaskBar>
             <BluetoothTaskbarIconEnabled>false</BluetoothTaskbarIconEnabled>
         </component>
@@ -358,7 +348,7 @@ EXIT
 </unattend>
 "@
         $OfflineServicingXML = Join-Path -Path $TempFolder -ChildPath "OfflineServicing.xml"
-        Set-Content -Path $OfflineServicingXML -Value $OfflineServicingTemplate -Encoding UTF8 -Force
+        Set-Content -Path $OfflineServicingXML -Value $OfflineServicingStr -Encoding UTF8 -Force
         [void](Use-WindowsUnattend -Path $MountFolder -UnattendPath "$TempFolder\OfflineServicing.xml")
     }
 	
@@ -369,11 +359,11 @@ EXIT
             Start-Sleep 3
             New-Container -Path "$MountFolder\Windows\Panther"
             Copy-Item -Path "$UnattendPath\unattend.xml" -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
-            $AppendSetup = @"
-DEL /F /Q "%WINDIR%\system32\sysprep\unattend.xml" >NUL
-DEL /F /Q "%WINDIR%\panther\unattend.xml" >NUL
+            $AppendSetup = @'
+DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL
+DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL
 DEL "%~f0"
-"@
+'@
             If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd") {
                 $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
                 $SetupContent = (Get-Content -Path $SetupScript)
@@ -388,7 +378,7 @@ DEL "%~f0"
         }
         Else {
             Write-Output ''
-            Write-Warning -Message "$UnattendPath does not contain an unattend.xml file."
+            Write-Warning "$UnattendPath does not contain an unattend.xml file."
             Start-Sleep 3
         }
     }
@@ -402,7 +392,7 @@ DEL "%~f0"
         }
         Else {
             Write-Output ''
-            Write-Warning -Message "$GenuineTicketPath does not contain a GenuineTicket.xml file."
+            Write-Warning "$GenuineTicketPath does not contain a GenuineTicket.xml file."
             Start-Sleep 3
         }
     }
@@ -421,7 +411,7 @@ DEL "%~f0"
         }
         Else {
             Write-Output ''
-            Write-Warning -Message "Connection test failed. Unable to replace the default Hosts File."
+            Write-Warning "Connection test failed. Unable to replace the default Hosts File."
             Start-Sleep 3
         }
     }
@@ -435,7 +425,7 @@ DEL "%~f0"
             [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 2 -CheckIntegrity -Verify)
             [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 1 -CheckIntegrity -Verify)
             [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 2 -CheckIntegrity -Verify)
-            $W32CalcStr = @"
+            $W32CalcStr = @'
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator]
@@ -502,7 +492,7 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Management\WindowsFeatureCategories]
 "COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
 
-"@
+'@
             $W32RegFile = Join-Path -Path $WorkFolder -ChildPath "Win32Calc.reg"
             Set-Content -Path $W32RegFile -Value $W32CalcStr -Encoding Unicode -Force
             [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
@@ -520,7 +510,7 @@ Windows Registry Editor Version 5.00
         }
         Else {
             Write-Output ''
-            Write-Warning -Message "$Win32CalcImagePath does not contain the required Win32Calc WIM files."
+            Write-Warning "$Win32CalcImagePath does not contain the required Win32Calc WIM files."
             Start-Sleep 3
         }
     }
@@ -552,15 +542,9 @@ Windows Registry Editor Version 5.00
             </AuditComputerName>
         </component>
     </settings>
-    <settings pass="auditUser">
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <RegisteredOrganization>$Organization</RegisteredOrganization>
-            <RegisteredOwner>$Owner</RegisteredOwner>
-        </component>
-    </settings>
 </unattend>
 "@
-        $RemOneDriveCmd = @"
+        $RemOneDriveCmd = @'
 TASKKILL /F /IM OneDrive.exe >NUL 2>&1
 IF EXIST %SystemRoot%\System32\OneDriveSetup.exe (
 START /WAIT %SystemRoot%\System32\OneDriveSetup.exe /UNINSTALL
@@ -571,19 +555,19 @@ RMDIR /S /Q "%UserProfile%\OneDrive" >NUL 2>&1
 RMDIR /S /Q "%LocalAppData%\Microsoft\OneDrive" >NUL 2>&1
 RMDIR /S /Q "%SystemDrive%\OneDriveTemp" >NUL 2>&1
 RMDIR /S /Q "%ProgramData%\Microsoft OneDrive" >NUL 2>&1
-"@
-        $ReadMeTxt = @"
+'@
+        $ReadMeTxt = @'
 Run "Disable-OneDrive.cmd" to uninstall OneDrive and remove its directories.
 There is a bug when doing a SysPrep where OneDrive will continue to point to the BUILTIN\Administrator account after Copy Profile is initiated which breaks all OneDrive links.
 Removing OneDrive via the Remove-OneDrive.cmd will prevent this from occuring, though OneDrive will have to be re-installed after the image has been generalized and installed.
 
 Before generalizing the image, rename the SetupComplete.txt file in %WINDIR%\Setup\Scripts to SetupComplete.cmd so it runs during Windows setup.
-"@
-        $AppendSetup = @"
-DEL /F /Q "%WINDIR%\system32\sysprep\unattend.xml" >NUL
+'@
+        $AppendSetup = @'
+DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL
 DEL "%~f0"
-"@
+'@
         New-Container -Path "$MountFolder\Windows\Panther"
         New-Container -Path "$MountFolder\OneDrive-Info"
         $AuditBootXML = Join-Path -Path "$MountFolder\Windows\Panther" -ChildPath "unattend.xml"
