@@ -2,7 +2,7 @@
 #Requires -Version 5
 <#
 	.SYNOPSIS
-		Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2 and RS3.
+		Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2 and RS3 64-bit.
 	
 	.DESCRIPTION
 		Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
@@ -25,7 +25,7 @@
 		The build number of the image.
 	
 	.PARAMETER SelectApps
-		Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.
+		Prompts the user for approval before a Provisioning Application Package is removed.
 	
 	.PARAMETER AllApps
 		Automatically removes all Provisioning Application Packages.
@@ -59,8 +59,6 @@
 	
 	.NOTES
 		The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
-		They can be commented out with the pound (#) symbol to omit them from whatever process they're apart of.
-		The only exception is the AppWhiteList, which is enabled by using its respective switch when calling the script.
 	
 	.NOTES
 		===========================================================================
@@ -68,8 +66,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.8.4
-		Last updated:	03/27/2018
+		Version:        3.0.8.5
+		Last updated:	04/02/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -137,7 +135,7 @@ $SystemAppsList = @(
     #"XboxGameCallableUI" # Removing XboxGameCallableUI will prevent Microsoft's App Troubleshooter from functioning properly.
 )
 ##*=============================================
-##* APP PACKAGES TO KEEP BY DISPLAY NAME
+##* APP PACKAGES TO KEEP BY DISPLAY NAME.
 ##*=============================================
 $AppWhiteList = @(
     "Microsoft.DesktopAppInstaller"
@@ -145,7 +143,7 @@ $AppWhiteList = @(
     #"Microsoft.WindowsCalculator"
     "Microsoft.Xbox.TCUI" # Removing Microsoft.Xbox.TCUI will prevent Microsoft's App Troubleshooter from functioning properly.
     "Microsoft.XboxIdentityProvider"
-    #"Microsoft.WindowsCamera"
+    "Microsoft.WindowsCamera"
     #"Microsoft.StorePurchaseApp"
     "Microsoft.WindowsStore"
 )
@@ -159,7 +157,7 @@ $FeatureDisableList = @(
     #"*MediaPlayback*"
 )
 ##*=============================================
-##* PACKAGES TO REMOVE.
+##* ON-DEMAND PACKAGES TO REMOVE.
 ##*=============================================
 $PackageRemovalList = @(
     "*ContactSupport*"
@@ -399,15 +397,15 @@ public sealed class AdjustAccessToken
         }
         $ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) # Assigns access control to a blank access control object.
         $AdminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544") # Assigns the SID of the built-in Administrator to a new object.
-        $Account = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the build-in Administrator SID to its Windows Account Name (NTAccount).
-        $ACL.SetOwner($Account) # Sets the ownership to the built-in Administrator.
+        $Admin = $AdminSID.Translate([System.Security.Principal.NTAccount]) # Translates the build-in Administrator SID to its NTAccount.
+        $ACL.SetOwner($Admin) # Sets the ownership to the built-in Administrator.
         $Key.SetAccessControl($ACL) # Sets the access control permissions to the built-in Administrator.
         $ACL = $Key.GetAccessControl() # Retrieves the access control information for the registry subkey.
         $Rights = [System.Security.AccessControl.RegistryRights]"FullControl" # Designates the registry object access control rights.
         $Inheritance = [System.Security.AccessControl.InheritanceFlags]"ContainerInherit" # Designates the object access control inheritance flags.
         $Propagation = [System.Security.AccessControl.PropagationFlags]"None" # Designates the object access control propogation flags.
         $Control = [System.Security.AccessControl.AccessControlType]"Allow" # Designates whether access is Allowed or Denied on the object.
-        $Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Account, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
+        $Rule = New-Object System.Security.AccessControl.RegistryAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Control) # Assigns the access control rule to a new object.
         $ACL.SetAccessRule($Rule) # Sets the new access control rule.
         $Key.SetAccessControl($ACL) # Sets the access control permissions to the object rule.
         $Key.Close() # Closes the subkey.
@@ -557,13 +555,18 @@ Function Clean-CurrentMount {
 	
     Write-Output ''
     Write-Verbose "Current mount location detected. Performing clean-up." -Verbose
-    $CurrentMount = (Get-WindowsImage -Mounted)
-    $MountPath = $CurrentMount.MountPath
-    $ImagePath = $CurrentMount.ImagePath
+    $IsMounted = (Get-WindowsImage -Mounted)
+    $MountPath = $IsMounted.MountPath
+    $ImagePath = $IsMounted.ImagePath
     $ImageParentPath = Split-Path -Path $ImagePath -Parent
     $HivesToUnload = REG QUERY HKLM | FINDSTR /V "BCD00000000 MACHINE\DRIVERS MACHINE\HARDWARE MACHINE\SAM MACHINE\SECURITY MACHINE\SOFTWARE MACHINE\SYSTEM"
-    If ($HivesToUnload) {
+    If (Verify-OfflineHives){
+        [void](Unload-OfflineHives)
+    }
+    If ($HivesToUnload.Length -gt 0) {
         [void]($HivesToUnload.ForEach{ REG UNLOAD $_ })
+        Write-Output ''
+        Write-Output "Ignore any error this may throw."
     }
     [void](Dismount-WindowsImage -Path $MountPath -Discard)
     [void](Clear-WindowsCorruptMountPoint)
@@ -1054,7 +1057,6 @@ If ($SetRegistry) {
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
         #****************************************************************
-        #****************************************************************
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
         Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
         #****************************************************************
@@ -1105,7 +1107,7 @@ If ($SetRegistry) {
         Write-Output "Disabling Automatic Download of Content and Suggestions." >> $WorkFolder\Registry-Optimizations.log
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-        $CON_DELIVERY = @(
+        $ContentDelivery = @(
             "ContentDeliveryAllowed"
             "FeatureManagementEnabled"
             "OemPreInstalledAppsEnabled"
@@ -1389,7 +1391,7 @@ If ($SetRegistry) {
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
         Write-Output "Restoring Windows Photo Viewer." >> $WorkFolder\Registry-Optimizations.log
         #****************************************************************
-        $TYPE = @(
+        $Type = @(
             ".bmp"
             ".gif"
             ".jfif"
@@ -1421,20 +1423,16 @@ If ($SetRegistry) {
             "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}"
         ) | % { Remove-Item -Path $_ -Recurse -Force }
         #****************************************************************
-        If ($Build -ge "16273") {
-            #****************************************************************
-            Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-            Write-Output "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-            #****************************************************************
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked"
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{E2BF9676-5F8F-435C-97EB-11607A5BEDF7}" `
-                -Value "" -Type String
-        }
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked"
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{E2BF9676-5F8F-435C-97EB-11607A5BEDF7}" `
+            -Value "" -Type String
         #****************************************************************
         Write-Output '' >> $WorkFolder\Registry-Optimizations.log
         Write-Output "Removing 'Give Access To' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked"
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{F81E9010-6EA4-11CE-A7FF-00AA003CA9F6}" `
             -Value "" -Type String
         #****************************************************************
@@ -1775,7 +1773,7 @@ Try {
         If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run") {
             [void](Remove-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth")
         }
-        $DEFENDER_SVCS = @(
+        $Services = @(
             "SecurityHealthService"
             "WinDefend"
             "WdNisSvc"
@@ -1827,7 +1825,7 @@ Try {
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
-        $XBOX_SVCS = @(
+        $Services = @(
             "xbgm"
             "XblAuthManager"
             "XblGameSave"
