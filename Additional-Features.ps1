@@ -43,8 +43,8 @@ Function Additional-Features {
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Additional-Features.ps1
-		Version:        2.0.6
-		Last updated:	04/02/2018
+		Version:        2.0.7
+		Last updated:	04/06/2018
 		===========================================================================
 #>
     [CmdletBinding()]
@@ -207,6 +207,7 @@ Function Additional-Features {
         [System.GC]::Collect()
         [void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
         Start-Sleep 3
+        
         $ExtendedDiskStr = @'
 If WScript.Arguments.length =0 Then
   Set Cleanup1 = CreateObject("Shell.Application")
@@ -216,6 +217,7 @@ Else
    Cleanup2.run ("cmd.exe /c cleanmgr /sageset:65535 & cleanmgr /sagerun:65535"), 0
 End If
 '@
+
         $RestorePointStr = @'
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
@@ -256,6 +258,7 @@ Sub CreateSRP
 	End If
 End Sub
 '@
+
         $RestartExplorerStr = @'
 @ECHO OFF
 ECHO:
@@ -297,32 +300,29 @@ EXIT
     If ($SystemImages) {
         Write-Output ''
         Write-Output "Adding or replacing System Images."
-		Start-Sleep 3
-		If ((Get-ChildItem -Path $LockScreenPath -Recurse) -ne $null)
-		{
-			[void](Set-FolderOwnership "$MountFolder\Windows\Web\Screen")
-			Copy-Item -Path "$LockScreenPath\*" -Destination "$MountFolder\Windows\Web\Screen" -Recurse -Force
-		}
-		If ((Get-ChildItem -Path $WallpaperPath -Recurse) -ne $null)
-		{
-			Copy-Item -Path "$WallpaperPath\*" -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -Force
-		}
-		If ((Get-ChildItem -Path $SystemLogoPath -Recurse) -ne $null)
-		{
-			New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo"
-			Copy-Item -Path "$SystemLogoPath\*" -Filter "*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -Force
-		}
-		If ((Get-ChildItem -Path $AccountPicturePath -Recurse) -ne $null)
-		{
-			[void](Set-FolderOwnership "$MountFolder\ProgramData\Microsoft\User Account Pictures")
-			Copy-Item -Path "$AccountPicturePath\*" -Destination "$MountFolder\ProgramData\Microsoft\User Account Pictures" -Recurse -Force
-		}
+        Start-Sleep 3
+        If ((Get-ChildItem -Path $LockScreenPath -Recurse) -ne $null) {
+            [void](Set-FolderOwnership "$MountFolder\Windows\Web\Screen")
+            Copy-Item -Path "$LockScreenPath\*" -Destination "$MountFolder\Windows\Web\Screen" -Recurse -Force
+        }
+        If ((Get-ChildItem -Path $WallpaperPath -Recurse) -ne $null) {
+            Copy-Item -Path "$WallpaperPath\*" -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -Force
+        }
+        If ((Get-ChildItem -Path $SystemLogoPath -Recurse) -ne $null) {
+            New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo"
+            Copy-Item -Path "$SystemLogoPath\*" -Filter "*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -Force
+        }
+        If ((Get-ChildItem -Path $AccountPicturePath -Recurse) -ne $null) {
+            [void](Set-FolderOwnership "$MountFolder\ProgramData\Microsoft\User Account Pictures")
+            Copy-Item -Path "$AccountPicturePath\*" -Destination "$MountFolder\ProgramData\Microsoft\User Account Pictures" -Recurse -Force
+        }
     }
 	
     If ($OfflineServicing) {
         Write-Output ''
         Write-Output "Applying an OfflineServicing answer file to the image."
         Start-Sleep 3
+
         $OfflineServicingStr = @"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
@@ -359,21 +359,24 @@ EXIT
             Start-Sleep 3
             New-Container -Path "$MountFolder\Windows\Panther"
             Copy-Item -Path "$UnattendPath\unattend.xml" -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force
-            $AppendSetup = @'
+            If (!(Test-Path -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd")) {
+
+                $AppendSetup = @'
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL
-DEL "%~f0"
+DEL "%~f0""
 '@
-            If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd") {
-                $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-                $SetupContent = (Get-Content -Path $SetupScript)
-                $SetupContent.Replace('DEL "%~f0"', $AppendSetup) | Set-Content -Path $SetupScript -Encoding ASCII -Force
-            }
-            Else {
-                New-Container -Path "$MountFolder\Windows\Setup\Scripts\Scripts"
-                $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-                $BeginSetup = "@ECHO OFF`n"
-                Set-Content -Path $SetupScript -Value $BeginSetup, $AppendSetup -Encoding ASCII -Force
+                If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd") {
+                    $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+                    $SetupContent = (Get-Content -Path $SetupScript)
+                    $SetupContent.Replace('DEL "%~f0"', $AppendSetup) | Set-Content -Path $SetupScript -Encoding ASCII -Force
+                }
+                Else {
+                    New-Container -Path "$MountFolder\Windows\Setup\Scripts\Scripts"
+                    $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+                    $BeginSetup = "@ECHO OFF`n"
+                    Set-Content -Path $SetupScript -Value $BeginSetup, $AppendSetup -Encoding ASCII -Force
+                }
             }
         }
         Else {
@@ -417,82 +420,33 @@ DEL "%~f0"
     }
 	
     If ($Win32Calc) {
-        If ((Test-Path -Path "$Win32CalcImagePath\Win32Calc.wim") -and (Test-Path -Path "$Win32CalcImagePath\Win32Calc_en-US.wim")) {
+        If ((Test-Path -Path "$Win32CalcImagePath\win32calc.exe") -and (Test-Path -Path "$Win32CalcImagePath\win32calc.exe.mui")) {
             Write-Output ''
             Write-Output "Applying the Win32 Calculator."
             Start-Sleep 3
-            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 1 -CheckIntegrity -Verify)
-            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc.wim" -Index 2 -CheckIntegrity -Verify)
-            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 1 -CheckIntegrity -Verify)
-            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$Win32CalcImagePath\Win32Calc_en-US.wim" -Index 2 -CheckIntegrity -Verify)
+            Copy-Item -Path "$Win32CalcImagePath\win32calc.exe" -Destination "$MountFolder\Windows\System32"
+            Copy-Item -Path "$Win32CalcImagePath\win32calc.exe.mui" -Destination "$MountFolder\Windows\System32\en-US"
+			
             $W32CalcStr = @'
 Windows Registry Editor Version 5.00
 
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator]
-@="URL:calculator"
-"URL Protocol"=""
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon]
+[HKEY_CLASSES_ROOT\calculator\DefaultIcon]
 @="C:\\Windows\\System32\\win32calc.exe,0"
 
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command]
+[HKEY_CLASSES_ROOT\calculator\shell\open\command]
 @="C:\\Windows\\System32\\win32calc.exe"
 
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\App Management\WindowsFeatureCategories]
-"COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ShellCompatibility\InboxApp]
-"56230F2FD0CC3EB4_Calculator_lnk_amd64.lnk"=hex(2):43,00,3a,00,5c,00,50,00,72,\
-  00,6f,00,67,00,72,00,61,00,6d,00,44,00,61,00,74,00,61,00,5c,00,4d,00,69,00,\
-  63,00,72,00,6f,00,73,00,6f,00,66,00,74,00,5c,00,57,00,69,00,6e,00,64,00,6f,\
-  00,77,00,73,00,5c,00,53,00,74,00,61,00,72,00,74,00,20,00,4d,00,65,00,6e,00,\
-  75,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,73,00,5c,00,41,00,63,\
-  00,63,00,65,00,73,00,73,00,6f,00,72,00,69,00,65,00,73,00,5c,00,43,00,61,00,\
-  6c,00,63,00,75,00,6c,00,61,00,74,00,6f,00,72,00,2e,00,6c,00,6e,00,6b,00,00,\
-  00
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Calculator/Debug]
-"OwningPublisher"="{75f48521-4131-4ac3-9887-65473224fcb2}"
-"Enabled"=dword:00000000
-"Isolation"=dword:00000000
-"ChannelAccess"="O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)"
-"Type"=dword:00000003
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Calculator/Diagnostic]
-"OwningPublisher"="{75f48521-4131-4ac3-9887-65473224fcb2}"
-"Enabled"=dword:00000000
-"Isolation"=dword:00000000
-"ChannelAccess"="O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)"
-"Type"=dword:00000002
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}]
-@="Microsoft-Windows-Calculator"
-"ResourceFileName"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,\
-  00,6f,00,74,00,25,00,5c,00,73,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,\
-  5c,00,77,00,69,00,6e,00,33,00,32,00,63,00,61,00,6c,00,63,00,2e,00,65,00,78,\
-  00,65,00,00,00
-"MessageFileName"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,\
-  6f,00,74,00,25,00,5c,00,73,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,\
-  00,77,00,69,00,6e,00,33,00,32,00,63,00,61,00,6c,00,63,00,2e,00,65,00,78,00,\
-  65,00,00,00
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences]
-"Count"=dword:00000002
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences\0]
-@="Microsoft-Windows-Calculator/Diagnostic"
-"Id"=dword:00000010
-"Flags"=dword:00000000
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{75f48521-4131-4ac3-9887-65473224fcb2}\ChannelReferences\1]
-@="Microsoft-Windows-Calculator/Debug"
-"Id"=dword:00000011
-"Flags"=dword:00000000
-
-[HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Management\WindowsFeatureCategories]
-"COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18]
+"ShellExecute"="C:\\Windows\\System32\\win32calc.exe"
 
 '@
+            $W32Shell = New-Object -ComObject WScript.Shell
+            $W32CShortcut = $W32Shell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
+            $W32CShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+            $W32CShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+            $W32CShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+            $W32CShortcut.Save()
+			
             $W32RegFile = Join-Path -Path $WorkFolder -ChildPath "Win32Calc.reg"
             Set-Content -Path $W32RegFile -Value $W32CalcStr -Encoding Unicode -Force
             [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\windows\system32\config\software")
@@ -510,7 +464,7 @@ Windows Registry Editor Version 5.00
         }
         Else {
             Write-Output ''
-            Write-Warning "$Win32CalcImagePath does not contain the required Win32Calc WIM files."
+            Write-Warning "$Win32CalcImagePath does not contain the required Win32Calc files."
             Start-Sleep 3
         }
     }
@@ -519,6 +473,7 @@ Windows Registry Editor Version 5.00
         Write-Output ''
         Write-Output "Setting image up for Audit Booting and System Preparation"
         Start-Sleep 3
+
         $AuditTemplate = @"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
@@ -544,6 +499,7 @@ Windows Registry Editor Version 5.00
     </settings>
 </unattend>
 "@
+
         $RemOneDriveCmd = @'
 TASKKILL /F /IM OneDrive.exe >NUL 2>&1
 IF EXIST %SystemRoot%\System32\OneDriveSetup.exe (
@@ -556,18 +512,19 @@ RMDIR /S /Q "%LocalAppData%\Microsoft\OneDrive" >NUL 2>&1
 RMDIR /S /Q "%SystemDrive%\OneDriveTemp" >NUL 2>&1
 RMDIR /S /Q "%ProgramData%\Microsoft OneDrive" >NUL 2>&1
 '@
-        $ReadMeTxt = @'
-Run "Disable-OneDrive.cmd" to uninstall OneDrive and remove its directories.
-There is a bug when doing a SysPrep where OneDrive will continue to point to the BUILTIN\Administrator account after Copy Profile is initiated which breaks all OneDrive links.
-Removing OneDrive via the Remove-OneDrive.cmd will prevent this from occuring, though OneDrive will have to be re-installed after the image has been generalized and installed.
 
-Before generalizing the image, rename the SetupComplete.txt file in %WINDIR%\Setup\Scripts to SetupComplete.cmd so it runs during Windows setup.
-'@
+        $ReadMeTxt = @"
+- Run "Disable-OneDrive.cmd" to uninstall OneDrive and remove its directories.
+- There is a bug when doing a SysPrep where OneDrive will continue to point to the BUILTIN\Administrator account after Copy Profile is initiated.`n- This bug breaks all OneDrive links for any users created on the live installation. Removing OneDrive via the Remove-OneDrive.cmd will prevent this from occuring, `n- OneDrive will have to be re-installed after the image has been generalized and installed unless you plan to keep it disabled permanently.
+`n- Before generalizing the image, rename the OOBE.txt and SetupComplete.txt files in %WINDIR%\Setup\Scripts to OOBE.cmd and SetupComplete.cmd so they run during Windows Setup.
+"@
+
         $AppendSetup = @'
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL
 DEL "%~f0"
 '@
+
         New-Container -Path "$MountFolder\Windows\Panther"
         New-Container -Path "$MountFolder\OneDrive-Info"
         $AuditBootXML = Join-Path -Path "$MountFolder\Windows\Panther" -ChildPath "unattend.xml"
@@ -576,18 +533,24 @@ DEL "%~f0"
         Set-Content -Path $AuditBootXML -Value $AuditTemplate -Encoding UTF8 -Force
         Set-Content -Path $OneDriveScript -Value $RemOneDriveCmd -Encoding ASCII -Force
         Set-Content -Path $ReadMeText -Value $ReadMeTxt -Force
-        If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd") {
-            $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-            $SetupContent = (Get-Content -Path $SetupScript)
-            $SetupContent.Replace('DEL "%~f0"', $AppendSetup) | Set-Content -Path $SetupScript -Encoding ASCII -Force
-            Rename-Item -Path $SetupScript -NewName "SetupComplete.txt" -Force
+        If (!(Test-Path -Path "$MountFolder\Windows\Setup\Scripts\OOBE.cmd")) {
+            If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd") {
+                $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+                $SetupContent = (Get-Content -Path $SetupScript)
+                $SetupContent.Replace('DEL "%~f0"', $AppendSetup) | Set-Content -Path $SetupScript -Encoding ASCII -Force
+                Copy-Item -Path $SetupScript -Destination "$MountFolder\Windows\Setup\Scripts\SetupComplete.txt" -Force
+            }
+            Else {
+                New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+                $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+                $BeginSetup = "@ECHO OFF`n"
+                Set-Content -Path $SetupScript -Value $BeginSetup, $AppendSetup -Encoding ASCII -Force
+                Copy-Item -Path $SetupScript -Destination "$MountFolder\Windows\Setup\Scripts\SetupComplete.txt" -Force
+            }
         }
         Else {
-            New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-            $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-            $BeginSetup = "@ECHO OFF`n"
-            Set-Content -Path $SetupScript -Value $BeginSetup, $AppendSetup -Encoding ASCII -Force
-            Rename-Item -Path $SetupScript -NewName "SetupComplete.txt" -Force
+            $OOBEScript = "$MountFolder\Windows\Setup\Scripts\OOBE.cmd"
+            Rename-Item -Path $OOBEScript -NewName "$OOBE.txt" -Force
         }
         If (Test-Path -Path "$MountFolder\Windows\SysWOW64\OneDriveSetup.exe") {
             Copy-Item -Path "$MountFolder\Windows\SysWOW64\OneDriveSetup.exe" -Destination "$MountFolder\OneDrive-Info" -Force
