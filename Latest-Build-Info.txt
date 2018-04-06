@@ -1,3 +1,17 @@
+## 3.0.8.6 ## (04-06-2018)
+
+- Added a very "lite" -Hardened switch that incorporates some more telemetry removal, sensor and app restrictions, etc.
+
+- The Additional-Features function script has been updated with a new Win32Calc application. The function no longer applies the WIM files to the image; rather, it simply copies over the essential files and also edits the appropriate Desktop.ini
+
+- The default Hosts file has been significantly increased in spy and telemetry domains. All of those that are added have been verified as of 3/28/2018 (but I still recommend Steven Black's Hosts file).
+
+- The -Hardened switch also has its own SetupComplete.cmd with a significantly more robust amount of tasks it will auto-disable.
+
+- v4.0 will be coming soon.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.5 ## (04-02-2018)
 
 - Fixed it so 'Share' and 'Cast to Device' context menu options are also removed from build RS2.
