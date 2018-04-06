@@ -34,7 +34,10 @@
 		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
 	.PARAMETER SetRegistry
-		Sets optimized registry values into the offline registry hives.
+        Sets optimized registry values into the offline registry hives.
+        
+    .PARAMETER SetRegistry
+		Increases device security and further restricts more access to such things as system and app sensors. Moreover, the SetupComplete script is quite a bit more substantive.
 	
 	.PARAMETER Drivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
@@ -49,7 +52,7 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -Drivers "E:\DriverFolder" -SetRegistry -AdditionalFeatures
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SetRegistry -AdditionalFeatures -Local
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -Hardened -AdditionalFeatures -Local
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -WhiteListApps -Drivers "E:\DriverFolder" -Local
@@ -58,7 +61,9 @@
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
 	
 	.NOTES
-		The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
+        The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
+        You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
+        I left out a lot of features for the -Hardened switch because I wanted to test the waters publicly.  In the beta version of the script, the -Hardened switch basically locks down the system from 99% of both junk and telemetry.
 	
 	.NOTES
 		===========================================================================
@@ -66,8 +71,8 @@
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.8.5
-		Last updated:	04/02/2018
+		Version:        3.0.8.6
+		Last updated:	04/06/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -99,6 +104,8 @@ Param
     [switch]$WhiteListApps,
     [Parameter(HelpMessage = 'Sets optimized registry values into the offline registry hives.')]
     [switch]$SetRegistry,
+    [Parameter(HelpMessage = 'Sets more restrictive registry values into the offline registry hives.')]
+    [switch]$Hardened,
     [Parameter(Mandatory = $false,
         HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
     [ValidateScript( { Test-Path $(Resolve-Path $_) })]
@@ -139,11 +146,11 @@ $SystemAppsList = @(
 ##*=============================================
 $AppWhiteList = @(
     "Microsoft.DesktopAppInstaller"
-    "Microsoft.Windows.Photos"
+    #"Microsoft.Windows.Photos"
     #"Microsoft.WindowsCalculator"
     "Microsoft.Xbox.TCUI" # Removing Microsoft.Xbox.TCUI will prevent Microsoft's App Troubleshooter from functioning properly.
     "Microsoft.XboxIdentityProvider"
-    "Microsoft.WindowsCamera"
+    #"Microsoft.WindowsCamera"
     #"Microsoft.StorePurchaseApp"
     "Microsoft.WindowsStore"
 )
@@ -172,11 +179,11 @@ $PackageRemovalList = @(
 $AddFeatures = @{
     ContextMenu      = $true
     NetFx3           = $null
-    SystemImages     = $null
+    SystemImages     = $true
     OfflineServicing = $null
     Unattend         = $null
     GenuineTicket    = $null
-    HostsFile        = $true
+    HostsFile        = $null
     Win32Calc        = $true
     SysPrep          = $null
 }
@@ -200,10 +207,8 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 Function Verify-Admin {
     $CurrentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
     $IsAdmin = $CurrentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-    Write-Verbose "IsUserAdmin? $IsAdmin" -Verbose
+    Write-Verbose "IsUserAdmin? $IsAdmin"
     Return $IsAdmin
-    Write-Output ''
-    Start-Sleep 3
 }
 
 Function Process-Log {
@@ -614,8 +619,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $DriveLetter = ($MountISO | Get-Volume).DriveLetter
     $SourceWIM = "$($DriveLetter):\sources\install.wim"
     If (Test-Path -Path $SourceWIM -PathType Leaf) {
-        Write-Output ''
-        Write-Verbose "Copying the WIM from $(Split-Path -Path $ResolveISO -Leaf) to a temporary directory." -Verbose
+        Write-Verbose "Copying the WIM from $(Split-Path -Path $ResolveISO -Leaf)" -Verbose
         [void]($MountFolder = Create-MountDirectory)
         [void]($ImageFolder = Create-ImageDirectory)
         [void]($WorkFolder = Create-WorkDirectory)
@@ -632,8 +636,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     }
 }
 ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
-    Write-Output ''
-    Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Parent) to a temporary directory." -Verbose
+    Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
     [void]($MountFolder = Create-MountDirectory)
     [void]($ImageFolder = Create-ImageDirectory)
     [void]($WorkFolder = Create-WorkDirectory)
@@ -729,7 +732,7 @@ If ($AllApps) {
     }
 }
 
-If ($SetRegistry) {
+If ($SetRegistry -or $Hardened) {
     If (Test-Path -Path $WorkFolder\Registry-Optimizations.log) {
         Remove-Item -Path $WorkFolder\Registry-Optimizations.log -Force
     }
@@ -1009,100 +1012,6 @@ If ($SetRegistry) {
     Write-Output "Disabling System Tray Promotion Notifications." >> $WorkFolder\Registry-Optimizations.log
     #****************************************************************
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoSystraySystemPromotion" -Value 1 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
-    #****************************************************************
-    $Groups = @(
-        "Accessibility"
-        "AppSync"
-        "BrowserSettings"
-        "Credentials"
-        "DesktopTheme"
-        "Language"
-        "PackageState"
-        "Personalization"
-        "StartLayout"
-        "Windows"
-    ) | % {
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_";
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
-    }
-    Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSyncOnPaidNetwork" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSyncUserOverride" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSync" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSyncUserOverride" -Value 1 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> $WorkFolder\Registry-Optimizations.log
-    #****************************************************************
-    [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
-    [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
-    [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
-    [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
-    New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration"
-    Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
-        -Name "SensorPermissionState" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
-        -Name "SensorPermissionState" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
-    #***************************************************************
-    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP"
-    Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling SmartScreen." >> $WorkFolder\Registry-Optimizations.log
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
-    Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
     #****************************************************************
     Write-Output '' >> $WorkFolder\Registry-Optimizations.log
     Write-Output "Disabling Typing Data Telemetry." >> $WorkFolder\Registry-Optimizations.log
@@ -1660,12 +1569,134 @@ If ($SetRegistry) {
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Power" -Name "HibernteEnabled" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowHibernateOption" -Value 0 -Type DWord
     #****************************************************************
+    If ($Hardened) {
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        $Groups = @(
+            "Accessibility"
+            "AppSync"
+            "BrowserSettings"
+            "Credentials"
+            "DesktopTheme"
+            "Language"
+            "PackageState"
+            "Personalization"
+            "StartLayout"
+            "Windows"
+        ) | % {
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_";
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
+        }
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync"
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSyncOnPaidNetwork" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSyncUserOverride" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSync" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSyncUserOverride" -Value 1 -Type DWord
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Type" /t REG_SZ /d "LooselyCoupled" /f)
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
+        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "InitialAppValue" /t REG_SZ /d "Unspecified" /f)
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration"
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
+            -Name "SensorPermissionState" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
+            -Name "SensorPermissionState" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling Shared Experiences." >> $WorkFolder\Registry-Optimizations.log
+        #***************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP"
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling SmartScreen." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
+    }
     [void](Unload-OfflineHives)
     $RegistryComplete = $true
     #endregion Registry Optimizations
 }
 
-If ($SelectApps -or $AllApps -or $WhiteListApps) {
+If ($RegistryComplete.Equals($true)) {
+    Write-Output ''
+    Process-Log -Output "Editing the Start Menu Desktop.ini to remove any broken links." -LogPath $LogFile -Level Info
+    $LnkINI = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+    $MathInput = "Math Input Panel.lnk=@%CommonProgramFiles%\Microsoft Shared\Ink\mip.exe,-291"
+    $SnippingTool = "Snipping Tool.lnk=@%SystemRoot%\system32\SnippingTool.exe,-15051"
+    $StepsRecorder = "Steps Recorder.lnk=@%SystemRoot%\system32\psr.exe,-1701"
+    $FaxScan = "Windows Fax and Scan.lnk=@%SystemRoot%\system32\FXSRESM.dll,-114"
+    $LnkContent = (Get-Content -Path $LnkINI)
+    If ((Select-String -InputObject $LnkContent -Pattern $MathInput -SimpleMatch -Quiet) -eq $true -and `
+        (Select-String -InputObject $LnkContent -Pattern $SnippingTool -SimpleMatch -Quiet) -eq $true -and `
+        (Select-String -InputObject $LnkContent -Pattern $StepsRecorder -SimpleMatch -Quiet) -eq $true -and `
+        (Select-String -InputObject $LnkContent -Pattern $FaxScan -SimpleMatch -Quiet) -eq $true) {
+        ATTRIB -S -H $LnkINI
+        $LnkContent.Where{ $_ -ne $MathInput -and $_ -ne $SnippingTool -and $_ -ne $StepsRecorder -and $_ -ne $FaxScan } | Set-Content -Path $LnkINI -Encoding Unicode -Force
+        ATTRIB +S +H $LnkINI
+        Remove-Item -Path "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Math Input Panel.lnk" -Force
+        Remove-Item -Path "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Snipping Tool.lnk" -Force
+        Remove-Item -Path "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Steps Recorder.lnk" -Force
+        Remove-Item -Path "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Windows Fax and Scan.lnk" -Force
+    }
+    Start-Sleep 3
+}
+
+If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry) {
     Write-Output ''
     Process-Log -Output "Applying a custom Start Menu and Taskbar Layout." -LogPath $LogFile -Level Info
     $LayoutTemplate = @'
@@ -1679,8 +1710,8 @@ If ($SelectApps -or $AllApps -or $WhiteListApps) {
           <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
           <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
           <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />
         </start:Group>
       </defaultlayout:StartLayout>
     </StartLayoutCollection>
@@ -1694,16 +1725,32 @@ If ($SelectApps -or $AllApps -or $WhiteListApps) {
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 '@
-    $LayoutModificationXML = Join-Path -Path "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell" -ChildPath "LayoutModification.xml"
-    Set-Content -Path $LayoutModificationXML -Value $LayoutTemplate -Force
-    $WshShell = New-Object -ComObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
-    $Shortcut.TargetPath = "C:\Windows\explorer.exe"
-    $Shortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
-    $Shortcut.IconLocation = "imageres.dll,-1023"
-    $Shortcut.WorkingDirectory = "C:\Windows"
-    $Shortcut.Description = "The UWP File Explorer Application."
-    $Shortcut.Save()
+    $LayoutModification = Join-Path -Path "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell" -ChildPath "LayoutModification.xml"
+    Set-Content -Path $LayoutModification -Value $LayoutTemplate -Encoding UTF8 -Force
+    $CreateShortcuts = {
+        $UWPShell = New-Object -ComObject WScript.Shell
+        $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
+        $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
+        $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
+        $UWPShortcut.IconLocation = "imageres.dll,-1023"
+        $UWPShortcut.WorkingDirectory = "%SystemRoot%"
+        $UWPShortcut.Description = "The UWP File Explorer Application."
+        $UWPShortcut.Save()
+        $UEFIShell = New-Object -ComObject WScript.Shell
+        $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+        $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
+        $UEFIShortcut.Arguments = "/r /fw"
+        $UEFIShortcut.IconLocation = "bootux.dll,-1016"
+        $UEFIShortcut.WorkingDirectory = "%SystemRoot%\System32"
+        $UEFIShortcut.Description = "Reboot directly into the system's UEFI firmware."
+        $UEFIShortcut.Save()
+        $Bytes = [System.IO.File]::ReadAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+        $Bytes[0x15] = $Bytes[0x15] -bor 0x20
+        [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes)
+    }
+    Write-Output ''
+    Process-Log -Output "Creating required Shortcuts." -LogPath $LogFile -Level Info
+    & $CreateShortcuts
     Start-Sleep 3
 }
 
@@ -2032,16 +2079,21 @@ DEL "%~f0"
         Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
         $SetupCompleteComplete = $true
     }
-    Else {
-        $Default = @'
+    ElseIf ($Hardened) {
+        $HardenedSetup = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "AitAgent" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\AitAgent" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "AnalyzeSystem" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Cellular" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Management\Provisioning\Cellular" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "CreateObjectTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\CloudExperienceHost\CreateObjectTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Diagnostics" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskFootprint\Diagnostics" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
@@ -2051,13 +2103,23 @@ SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "\
 SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL  
+SCHTASKS /QUERY | FINDSTR /B /I "Microsoft Compatibility Appraiser" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticResolver" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "NetworkStateChangeTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\NetworkStateChangeTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "SmartScreenSpecific" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\AppID\SmartScreenSpecific" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL  && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "StartupAppTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "StorageSense" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskFootprint\StorageSense" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "UpdateLibrary" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Media Sharing\UpdateLibrary" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "WiFiTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\WCM\WiFiTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "WindowsActionDialog" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\WindowsActionDialog" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
@@ -2066,7 +2128,9 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-        [void]($SB.Append($Default))
+        [void]($SB.Append($HardenedSetup))
+        Remove-Item -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Force
+        $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
         Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
         $SetupCompleteComplete = $true
     }
@@ -2078,19 +2142,48 @@ Finally {
 Try {
     If ($AddFeatures.HostsFile -ne $true) {
         Write-Output ''
-        Process-Log -Output "Updating the Hosts file to block spyware domains." -LogPath $LogFile -Level Info
+        Process-Log -Output "Blocking Microsoft spyware, Windows Update and telemetry domains." -LogPath $LogFile -Level Info
         Copy-Item -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Destination "$MountFolder\Windows\System32\drivers\etc\hosts.bak" -Force
         Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value "`r`n# Entries created by the Optimize-Offline PowerShell Script." -Encoding UTF8
         $DisableHosts = @(
+            "000202-1.l.windowsupdate.com"
+            "0002c3-1.l.windowsupdate.com"
+            "0002fd-1.l.windowsupdate.com"
+            "00149f-1.l.windowsupdate.com"
+            "001891-1.l.windowsupdate.com"
+            "001f23-1.l.windowsupdate.com"
+            "002062-1.l.windowsupdate.com"
+            "0021d0-1.l.windowsupdate.com"
+            "a-0001.a-msedge.net"
+            "a-0001.dc-msedge.net"
+            "a-0002.a-msedge.net"
+            "a-0003.a-msedge.net"
+            "a-0003.dc-msedge.net"
+            "a-0004.a-msedge.net"
+            "a-0005.a-msedge.net"
+            "a-0006.a-msedge.net"
+            "a-0007.a-msedge.net"
+            "a-0008.a-msedge.net"
+            "a-0009.a-msedge.net"
+            "a-0010.a-msedge.net"
+            "a-0011.a-msedge.net"
+            "a-0012.a-msedge.net"
+            "a-msedge.net"
+            "a.ads1.msn.com"
             "a.ads2.msads.net"
+            "a.ads2.msn.com"
+            "a.rad.msn.com"
             "ac3.msn.com"
             "activity.windows.com"
             "adnexus.net"
+            "adnxs.com"
+            "ads.msn.com"
+            "ads1.msads.net"
+            "ads1.msn.com"
             "aidps.atdmt.com"
-            "appex.bing.com"
-            "apprep.smartscreen.microsoft.com"
+            "aka-cdn-ns.adtech.de"
+            "answers.microsoft.com"
             "apps.skype.com"
-            "arc.msn.com"
             "array101-prod.do.dsp.mp.microsoft.com"
             "array102-prod.do.dsp.mp.microsoft.com"
             "array103-prod.do.dsp.mp.microsoft.com"
@@ -2107,137 +2200,621 @@ Try {
             "array406-prod.do.dsp.mp.microsoft.com"
             "array407-prod.do.dsp.mp.microsoft.com"
             "array408-prod.do.dsp.mp.microsoft.com"
+            "ars.smartscreen.microsoft.com"
+            "au.download.windowsupdate.com"
+            "au.v4.download.windowsupdate.com"
             "az361816.vo.msecnd.net"
             "az512334.vo.msecnd.net"
             "b.ads1.msn.com"
             "b.ads2.msads.net"
-            "bat.r.msn.com"
-            "bn1303.settings.live.net"
+            "b.rad.msn.com"
+            "bingads.microsoft.com"
+            "bl3301-a.1drv.com"
+            "bl3301-c.1drv.com"
+            "bl3301-g.1drv.com"
+            "blob.weather.microsoft.com"
+            "bn1304-e.1drv.com"
+            "bn1306-a.1drv.com"
+            "bn1306-e.1drv.com"
+            "bn1306-g.1drv.com"
+            "bn2b-cor001.api.p001.1drv.com"
+            "bn2b-cor002.api.p001.1drv.com"
+            "bn2b-cor003.api.p001.1drv.com"
+            "bn2b-cor004.api.p001.1drv.com"
+            "bn2wns1.wns.windows.com"
+            "bn3p-cor001.api.p001.1drv.com"
+            "bn3sch020010560.wns.windows.com"
+            "bn3sch020010618.wns.windows.com"
+            "bn3sch020010629.wns.windows.com"
+            "bn3sch020010631.wns.windows.com"
+            "bn3sch020010635.wns.windows.com"
+            "bn3sch020010636.wns.windows.com"
+            "bn3sch020010650.wns.windows.com"
+            "bn3sch020011727.wns.windows.com"
+            "bn3sch020012850.wns.windows.com"
+            "bn3sch020020322.wns.windows.com"
+            "bn3sch020020749.wns.windows.com"
+            "bn3sch020022328.wns.windows.com"
+            "bn3sch020022335.wns.windows.com"
+            "bn3sch020022361.wns.windows.com"
+            "bn4sch101120814.wns.windows.com"
+            "bn4sch101120818.wns.windows.com"
+            "bn4sch101120913.wns.windows.com"
+            "bn4sch101121019.wns.windows.com"
+            "bn4sch101121109.wns.windows.com"
+            "bn4sch101121118.wns.windows.com"
+            "bn4sch101121223.wns.windows.com"
+            "bn4sch101121407.wns.windows.com"
+            "bn4sch101121618.wns.windows.com"
+            "bn4sch101121704.wns.windows.com"
+            "bn4sch101121709.wns.windows.com"
+            "bn4sch101121714.wns.windows.com"
+            "bn4sch101121908.wns.windows.com"
+            "bn4sch101122117.wns.windows.com"
+            "bn4sch101122310.wns.windows.com"
+            "bn4sch101122312.wns.windows.com"
+            "bn4sch101122421.wns.windows.com"
+            "bn4sch101123108.wns.windows.com"
+            "bn4sch101123110.wns.windows.com"
+            "bn4sch101123202.wns.windows.com"
+            "bn4sch102110124.wns.windows.com"
+            "bs.serving-sys.com"
+            "by3301-a.1drv.com"
+            "by3301-c.1drv.com"
+            "by3301-e.1drv.com"
+            "c-0001.dc-msedge.net"
             "c.atdmt.com"
-            "c.bing.com"
-            "c.microsoft.com"
             "c.msn.com"
-            "c.s-microsoft.com"
-            "c.urs.microsoft.com"
-            "c1.microsoft.com"
+            "ca.telemetry.microsoft.com"
             "cache.datamart.windows.com"
+            "candycrushsoda.king.com"
             "cdn.atdmt.com"
+            "cdn.content.prod.cms.msn.com"
+            "cdn.onenote.net"
+            "cds1204.lon.llnw.net"
+            "cds1289.lon.llnw.net"
+            "cds1293.lon.llnw.net"
+            "cds1327.lon.llnw.net"
+            "cds20417.lcy.llnw.net"
+            "cds20431.lcy.llnw.net"
+            "cds20450.lcy.llnw.net"
+            "cds20457.lcy.llnw.net"
+            "cds20475.lcy.llnw.net"
+            "cds21244.lon.llnw.net"
             "cds26.ams9.msecn.net"
+            "cds299.lcy.llnw.net"
+            "cds405.lcy.llnw.net"
+            "cds425.lcy.llnw.net"
+            "cds459.lcy.llnw.net"
+            "cds494.lcy.llnw.net"
+            "cds965.lon.llnw.net"
+            "ch1-cor001.api.p001.1drv.com"
+            "ch1-cor002.api.p001.1drv.com"
+            "ch3301-c.1drv.com"
+            "ch3301-e.1drv.com"
+            "ch3301-g.1drv.com"
+            "ch3302-c.1drv.com"
+            "ch3302-e.1drv.com"
             "choice.microsoft.com"
             "choice.microsoft.com.nsatc.net"
             "client-s.gateway.messenger.live.com"
             "client.wns.windows.com"
+            "clientconfig.passport.net"
             "compatexchange.cloudapp.net"
+            "compatexchange1.trafficmanager.net"
+            "continuum.dds.microsoft.com"
             "corp.sts.microsoft.com"
             "corpext.msitadfs.glbdns2.microsoft.com"
+            "cp101-prod.do.dsp.mp.microsoft.com"
             "cp201-prod.do.dsp.mp.microsoft.com"
+            "cp401-prod.do.dsp.mp.microsoft.com"
             "cs1.wpc.v0cdn.net"
+            "ctldl.windowsupdate.com"
             "db3aqu.atdmt.com"
             "db3wns2011111.wns.windows.com"
+            "db5.wns.windows.com"
+            "db5sch101100122.wns.windows.com"
+            "db5sch101100127.wns.windows.com"
+            "db5sch101100831.wns.windows.com"
+            "db5sch101100835.wns.windows.com"
+            "db5sch101100917.wns.windows.com"
+            "db5sch101100925.wns.windows.com"
+            "db5sch101100928.wns.windows.com"
+            "db5sch101100938.wns.windows.com"
+            "db5sch101101001.wns.windows.com"
+            "db5sch101101022.wns.windows.com"
+            "db5sch101101024.wns.windows.com"
+            "db5sch101101031.wns.windows.com"
+            "db5sch101101034.wns.windows.com"
+            "db5sch101101042.wns.windows.com"
+            "db5sch101101044.wns.windows.com"
+            "db5sch101101122.wns.windows.com"
+            "db5sch101101123.wns.windows.com"
+            "db5sch101101125.wns.windows.com"
+            "db5sch101101128.wns.windows.com"
+            "db5sch101101129.wns.windows.com"
+            "db5sch101101133.wns.windows.com"
+            "db5sch101101145.wns.windows.com"
+            "db5sch101101209.wns.windows.com"
+            "db5sch101101221.wns.windows.com"
+            "db5sch101101228.wns.windows.com"
+            "db5sch101101231.wns.windows.com"
+            "db5sch101101237.wns.windows.com"
+            "db5sch101101317.wns.windows.com"
+            "db5sch101101324.wns.windows.com"
+            "db5sch101101329.wns.windows.com"
+            "db5sch101101333.wns.windows.com"
+            "db5sch101101334.wns.windows.com"
+            "db5sch101101338.wns.windows.com"
+            "db5sch101101419.wns.windows.com"
+            "db5sch101101424.wns.windows.com"
+            "db5sch101101426.wns.windows.com"
+            "db5sch101101427.wns.windows.com"
+            "db5sch101101430.wns.windows.com"
+            "db5sch101101445.wns.windows.com"
+            "db5sch101101511.wns.windows.com"
+            "db5sch101101519.wns.windows.com"
+            "db5sch101101529.wns.windows.com"
+            "db5sch101101535.wns.windows.com"
+            "db5sch101101541.wns.windows.com"
+            "db5sch101101543.wns.windows.com"
+            "db5sch101101608.wns.windows.com"
+            "db5sch101101618.wns.windows.com"
+            "db5sch101101629.wns.windows.com"
+            "db5sch101101631.wns.windows.com"
+            "db5sch101101633.wns.windows.com"
+            "db5sch101101640.wns.windows.com"
+            "db5sch101101711.wns.windows.com"
+            "db5sch101101722.wns.windows.com"
+            "db5sch101101739.wns.windows.com"
+            "db5sch101101745.wns.windows.com"
+            "db5sch101101813.wns.windows.com"
+            "db5sch101101820.wns.windows.com"
+            "db5sch101101826.wns.windows.com"
+            "db5sch101101828.wns.windows.com"
+            "db5sch101101835.wns.windows.com"
+            "db5sch101101837.wns.windows.com"
+            "db5sch101101844.wns.windows.com"
+            "db5sch101101902.wns.windows.com"
+            "db5sch101101907.wns.windows.com"
+            "db5sch101101914.wns.windows.com"
+            "db5sch101101929.wns.windows.com"
+            "db5sch101101939.wns.windows.com"
+            "db5sch101101941.wns.windows.com"
+            "db5sch101102015.wns.windows.com"
+            "db5sch101102017.wns.windows.com"
+            "db5sch101102019.wns.windows.com"
+            "db5sch101102023.wns.windows.com"
+            "db5sch101102025.wns.windows.com"
+            "db5sch101102032.wns.windows.com"
+            "db5sch101102033.wns.windows.com"
+            "db5sch101110108.wns.windows.com"
+            "db5sch101110109.wns.windows.com"
+            "db5sch101110114.wns.windows.com"
+            "db5sch101110135.wns.windows.com"
+            "db5sch101110142.wns.windows.com"
+            "db5sch101110204.wns.windows.com"
+            "db5sch101110206.wns.windows.com"
+            "db5sch101110214.wns.windows.com"
+            "db5sch101110225.wns.windows.com"
+            "db5sch101110232.wns.windows.com"
+            "db5sch101110245.wns.windows.com"
+            "db5sch101110315.wns.windows.com"
+            "db5sch101110323.wns.windows.com"
+            "db5sch101110325.wns.windows.com"
+            "db5sch101110328.wns.windows.com"
+            "db5sch101110331.wns.windows.com"
+            "db5sch101110341.wns.windows.com"
+            "db5sch101110343.wns.windows.com"
+            "db5sch101110345.wns.windows.com"
+            "db5sch101110403.wns.windows.com"
+            "db5sch101110419.wns.windows.com"
+            "db5sch101110428.wns.windows.com"
+            "db5sch101110435.wns.windows.com"
+            "db5sch101110438.wns.windows.com"
+            "db5sch101110442.wns.windows.com"
+            "db5sch101110501.wns.windows.com"
+            "db5sch101110527.wns.windows.com"
+            "db5sch101110533.wns.windows.com"
+            "db5sch101110618.wns.windows.com"
+            "db5sch101110621.wns.windows.com"
+            "db5sch101110622.wns.windows.com"
+            "db5sch101110624.wns.windows.com"
+            "db5sch101110626.wns.windows.com"
+            "db5sch101110634.wns.windows.com"
+            "db5sch101110705.wns.windows.com"
+            "db5sch101110713.wns.windows.com"
+            "db5sch101110724.wns.windows.com"
+            "db5sch101110740.wns.windows.com"
+            "db5sch101110810.wns.windows.com"
+            "db5sch101110816.wns.windows.com"
+            "db5sch101110821.wns.windows.com"
+            "db5sch101110822.wns.windows.com"
+            "db5sch101110825.wns.windows.com"
+            "db5sch101110828.wns.windows.com"
+            "db5sch101110829.wns.windows.com"
+            "db5sch101110831.wns.windows.com"
+            "db5sch101110835.wns.windows.com"
+            "db5sch101110919.wns.windows.com"
+            "db5sch101110921.wns.windows.com"
+            "db5sch101110923.wns.windows.com"
+            "db5sch101110929.wns.windows.com"
+            "db5sch103081814.wns.windows.com"
+            "db5sch103081913.wns.windows.com"
+            "db5sch103082011.wns.windows.com"
+            "db5sch103082111.wns.windows.com"
+            "db5sch103082308.wns.windows.com"
+            "db5sch103082406.wns.windows.com"
+            "db5sch103082409.wns.windows.com"
+            "db5sch103082609.wns.windows.com"
+            "db5sch103082611.wns.windows.com"
+            "db5sch103082709.wns.windows.com"
+            "db5sch103082712.wns.windows.com"
+            "db5sch103082806.wns.windows.com"
+            "db5sch103090115.wns.windows.com"
+            "db5sch103090414.wns.windows.com"
+            "db5sch103090415.wns.windows.com"
+            "db5sch103090513.wns.windows.com"
+            "db5sch103090515.wns.windows.com"
+            "db5sch103090608.wns.windows.com"
+            "db5sch103090806.wns.windows.com"
+            "db5sch103090814.wns.windows.com"
+            "db5sch103090906.wns.windows.com"
+            "db5sch103091011.wns.windows.com"
+            "db5sch103091012.wns.windows.com"
+            "db5sch103091106.wns.windows.com"
+            "db5sch103091108.wns.windows.com"
+            "db5sch103091212.wns.windows.com"
+            "db5sch103091311.wns.windows.com"
+            "db5sch103091414.wns.windows.com"
+            "db5sch103091511.wns.windows.com"
+            "db5sch103091609.wns.windows.com"
+            "db5sch103091617.wns.windows.com"
+            "db5sch103091715.wns.windows.com"
+            "db5sch103091817.wns.windows.com"
+            "db5sch103091908.wns.windows.com"
+            "db5sch103091911.wns.windows.com"
+            "db5sch103092010.wns.windows.com"
+            "db5sch103092108.wns.windows.com"
+            "db5sch103092109.wns.windows.com"
+            "db5sch103092209.wns.windows.com"
+            "db5sch103092210.wns.windows.com"
+            "db5sch103092509.wns.windows.com"
+            "db5sch103100117.wns.windows.com"
+            "db5sch103100121.wns.windows.com"
+            "db5sch103100221.wns.windows.com"
+            "db5sch103100313.wns.windows.com"
+            "db5sch103100314.wns.windows.com"
+            "db5sch103100412.wns.windows.com"
+            "db5sch103100510.wns.windows.com"
+            "db5sch103100511.wns.windows.com"
+            "db5sch103100611.wns.windows.com"
+            "db5sch103100712.wns.windows.com"
+            "db5sch103101105.wns.windows.com"
+            "db5sch103101208.wns.windows.com"
+            "db5sch103101212.wns.windows.com"
+            "db5sch103101314.wns.windows.com"
+            "db5sch103101411.wns.windows.com"
+            "db5sch103101413.wns.windows.com"
+            "db5sch103101513.wns.windows.com"
+            "db5sch103101610.wns.windows.com"
+            "db5sch103101611.wns.windows.com"
+            "db5sch103101705.wns.windows.com"
+            "db5sch103101711.wns.windows.com"
+            "db5sch103101909.wns.windows.com"
+            "db5sch103101914.wns.windows.com"
+            "db5sch103102009.wns.windows.com"
+            "db5sch103102112.wns.windows.com"
+            "db5sch103102203.wns.windows.com"
+            "db5sch103102209.wns.windows.com"
+            "db5sch103102310.wns.windows.com"
+            "db5sch103102404.wns.windows.com"
+            "db5sch103102410.wns.windows.com"
+            "db5sch103102609.wns.windows.com"
+            "db5sch103102610.wns.windows.com"
+            "db5sch103102711.wns.windows.com"
+            "db5sch103102805.wns.windows.com"
+            "db5wns1d.wns.windows.com"
+            "db6sch102090104.wns.windows.com"
+            "db6sch102090109.wns.windows.com"
+            "db6sch102090112.wns.windows.com"
+            "db6sch102090116.wns.windows.com"
+            "db6sch102090122.wns.windows.com"
+            "db6sch102090203.wns.windows.com"
+            "db6sch102090206.wns.windows.com"
+            "db6sch102090208.wns.windows.com"
+            "db6sch102090209.wns.windows.com"
+            "db6sch102090211.wns.windows.com"
+            "db6sch102090212.wns.windows.com"
+            "db6sch102090305.wns.windows.com"
+            "db6sch102090306.wns.windows.com"
+            "db6sch102090308.wns.windows.com"
+            "db6sch102090311.wns.windows.com"
+            "db6sch102090313.wns.windows.com"
+            "db6sch102090410.wns.windows.com"
+            "db6sch102090412.wns.windows.com"
+            "db6sch102090504.wns.windows.com"
+            "db6sch102090510.wns.windows.com"
+            "db6sch102090512.wns.windows.com"
+            "db6sch102090513.wns.windows.com"
+            "db6sch102090514.wns.windows.com"
+            "db6sch102090519.wns.windows.com"
+            "db6sch102090613.wns.windows.com"
+            "db6sch102090619.wns.windows.com"
+            "db6sch102090810.wns.windows.com"
+            "db6sch102090811.wns.windows.com"
+            "db6sch102090902.wns.windows.com"
+            "db6sch102090905.wns.windows.com"
+            "db6sch102090907.wns.windows.com"
+            "db6sch102090908.wns.windows.com"
+            "db6sch102090910.wns.windows.com"
+            "db6sch102090911.wns.windows.com"
+            "db6sch102091003.wns.windows.com"
+            "db6sch102091007.wns.windows.com"
+            "db6sch102091008.wns.windows.com"
+            "db6sch102091009.wns.windows.com"
+            "db6sch102091011.wns.windows.com"
+            "db6sch102091103.wns.windows.com"
+            "db6sch102091105.wns.windows.com"
+            "db6sch102091204.wns.windows.com"
+            "db6sch102091209.wns.windows.com"
+            "db6sch102091305.wns.windows.com"
+            "db6sch102091307.wns.windows.com"
+            "db6sch102091308.wns.windows.com"
+            "db6sch102091309.wns.windows.com"
+            "db6sch102091314.wns.windows.com"
+            "db6sch102091412.wns.windows.com"
+            "db6sch102091503.wns.windows.com"
+            "db6sch102091507.wns.windows.com"
+            "db6sch102091508.wns.windows.com"
+            "db6sch102091602.wns.windows.com"
+            "db6sch102091603.wns.windows.com"
+            "db6sch102091606.wns.windows.com"
+            "db6sch102091607.wns.windows.com"
+            "deploy.static.akamaitechnologies.com"
+            "dev.virtualearth.net"
+            "device.auth.xboxlive.com"
             "df.telemetry.microsoft.com"
             "diagnostics.support.microsoft.com"
+            "disc101-prod.do.dsp.mp.microsoft.com"
             "disc201-prod.do.dsp.mp.microsoft.com"
+            "disc401-prod.do.dsp.mp.microsoft.com"
+            "displaycatalog.mp.microsoft.com"
             "dl.delivery.mp.microsoft.com"
+            "dmd.metaservices.microsoft.com"
+            "dns.msftncsi.com"
+            "download.microsoft.com"
+            "download.windowsupdate.com"
+            "ec.atdmt.com"
+            "ecn.dev.virtualearth.net"
+            "emdl.ws.microsoft.com"
+            "eu.vortex.data.microsoft.com"
+            "fe2.update.microsoft.com"
             "fe2.update.microsoft.com.akadns.net"
             "fe3.delivery.dsp.mp.microsoft.com.nsatc.net"
+            "fe3.delivery.mp.microsoft.com"
             "feedback.microsoft-hohm.com"
             "feedback.search.microsoft.com"
             "feedback.windows.com"
+            "fg.ds.b1.download.windowsupdate.com"
+            "fg.v4.download.windowsupdate.com"
             "flex.msn.com"
-            "g.bing.com"
+            "fs.microsoft.com"
+            "g.live.com"
             "g.msn.com"
             "geo-prod.do.dsp.mp.microsoft.com"
             "geover-prod.do.dsp.mp.microsoft.com"
             "h1.msn.com"
+            "h2.msn.com"
+            "hk2.wns.windows.com"
+            "hk2sch130020721.wns.windows.com"
+            "hk2sch130020723.wns.windows.com"
+            "hk2sch130020726.wns.windows.com"
+            "hk2sch130020729.wns.windows.com"
+            "hk2sch130020732.wns.windows.com"
+            "hk2sch130020824.wns.windows.com"
+            "hk2sch130020843.wns.windows.com"
+            "hk2sch130020851.wns.windows.com"
+            "hk2sch130020854.wns.windows.com"
+            "hk2sch130020855.wns.windows.com"
+            "hk2sch130020924.wns.windows.com"
+            "hk2sch130020936.wns.windows.com"
+            "hk2sch130020940.wns.windows.com"
+            "hk2sch130020956.wns.windows.com"
+            "hk2sch130020958.wns.windows.com"
+            "hk2sch130020961.wns.windows.com"
+            "hk2sch130021017.wns.windows.com"
+            "hk2sch130021029.wns.windows.com"
+            "hk2sch130021035.wns.windows.com"
+            "hk2sch130021137.wns.windows.com"
+            "hk2sch130021142.wns.windows.com"
+            "hk2sch130021153.wns.windows.com"
+            "hk2sch130021217.wns.windows.com"
+            "hk2sch130021246.wns.windows.com"
+            "hk2sch130021249.wns.windows.com"
+            "hk2sch130021260.wns.windows.com"
+            "hk2sch130021264.wns.windows.com"
+            "hk2sch130021322.wns.windows.com"
+            "hk2sch130021323.wns.windows.com"
+            "hk2sch130021329.wns.windows.com"
+            "hk2sch130021334.wns.windows.com"
+            "hk2sch130021360.wns.windows.com"
+            "hk2sch130021432.wns.windows.com"
+            "hk2sch130021433.wns.windows.com"
+            "hk2sch130021435.wns.windows.com"
+            "hk2sch130021437.wns.windows.com"
+            "hk2sch130021440.wns.windows.com"
+            "hk2sch130021450.wns.windows.com"
+            "hk2sch130021518.wns.windows.com"
+            "hk2sch130021523.wns.windows.com"
+            "hk2sch130021526.wns.windows.com"
+            "hk2sch130021527.wns.windows.com"
+            "hk2sch130021544.wns.windows.com"
+            "hk2sch130021554.wns.windows.com"
+            "hk2sch130021618.wns.windows.com"
+            "hk2sch130021634.wns.windows.com"
+            "hk2sch130021638.wns.windows.com"
+            "hk2sch130021646.wns.windows.com"
+            "hk2sch130021652.wns.windows.com"
+            "hk2sch130021654.wns.windows.com"
+            "hk2sch130021657.wns.windows.com"
+            "hk2sch130021723.wns.windows.com"
+            "hk2sch130021726.wns.windows.com"
+            "hk2sch130021727.wns.windows.com"
+            "hk2sch130021730.wns.windows.com"
+            "hk2sch130021731.wns.windows.com"
+            "hk2sch130021754.wns.windows.com"
+            "hk2sch130021829.wns.windows.com"
+            "hk2sch130021830.wns.windows.com"
+            "hk2sch130021833.wns.windows.com"
+            "hk2sch130021840.wns.windows.com"
+            "hk2sch130021842.wns.windows.com"
+            "hk2sch130021851.wns.windows.com"
+            "hk2sch130021852.wns.windows.com"
+            "hk2sch130021927.wns.windows.com"
+            "hk2sch130021928.wns.windows.com"
+            "hk2sch130021929.wns.windows.com"
+            "hk2sch130021958.wns.windows.com"
+            "hk2sch130022035.wns.windows.com"
+            "hk2sch130022041.wns.windows.com"
+            "hk2sch130022049.wns.windows.com"
+            "hk2sch130022135.wns.windows.com"
+            "hk2wns1.wns.windows.com"
+            "hk2wns1b.wns.windows.com"
+            "i-bl6p-cor001.api.p001.1drv.com"
+            "i-by3p-cor001.api.p001.1drv.com"
+            "i-by3p-cor002.api.p001.1drv.com"
+            "i-ch1-cor001.api.p001.1drv.com"
+            "i-ch1-cor002.api.p001.1drv.com"
+            "i-sn2-cor001.api.p001.1drv.com"
+            "i-sn2-cor002.api.p001.1drv.com"
             "i1.services.social.microsoft.com"
             "i1.services.social.microsoft.com.nsatc.net"
             "iecvlist.microsoft.com"
-            "ieonline.microsoft.com"
-            "ieonlinews.microsoft.com"
-            "inprod.support.services.microsoft.com"
+            "img-s-msn-com.akamaized.net"
+            "inference.location.live.net"
+            "insiderppe.cloudapp.net"
+            "insiderservice.microsoft.com"
+            "kv101-prod.do.dsp.mp.microsoft.com"
             "kv201-prod.do.dsp.mp.microsoft.com"
+            "kv401-prod.do.dsp.mp.microsoft.com"
             "lb1.www.ms.akadns.net"
+            "licensing.mp.microsoft.com"
             "live.rads.msn.com"
+            "login.live.com"
+            "ls2web.redmond.corp.microsoft.com"
             "m.adnxs.com"
-            "microsoftgamestudio.112.2o7.net"
-            "microsoftinternetexplorer.112.2o7.net"
-            "microsoftmachinetranslation.112.2o7.net"
-            "microsoftoffice.112.2o7.net"
-            "microsoftsto.112.2o7.net"
-            "microsoftuk.122.2o7.net"
-            "microsoftwga.112.2o7.net"
-            "microsoftwindowsmobile.122.2o7.net"
-            "microsoftwllivemkt.112.2o7.net"
-            "microsoftwlmailmkt.112.2o7.net"
-            "microsoftwlmessengermkt.112.2o7.net"
-            "microsoftwlmobilemkt.112.2o7.net"
-            "microsoftwlsearchcrm.112.2o7.net"
-            "microsoftxbox.112.2o7.net"
-            "msnbot-65-55-108-23.search.msn.com"
+            "m.hotmail.com"
+            "mediaredirect.microsoft.com"
+            "microsoftwindowsupdate.net"
+            "mobile.pipe.aria.microsoft.com"
+            "msedge.net"
+            "msftncsi.com"
             "msntest.serving-sys.com"
             "nexus.officeapps.live.com"
             "nexusrules.officeapps.live.com"
             "oca.telemetry.microsoft.com"
             "oca.telemetry.microsoft.com.nsatc.net"
-            "ocos-office365-s2s.msedge.net"
-            "ocsa.office.microsoft.com"
-            "odc.officeapps.live.com"
-            "otf.msn.com"
+            "officeclient.microsoft.com"
+            "oneclient.sfx.ms"
+            "onesettings-bn2.metron.live.com.nsatc.net"
+            "onesettings-cy2.metron.live.com.nsatc.net"
+            "onesettings-db5.metron.live.com.nsatc.net"
+            "onesettings-hk2.metron.live.com.nsatc.net"
             "pre.footprintpredict.com"
             "preview.msn.com"
-            "public-family.api.account.microsoft.com"
+            "pricelist.skype.com"
+            "pti.store.microsoft.com"
+            "query.prod.cms.rt.microsoft.com"
+            "rad.live.com"
             "rad.msn.com"
             "redir.metaservices.microsoft.com"
+            "register.cdpcs.microsoft.com"
             "reports.wes.df.telemetry.microsoft.com"
-            "roaming.officeapps.live.com"
-            "rpt.msn.com"
-            "rr.office.microsoft.com"
+            "s.gateway.messenger.live.com"
+            "s0.2mdn.net"
+            "sO.2mdn.net"
             "schemas.microsoft.akadns.net"
+            "search.msn.com"
+            "secure.adnxs.com"
             "secure.flashtalking.com"
             "services.wes.df.telemetry.microsoft.com"
             "settings-sandbox.data.microsoft.com"
+            "settings-ssl.xboxlive.com"
+            "settings-win-ppe.data.microsoft.com"
             "settings-win.data.microsoft.com"
+            "settings.data.glbdns2.microsoft.com"
             "settings.data.microsoft.com"
+            "sls.update.microsoft.com"
             "sls.update.microsoft.com.akadns.net"
+            "sn3301-c.1drv.com"
+            "sn3301-e.1drv.com"
+            "sn3301-g.1drv.com"
             "spynet2.microsoft.com"
             "spynetalt.microsoft.com"
+            "spyneteurope.microsoft.akadns.net"
             "sqm.df.telemetry.microsoft.com"
             "sqm.telemetry.microsoft.com"
             "sqm.telemetry.microsoft.com.nsatc.net"
             "ssw.live.com"
-            "statsfe1-df.ws.microsoft.com"
+            "static.2mdn.net"
             "statsfe1.ws.microsoft.com"
-            "statsfe2-df.ws.microsoft.com"
             "statsfe2.update.microsoft.com.akadns.net"
+            "statsfe2.ws.microsoft.com"
+            "storage.live.com"
+            "store-images.s-microsoft.com"
+            "storecatalogrevocation.storequality.microsoft.com"
+            "storeedgefd.dsx.mp.microsoft.com"
+            "support.microsoft.com"
             "survey.watson.microsoft.com"
-            "t.urs.microsoft.com"
+            "t0.ssl.ak.dynamic.tiles.virtualearth.net"
+            "t0.ssl.ak.tiles.virtualearth.net"
             "telecommand.telemetry.microsoft.com"
             "telecommand.telemetry.microsoft.com.nsatc.net"
             "telemetry.appex.bing.net"
             "telemetry.microsoft.com"
             "telemetry.urs.microsoft.com"
+            "test.activity.windows.com"
+            "tile-service.weather.microsoft.com"
+            "time.windows.com"
+            "tk2.plt.msn.com"
             "tlu.dl.delivery.mp.microsoft.com"
             "tsfe.trafficshaping.dsp.mp.microsoft.com"
-            "uci.officeapps.live.com"
-            "uif.microsoft.com"
-            "urs.microsoft.com"
+            "ui.skype.com"
             "urs.smartscreen.microsoft.com"
+            "v10.vortex-win.data.metron.live.com.nsatc.net"
             "v10.vortex-win.data.microsoft.com"
+            "v4.download.windowsupdate.com"
+            "version.hybrid.api.here.com"
+            "view.atdmt.com"
             "vortex-bn2.metron.live.com.nsatc.net"
             "vortex-cy2.metron.live.com.nsatc.net"
+            "vortex-db5.metron.live.com.nsatc.net"
+            "vortex-hk2.metron.live.com.nsatc.net"
             "vortex-sandbox.data.microsoft.com"
+            "vortex-win.data.metron.live.com.nsatc.net"
             "vortex-win.data.microsoft.com"
+            "vortex.data.glbdns2.microsoft.com"
+            "vortex.data.metron.live.com.nsatc.net"
             "vortex.data.microsoft.com"
             "watson.live.com"
             "watson.microsoft.com"
             "watson.ppe.telemetry.microsoft.com"
             "watson.telemetry.microsoft.com"
             "watson.telemetry.microsoft.com.nsatc.net"
+            "wdcp.microsoft.com"
+            "wdcpalt.microsoft.com"
             "web.vortex.data.microsoft.com"
             "wes.df.telemetry.microsoft.com"
+            "win10-trt.msedge.net"
             "win10.ipv6.microsoft.com"
-            "www.bing.com"
-            "www.windowssearch.com"
+            "win1710.ipv6.microsoft.com"
+            "windowsupdate.com"
+            "windowupdate.org"
+            "wscont.apps.microsoft.com"
+            "www.msedge.net"
+            "www.msftconnecttest.com"
+            "www.msftncsi.com"
         ) | % { Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value $_.Replace($_, "0.0.0.0 $($_)") -Encoding UTF8 }
     }
 }
