@@ -36,7 +36,7 @@
 	.PARAMETER SetRegistry
         	Sets optimized registry values into the offline registry hives.
         
-    	.PARAMETER SetRegistry
+    	.PARAMETER Hardened
 		Increases device security and further restricts more access to such things as system and app sensors. Moreover, the SetupComplete script is quite a bit more substantive.
 	
 	.PARAMETER Drivers
