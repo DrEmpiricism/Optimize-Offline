@@ -2,7 +2,7 @@
 #Requires -Version 5
 <#
 	.SYNOPSIS
-		Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2 and RS3 64-bit.
+		Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2, RS3 and RS4 64-bit.
 	
 	.DESCRIPTION
 		Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
@@ -146,12 +146,12 @@ $SystemAppsList = @(
 ##*=============================================
 $AppWhiteList = @(
     "Microsoft.DesktopAppInstaller"
-    #"Microsoft.Windows.Photos"
+    "Microsoft.Windows.Photos"
     #"Microsoft.WindowsCalculator"
     "Microsoft.Xbox.TCUI" # Removing Microsoft.Xbox.TCUI will prevent Microsoft's App Troubleshooter from functioning properly.
     "Microsoft.XboxIdentityProvider"
-    #"Microsoft.WindowsCamera"
-    #"Microsoft.StorePurchaseApp"
+    "Microsoft.WindowsCamera"
+    "Microsoft.StorePurchaseApp"
     "Microsoft.WindowsStore"
 )
 ##*=============================================
@@ -182,8 +182,8 @@ $AddFeatures = @{
     SystemImages     = $true
     OfflineServicing = $null
     Unattend         = $null
-    GenuineTicket    = $null
-    HostsFile        = $null
+    GenuineTicket    = $true
+    HostsFile        = $true
     Win32Calc        = $true
     SysPrep          = $null
 }
@@ -856,14 +856,6 @@ If ($SetRegistry -or $Hardened) {
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Value 0 -Type DWord
     #****************************************************************
     Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-    Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> $WorkFolder\Registry-Optimizations.log
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "UxOption" -Value 1 -Type DWord
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
-    #****************************************************************
-    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
     Write-Output "Disabling 'Find My Device'." >> $WorkFolder\Registry-Optimizations.log
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\FindMyDevice"
@@ -1432,6 +1424,12 @@ If ($SetRegistry -or $Hardened) {
     }
     #****************************************************************
     Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Removing 3D Objects from This PC." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    Remove-Item "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
+    Remove-Item "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
     Write-Output "Removing Drives from the Navigation Pane." >> $WorkFolder\Registry-Optimizations.log
     #****************************************************************
     Remove-Item "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}"
@@ -1666,6 +1664,19 @@ If ($SetRegistry -or $Hardened) {
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
+        #****************************************************************
+        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+        Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> $WorkFolder\Registry-Optimizations.log
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU"
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "UxOption" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Value 2 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Value 3 -Type DWord
     }
     [void](Unload-OfflineHives)
     $RegistryComplete = $true
