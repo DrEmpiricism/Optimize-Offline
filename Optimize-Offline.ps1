@@ -1688,7 +1688,7 @@ If ($RegistryComplete.Equals($true)) {
     Start-Sleep 3
 }
 
-If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry) {
+If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) {
     Write-Output ''
     Process-Log -Output "Applying a custom Start Menu and Taskbar Layout." -LogPath $LogFile -Level Info
     $LayoutTemplate = @'
