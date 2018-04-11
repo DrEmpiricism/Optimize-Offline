@@ -2,8 +2,6 @@
 
 - Changed Helper Function names to use approved PowerShell verbs.
 
-- The -Hardened feature has been temporarily removed on the public script.
-
 - Fixed the logging so entries were once again appended to the .log file instead of overwriting each entry.
 
 - Added the removal of unused Desktop.ini entries and their respective program links.
@@ -14,15 +12,9 @@
 
 ## 3.0.8.6 ## (04-06-2018)
 
-- Added a very "lite" -Hardened switch that incorporates some more telemetry removal, sensor and app restrictions, etc.
-
 - The Additional-Features function script has been updated with a new Win32Calc application. The function no longer applies the WIM files to the image; rather, it simply copies over the essential files and also edits the appropriate Desktop.ini
 
 - The default Hosts file has been significantly increased in spy and telemetry domains. All of those that are added have been verified as of 3/28/2018 (but I still recommend Steven Black's Hosts file).
-
-- The -Hardened switch also has its own SetupComplete.cmd with a significantly more robust amount of tasks it will auto-disable.
-
-- v4.0 will be coming soon.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
