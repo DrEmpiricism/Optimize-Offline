@@ -184,7 +184,7 @@ $AddFeatures = @{
     OfflineServicing = $null
     Unattend         = $null
     GenuineTicket    = $null
-    HostsFile        = $true
+    HostsFile        = $null
     Win32Calc        = $true
     SysPrep          = $null
 }
@@ -196,7 +196,6 @@ $AddFeatures = @{
 $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
 $Host.UI.RawUI.WindowTitle = "Optimizing image."
 $ProgressPreference = 'SilentlyContinue'
-$ErrorMessage = $_.Exception.Message
 $TimeStamp = Get-Date -Format "[MM-dd-yyyy hh:mm:ss]"
 $Script = "Optimize-Offline"
 $LogFile = "$env:TEMP\Optimize-Offline.log"
@@ -205,14 +204,14 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 #endregion Script Variables
 
 #region Helper Functions
-Function Verify-Admin {
+Function Test-Admin {
     $CurrentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
     $IsAdmin = $CurrentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     Write-Verbose "IsUserAdmin? $IsAdmin"
     Return $IsAdmin
 }
 
-Function Process-Log {
+Function Write-Log {
     [CmdletBinding()]
     Param
     (
@@ -437,7 +436,7 @@ public sealed class AdjustAccessToken
     }
 }
 
-Function Create-WorkDirectory {
+Function New-WorkDirectory {
     If ($Local) {
         $WorkDir = [System.IO.Path]::Combine($PSScriptRoot, [System.Guid]::NewGuid())
         [void][System.IO.Directory]::CreateDirectory($WorkDir)
@@ -451,7 +450,7 @@ Function Create-WorkDirectory {
     }
 }
 
-Function Create-TempDirectory {
+Function New-TempDirectory {
     If ($Local) {
         $TempDir = [System.IO.Path]::Combine($PSScriptRoot, [System.Guid]::NewGuid())
         [void][System.IO.Directory]::CreateDirectory($TempDir)
@@ -465,7 +464,7 @@ Function Create-TempDirectory {
     }
 }
 
-Function Create-ImageDirectory {
+Function New-ImageDirectory {
     If ($Local) {
         $ImageDir = [System.IO.Path]::Combine($PSScriptRoot, [System.Guid]::NewGuid())
         [void][System.IO.Directory]::CreateDirectory($ImageDir)
@@ -479,7 +478,7 @@ Function Create-ImageDirectory {
     }
 }
 
-Function Create-MountDirectory {
+Function New-MountDirectory {
     If ($Local) {
         $MountDir = [System.IO.Path]::Combine($PSScriptRoot, [System.Guid]::NewGuid())
         [void][System.IO.Directory]::CreateDirectory($MountDir)
@@ -493,7 +492,7 @@ Function Create-MountDirectory {
     }
 }
 
-Function Create-SaveDirectory {
+Function New-SaveDirectory {
     If ($Local) {
         New-Item -ItemType Directory -Path $PSScriptRoot\Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"
     }
@@ -502,14 +501,14 @@ Function Create-SaveDirectory {
     }
 }
 
-Function Load-OfflineHives {
+Function Mount-OfflineHives {
     [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software")
     [void](REG LOAD HKLM\WIM_HKLM_SYSTEM "$MountFolder\Windows\System32\config\system")
     [void](REG LOAD HKLM\WIM_HKCU "$MountFolder\Users\Default\NTUSER.DAT")
     [void](REG LOAD HKLM\WIM_HKU_DEFAULT "$MountFolder\Windows\System32\config\default")
 }
 
-Function Unload-OfflineHives {
+Function Dismount-OfflineHives {
     Start-Sleep 3
     [System.GC]::Collect()
     [void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
@@ -518,7 +517,7 @@ Function Unload-OfflineHives {
     [void](REG UNLOAD HKLM\WIM_HKU_DEFAULT)
 }
 
-Function Verify-OfflineHives {
+Function Test-OfflineHives {
     Param ()
 	
     $HivePaths = @(
@@ -529,14 +528,12 @@ Function Verify-OfflineHives {
     ) | % { $AllHivesLoaded = ((Test-Path -Path $_) -eq $true) }; Return $AllHivesLoaded
 }
 
-Function Terminate-Script {
-    Param ()
-	
+Function Exit-Script {
     Start-Sleep 3
     Write-Output ''
     Write-Verbose "Cleaning-up and terminating script." -Verbose
-    If (Verify-OfflineHives) {
-        [void](Unload-OfflineHives)
+    If (Test-OfflineHives) {
+        [void](Dismount-OfflineHives)
     }
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $TempFolder -LogPath $DISMLog)
     [void](Clear-WindowsCorruptMountPoint -LogPath $DISMLog)
@@ -563,7 +560,7 @@ Function New-Container($Path) {
 }
 #endregion Helper Primary Functions
 
-If (!(Verify-Admin)) {
+If (!(Test-Admin)) {
     Write-Warning "Administrative access is required. Please re-launch PowerShell with elevation."
     Break
 }
@@ -595,10 +592,10 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $SourceWIM = "$($DriveLetter):\sources\install.wim"
     If (Test-Path -Path $SourceWIM -PathType Leaf) {
         Write-Verbose "Copying the WIM from $(Split-Path -Path $ResolveISO -Leaf)" -Verbose
-        [void]($MountFolder = Create-MountDirectory)
-        [void]($ImageFolder = Create-ImageDirectory)
-        [void]($WorkFolder = Create-WorkDirectory)
-        [void]($TempFolder = Create-TempDirectory)
+        [void]($MountFolder = New-MountDirectory)
+        [void]($ImageFolder = New-ImageDirectory)
+        [void]($WorkFolder = New-WorkDirectory)
+        [void]($TempFolder = New-TempDirectory)
         Copy-Item -Path $SourceWIM -Destination $ImageFolder -Force
         $ImageFile = "$ImageFolder\install.wim"
         Dismount-DiskImage -ImagePath $ResolveISO -StorageType ISO
@@ -612,10 +609,10 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
 }
 ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
     Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
-    [void]($MountFolder = Create-MountDirectory)
-    [void]($ImageFolder = Create-ImageDirectory)
-    [void]($WorkFolder = Create-WorkDirectory)
-    [void]($TempFolder = Create-TempDirectory)
+    [void]($MountFolder = New-MountDirectory)
+    [void]($ImageFolder = New-ImageDirectory)
+    [void]($WorkFolder = New-WorkDirectory)
+    [void]($TempFolder = New-TempDirectory)
     Copy-Item -Path $ImagePath -Destination $ImageFolder -Force
     $ImageFile = "$ImageFolder\install.wim"
     If (([IO.FileInfo]$ImageFile).IsReadOnly) {
@@ -643,8 +640,16 @@ Try {
         Start-Sleep 3
         Clear-Host
         $Error.Clear()
-        Process-Log -Output "Mounting Image." -LogPath $LogFile -Level Info
-        [void](Mount-WindowsImage -ImagePath $ImageFile -Index $Index -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog)
+        Write-Log -Output "Mounting Image." -LogPath $LogFile -Level Info
+        $MountWindowsImage = @{
+            ImagePath        = $ImageFile
+            Index            = $Index
+            Path             = $MountFolder
+            ScratchDirectory = $TempFolder
+            LogPath          = $DISMLog
+            ErrorAction      = "Stop"
+        }
+        [void](Mount-WindowsImage @MountWindowsImage)
         $ImageIsMounted = $true
     }
 }
@@ -655,11 +660,12 @@ Catch {
     Remove-Item -Path $TempFolder -Recurse -Force
     Remove-Item -Path $LogFile -Force
     Remove-Item -Path $DISMLog -Force
+    Break
 }
 
 If ($ImageIsMounted.Equals($true)) {
     Write-Output ''
-    Process-Log -Output "Verifying image health." -LogPath $LogFile -Level Info
+    Write-Log -Output "Verifying image health." -LogPath $LogFile -Level Info
     $StartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth -LogPath $DISMLog
     If ($StartHealthCheck.ImageHealthState -eq "Healthy") {
         Write-Output ''
@@ -669,8 +675,8 @@ If ($ImageIsMounted.Equals($true)) {
     }
     Else {
         Write-Output ''
-        Process-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -LogPath $LogFile -Level Error
-        Terminate-Script
+        Write-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -LogPath $LogFile -Level Error
+        Exit-Script
         Break
     }
 }
@@ -678,7 +684,7 @@ If ($ImageIsMounted.Equals($true)) {
 If ($WhiteListApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($_.DisplayName -notin $AppWhiteList) {
-            Process-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+            Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
             [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
         }
     }
@@ -689,11 +695,12 @@ If ($SelectApps) {
         If ($SelectApps) {
             $AppSelect = Read-Host "Remove Provisioned App Package:" $_.DisplayName "(y/N)"
             If ($AppSelect.Equals("y")) {
-                Process-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+                Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
                 [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
                 $AppSelect = ''
             }
             Else {
+                Write-Host "Skipping Provisioned App Package: $($_.DisplayName)" -ForegroundColor Cyan
                 $AppSelect = ''
             }
         }
@@ -702,19 +709,19 @@ If ($SelectApps) {
 
 If ($AllApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
-        Process-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+        Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
         [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
     }
 }
 
 If ($SetRegistry -or $Hardened) {
+    #region Default Registry Optimizations
     If (Test-Path -Path $WorkFolder\Registry-Optimizations.log) {
         Remove-Item -Path $WorkFolder\Registry-Optimizations.log -Force
     }
-    #region Registry Optimizations
     Clear-Host
-    Process-Log -Output "Enhancing system security, usability and performance with registry optimizations." -LogPath $LogFile -Level Info
-    [void](Load-OfflineHives)
+    Write-Log -Output "Enhancing system security, usability and performance with registry optimizations." -LogPath $LogFile -Level Info
+    [void](Mount-OfflineHives)
     #****************************************************************
     Write-Output "Disabling Cortana and Search Bar Web Connectivity." >> $WorkFolder\Registry-Optimizations.log
     #****************************************************************
@@ -1542,15 +1549,16 @@ If ($SetRegistry -or $Hardened) {
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Power" -Name "HibernteEnabled" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowHibernateOption" -Value 0 -Type DWord
     #****************************************************************
-    [void](Unload-OfflineHives)
+    [void](Dismount-OfflineHives)
     $RegistryComplete = $true
-    #endregion Registry Optimizations
+    #endregion Default Registry Optimizations
 }
 
 If ($Hardened) {
-    [void](Load-OfflineHives)
+    #region Hardened Registry Optimizations
+    [void](Mount-OfflineHives)
     Write-Output ''
-    Process-Log -Output "Adding Hardened Registry Values." -LogPath $LogFile -Level Info
+    Write-Log -Output "Adding Hardened Registry Values." -LogPath $LogFile -Level Info
     #****************************************************************
     Write-Output '' >> $WorkFolder\Registry-Optimizations.log
     Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
@@ -1661,12 +1669,13 @@ If ($Hardened) {
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Value 3 -Type DWord
     #****************************************************************
-    [void](Unload-OfflineHives)
+    [void](Dismount-OfflineHives)
+    #endregion Default Hardened Registry Optimizations
 }
 
 If ($RegistryComplete.Equals($true)) {
     Write-Output ''
-    Process-Log -Output "Editing the Start Menu Desktop.ini to remove any broken links." -LogPath $LogFile -Level Info
+    Write-Log -Output "Editing the Start Menu Desktop.ini to remove any broken links." -LogPath $LogFile -Level Info
     $LnkINI = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
     $MathInput = "Math Input Panel.lnk=@%CommonProgramFiles%\Microsoft Shared\Ink\mip.exe,-291"
     $SnippingTool = "Snipping Tool.lnk=@%SystemRoot%\system32\SnippingTool.exe,-15051"
@@ -1690,7 +1699,7 @@ If ($RegistryComplete.Equals($true)) {
 
 If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) {
     Write-Output ''
-    Process-Log -Output "Applying a custom Start Menu and Taskbar Layout." -LogPath $LogFile -Level Info
+    Write-Log -Output "Applying a custom Start Menu and Taskbar Layout." -LogPath $LogFile -Level Info
     $LayoutTemplate = @'
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
   <LayoutOptions StartTileGroupCellWidth="6" />
@@ -1720,6 +1729,7 @@ If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) 
     $LayoutModification = Join-Path -Path "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell" -ChildPath "LayoutModification.xml"
     Set-Content -Path $LayoutModification -Value $LayoutTemplate -Encoding UTF8 -Force
     $CreateShortcuts = {
+        # UWP Explorer App LayoutModification Link
         $UWPShell = New-Object -ComObject WScript.Shell
         $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
         $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
@@ -1728,6 +1738,7 @@ If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) 
         $UWPShortcut.WorkingDirectory = "%SystemRoot%"
         $UWPShortcut.Description = "The UWP File Explorer Application."
         $UWPShortcut.Save()
+        # Boot to Firmware LayoutModification Link
         $UEFIShell = New-Object -ComObject WScript.Shell
         $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
         $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
@@ -1741,7 +1752,7 @@ If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) 
         [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes)
     }
     Write-Output ''
-    Process-Log -Output "Creating required Shortcuts." -LogPath $LogFile -Level Info
+    Write-Log -Output "Creating required Shortcuts." -LogPath $LogFile -Level Info
     & $CreateShortcuts
     Start-Sleep 3
 }
@@ -1749,7 +1760,7 @@ If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) 
 If ($SystemAppsList.Count -gt 0) {
     Write-Output ''
     Write-Verbose "Removing System Applications." -Verbose
-    [void](Load-OfflineHives)
+    [void](Mount-OfflineHives)
     $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
     ForEach ($SystemApp in $SystemAppsList) {
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | ? { $_ -like "*$SystemApp*" }
@@ -1760,38 +1771,37 @@ If ($SystemAppsList.Count -gt 0) {
             [void](REG DELETE $AppKey /F)
         }
     }
-    [void](Unload-OfflineHives)
-    $SystemAppsComplete = $true
+    [void](Dismount-OfflineHives)
 }
 
 Try {
     If ($SelectApps -or $AllApps -or $WhiteListApps) {
         Write-Output ''
-        Process-Log -Output "Disabling removed Provisoned App Package services." -LogPath $LogFile -Level Info
+        Write-Log -Output "Disabling removed Provisoned App Package services." -LogPath $LogFile -Level Info
         If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0)) {
-            [void](Load-OfflineHives)
+            [void](Mount-OfflineHives)
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord
-            [void](Unload-OfflineHives)
+            [void](Dismount-OfflineHives)
         }
         If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0)) {
-            [void](Load-OfflineHives)
+            [void](Mount-OfflineHives)
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord
-            [void](Unload-OfflineHives)
+            [void](Dismount-OfflineHives)
         }
     }
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "An error occurred removing Provisoned App Package services." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "An error occurred removing Provisoned App Package services." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 
 Try {
     If ($SystemAppsList -contains "SecHealthUI") {
         Write-Output ''
-        Process-Log -Output "Disabling remaining Windows Defender services and drivers." -LogPath $LogFile -Level Info
-        [void](Load-OfflineHives)
+        Write-Log -Output "Disabling remaining Windows Defender services and drivers." -LogPath $LogFile -Level Info
+        [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection"
@@ -1826,17 +1836,17 @@ Try {
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "An error occurred disabling remaining Windows Defender services and drivers." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "An error occurred disabling remaining Windows Defender services and drivers." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 Finally {
-    [void](Unload-OfflineHives)
+    [void](Dismount-OfflineHives)
 }
 
 If ($DisableDefenderComplete.Equals($true) -and $Build -ge '16273') {
     Write-Output ''
-    Process-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
+    Write-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
     $DisableDefenderFeature = @{
         Path             = $MountFolder
         FeatureName      = "Windows-Defender-Default-Definitions"
@@ -1849,8 +1859,8 @@ If ($DisableDefenderComplete.Equals($true) -and $Build -ge '16273') {
 Try {
     If ($SystemAppsList -contains "XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.PackageName -like "*Xbox*" }).Count -lt 5)) {
         Write-Output ''
-        Process-Log -Output "Disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Info
-        [void](Load-OfflineHives)
+        Write-Log -Output "Disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Info
+        [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR"
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR"
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar"
@@ -1877,17 +1887,17 @@ Try {
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "An error occurred disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "An error occurred disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 Finally {
-    [void](Unload-OfflineHives)
+    [void](Dismount-OfflineHives)
 }
 
 If ($FeatureDisableList.Count -gt 0) {
     Write-Output ''
-    Process-Log -Output "Disabling Windows Optional Features." -LogPath $LogFile -Level Info
+    Write-Log -Output "Disabling Windows Optional Features." -LogPath $LogFile -Level Info
     $WindowsFeatures = Get-WindowsOptionalFeature -Path $MountFolder
     ForEach ($Feature in $FeatureDisableList) {
         $DisableFeature = @{
@@ -1901,7 +1911,7 @@ If ($FeatureDisableList.Count -gt 0) {
 
 If ($PackageRemovalList.Count -gt 0) {
     Write-Output ''
-    Process-Log -Output "Removing Windows Packages." -LogPath $LogFile -Level Info
+    Write-Log -Output "Removing Windows OnDemand Packages." -LogPath $LogFile -Level Info
     $WindowsPackages = Get-WindowsPackage -Path $MountFolder
     ForEach ($Package in $PackageRemovalList) {
         $RemovePackage = @{
@@ -1916,25 +1926,26 @@ If ($PackageRemovalList.Count -gt 0) {
 If ($Drivers) {
     If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
         Write-Output ''
-        Process-Log -Output "Injecting driver packages into the image." -LogPath $LogFile -Level Info
+        Write-Log -Output "Injecting driver packages into the image." -LogPath $LogFile -Level Info
         [void](Add-WindowsDriver -Path $MountFolder -Driver $Drivers -Recurse -ForceUnsigned -LogPath $DISMLog)
         Get-WindowsDriver -Path $MountFolder | Format-List | Out-File $WorkFolder\DriverPackageList.log -Force
     }
     ElseIf (Test-Path -Path $Drivers -PathType Leaf -Filter "*.inf") {
         Write-Output ''
-        Process-Log -Output "Injecting driver package into the image." -LogPath $LogFile -Level Info
+        Write-Log -Output "Injecting driver package into the image." -LogPath $LogFile -Level Info
         [void](Add-WindowsDriver -Path $MountFolder -Driver $Drivers -ForceUnsigned -LogPath $DISMLog)
         Get-WindowsDriver -Path $MountFolder | Format-List | Out-File $WorkFolder\DriverPackageList.log -Force
     }
     Else {
         Write-Output ''
-        Process-Log -Output "$Drivers is not a valid driver package path." -LogPath $LogFile -Level Warning
+        Write-Log -Output "$Drivers is not a valid driver package path." -LogPath $LogFile -Level Warning
     }
 }
 
-If (!$Hardened) {
-    If ($RegistryComplete.Equals($true)) {
-        $SetupComplete = @'
+Try {
+    If (!$Hardened) {
+        If ($RegistryComplete.Equals($true)) {
+            $SetupComplete = @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "s-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -1961,12 +1972,12 @@ GOTO :CONTINUE
 
 
 '@
-        [void]($SB = [System.Text.StringBuilder]::New($SetupComplete))
-        New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-        $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
-    }
-    If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true)) {
-        $DefenderXbox = @'
+            [void]($SB = [System.Text.StringBuilder]::New($SetupComplete))
+            New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+            $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
+        }
+        If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true)) {
+            $DefenderXbox = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
@@ -1999,12 +2010,11 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-        [void]($SB.Append($DefenderXbox))
-        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-        $SetupCompleteComplete = $true
-    }
-    ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true) {
-        $Defender = @'
+            [void]($SB.Append($DefenderXbox))
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        }
+        ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true) {
+            $Defender = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
@@ -2035,12 +2045,11 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTAS
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >NUL
 DEL "%~f0"
 '@
-        [void]($SB.Append($Defender))
-        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-        $SetupCompleteComplete = $true
-    }
-    ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true)) {
-        $Xbox = @'
+            [void]($SB.Append($Defender))
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        }
+        ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true)) {
+            $Xbox = @'
 :CONTINUE
 SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
@@ -2067,13 +2076,12 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-        [void]($SB.Append($Xbox))
-        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-        $SetupCompleteComplete = $true
+            [void]($SB.Append($Xbox))
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        }
     }
-}
-ElseIf ($Hardened) {
-    $HardenedSetup = @'
+    ElseIf ($Hardened) {
+        $HardenedSetup = @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "s-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2145,18 +2153,25 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-    New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-    $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
-    Set-Content -Path $SetupCompleteScript -Value $HardenedSetup -Encoding ASCII
+        [void]($SB = [System.Text.StringBuilder]::New($HardenedSetup))
+        New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+        $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
+        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+    }
+}
+Finally {
+    If ($SetRegistry -or $Hardened) {
+        [void]($SB.Clear())
+    }
 }
 
 Try {
     If ($AddFeatures.HostsFile -ne $true) {
         Write-Output ''
-        Process-Log -Output "Blocking Microsoft spyware, Windows Update and telemetry domains." -LogPath $LogFile -Level Info
+        Write-Log -Output "Blocking Microsoft spyware, Windows Update and telemetry domains." -LogPath $LogFile -Level Info
         Copy-Item -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Destination "$MountFolder\Windows\System32\drivers\etc\hosts.bak" -Force
         Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value "`r`n# Entries created by the Optimize-Offline PowerShell Script." -Encoding UTF8
-        $DisableHosts = @(
+        $Domains = @(
             "000202-1.l.windowsupdate.com"
             "0002c3-1.l.windowsupdate.com"
             "0002fd-1.l.windowsupdate.com"
@@ -2835,14 +2850,14 @@ Finally {
 
 If ($AdditionalFeatures) {
     Clear-Host
-    Process-Log -Output "Calling the Additional-Features function script." -LogPath $LogFile -Level Info
+    Write-Log -Output "Calling the Additional-Features function script." -LogPath $LogFile -Level Info
     Start-Sleep 3
     Additional-Features @AddFeatures
 }
 
 Try {
     Clear-Host
-    Process-Log -Output "Verifying the image health before finalizing." -LogPath $LogFile -Level Info
+    Write-Log -Output "Verifying the image health before finalizing." -LogPath $LogFile -Level Info
     $EndHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth
     If ($EndHealthCheck.ImageHealthState -eq "Healthy") {
         Write-Output ''
@@ -2857,31 +2872,39 @@ Try {
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "Failed to verify the image health." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 Finally {
-    If (Verify-OfflineHives) {
-        [void](Unload-OfflineHives)
+    If (Test-OfflineHives) {
+        [void](Dismount-OfflineHives)
     }
 }
 
 Try {
     Write-Output ''
-    Process-Log -Output "Saving Image and Dismounting." -LogPath $LogFile -Level Info
-    [void](Dismount-WindowsImage -Path $MountFolder -Save -CheckIntegrity -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
+    Write-Log -Output "Saving Image and Dismounting." -LogPath $LogFile -Level Info
+    $DismountWindowsImage = @{
+        Path             = $MountFolder
+        Save             = $true
+        CheckIntegrity   = $true
+        ScratchDirectory = $TempFolder
+        LogPath          = $DISMLog
+        ErrorAction      = "Stop"
+    }
+    [void](Dismount-WindowsImage @DismountWindowsImage)
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "An I/O error occured while trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "An error occured trying to save and dismount the Windows Image." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 
 Try {
     Write-Output ''
-    Process-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
+    Write-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
     $ExportImage = @{
         CheckIntegrity       = $true
         CompressionType      = "Maximum"
@@ -2890,29 +2913,30 @@ Try {
         DestinationImagePath = "$WorkFolder\install.wim"
         ScratchDirectory     = $TempFolder
         LogPath              = $DISMLog
+        ErrorAction          = "Stop"
     }
     [void](Export-WindowsImage @ExportImage)
 }
 Catch {
     Write-Output ''
-    Process-Log -Output "An I/O error occured while trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
-    Terminate-Script
+    Write-Log -Output "An error occured trying to rebuild and compress the the new image." -LogPath $LogFile -Level Error
+    Exit-Script
     Break
 }
 
 Try {
     Write-Output ''
-    Process-Log -Output "Finalizing Script." -LogPath $LogFile -Level Info
-    [void]($SaveFolder = Create-SaveDirectory)
+    Write-Log -Output "Finalizing Script." -LogPath $LogFile -Level Info
+    [void]($SaveFolder = New-SaveDirectory)
     Move-Item -Path $WorkFolder\*.txt -Destination $SaveFolder -Force
     Move-Item -Path $WorkFolder\*.log -Destination $SaveFolder -Force
     Move-Item -Path $WorkFolder\install.wim -Destination $SaveFolder -Force
     Move-Item -Path $DISMLog -Destination $SaveFolder -Force
     Start-Sleep 3
 }
-Catch [System.IO.DirectoryNotFoundException], [System.IO.FileNotFoundException] {
+Catch {
     Write-Output ''
-    Process-Log -Output "Failed to locate all required files in $env:TEMP." -LogPath $LogFile -Level Error
+    Write-Log -Output "Failed to locate all required files in $env:TEMP." -LogPath $LogFile -Level Error
 }
 Finally {
     Remove-Item -Path $TempFolder -Recurse -Force
@@ -2926,9 +2950,10 @@ If ($Error.Count.Equals(0)) {
     Write-Output ''
     Write-Output "Newly optimized image has been saved to $SaveFolder."
     Write-Output ''
-    Process-Log -Output "$Script completed with [0] errors." -LogPath $LogFile -Level Info
+    Write-Log -Output "$Script completed with [0] errors." -LogPath $LogFile -Level Info
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
+    Start-Sleep 3
 }
 Else {
     $SaveErrorLog = Join-Path -Path $env:TEMP -ChildPath "ErrorLog.log"
@@ -2937,9 +2962,10 @@ Else {
     Write-Output ''
     Write-Output "Newly optimized image has been saved to $SaveFolder."
     Write-Output ''
-    Process-Log -Output "$Script completed with [$($Error.Count)] errors." -LogPath $LogFile -Level Warning
+    Write-Log -Output "$Script completed with [$($Error.Count)] errors." -LogPath $LogFile -Level Warning
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
+    Start-Sleep 3
 }
 # SIG # Begin signature block
 # MIIJLQYJKoZIhvcNAQcCoIIJHjCCCRoCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
