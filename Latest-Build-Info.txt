@@ -1,3 +1,19 @@
+## 3.0.8.7 ## (04-10-2018)
+
+- Changed Helper Function names to use approved PowerShell verbs.
+
+- Added the -Hardened switch parameters to their own processes blocks for better visibility within the script.
+
+- Fixed the logging so entries were once again appended to the .log file instead of overwriting each entry.
+
+- Added the removal of unused Desktop.ini entries and their respective program links.
+
+- Added an initialization check to ensure the -SetRegistry switch and -Hardened switch are not being used simultaneously.
+
+- Removed the current mount clean-up check and Helper Function.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.6 ## (04-06-2018)
 
 - Added a very "lite" -Hardened switch that incorporates some more telemetry removal, sensor and app restrictions, etc.
