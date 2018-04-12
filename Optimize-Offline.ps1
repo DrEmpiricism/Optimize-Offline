@@ -34,9 +34,9 @@
 		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
 	.PARAMETER SetRegistry
-        Sets optimized registry values into the offline registry hives.
+        	Sets optimized registry values into the offline registry hives.
         
-    .PARAMETER Hardened
+    	.PARAMETER Hardened
 		Increases device security and further restricts more access to such things as system and app sensors. Moreover, the SetupComplete script is quite a bit more substantive.
 	
 	.PARAMETER Drivers
@@ -61,12 +61,12 @@
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
 	
 	.NOTES
-        The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
-        You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
+        	The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
+        	You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
 	
 	.NOTES
-        ===========================================================================
-        Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
+        	===========================================================================
+        	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 		Created on:   	11/30/2017
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
