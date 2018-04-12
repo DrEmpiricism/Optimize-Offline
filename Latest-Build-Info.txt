@@ -1,4 +1,4 @@
-## 3.0.8.7 ## (04-10-2018)
+## 3.0.8.8 ## (04-12-2018)
 
 - Changed Helper Function names to use approved PowerShell verbs.
 
@@ -7,6 +7,10 @@
 - Added the removal of unused Desktop.ini entries and their respective program links.
 
 - Removed the current mount clean-up check and Helper Function.
+
+- Further isolated the -Hardened switch processes as to not blend in with other processes.
+
+- Added additional string appending for the SetupComplete.cmd generated with the -Hardened switch.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
