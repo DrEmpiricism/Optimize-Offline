@@ -34,9 +34,9 @@
 		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
 	.PARAMETER SetRegistry
-        	Sets optimized registry values into the offline registry hives.
+        Sets optimized registry values into the offline registry hives.
         
-    	.PARAMETER Hardened
+    .PARAMETER Hardened
 		Increases device security and further restricts more access to such things as system and app sensors. Moreover, the SetupComplete script is quite a bit more substantive.
 	
 	.PARAMETER Drivers
@@ -61,12 +61,12 @@
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
 	
 	.NOTES
-        	The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
-        	You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
-        	I left out a lot of features for the -Hardened switch because I wanted to test the waters publicly.  In the beta version of the script, the -Hardened switch basically locks down the system from 99% of both junk and telemetry.
+        The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
+        You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
 	
 	.NOTES
-		===========================================================================
+        ===========================================================================
+        Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 		Created on:   	11/30/2017
 		Created by:     DrEmpiricism
 		Contact:        Ben@Omnic.Tech
@@ -156,7 +156,7 @@ $AppWhiteList = @(
     "Microsoft.WindowsStore"
 )
 ##*=============================================
-##* OPTIONAL FEATURES TO DISABLE.
+##* OPTIONAL FEATURES TO DISABLE. USE WILDCARDS.
 ##*=============================================
 $FeatureDisableList = @(
     "WorkFolders-Client"
@@ -165,7 +165,7 @@ $FeatureDisableList = @(
     #"*MediaPlayback*"
 )
 ##*=============================================
-##* ON-DEMAND PACKAGES TO REMOVE.
+##* ON-DEMAND PACKAGES TO REMOVE. USE WILDCARDS.
 ##*=============================================
 $PackageRemovalList = @(
     "*ContactSupport*"
@@ -266,8 +266,8 @@ Function Set-RegistryOwner {
     )
 	
     Begin {
-		#region C# Process Privilege Method
-		Add-Type @'
+        #region C# Process Privilege Method
+        Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
@@ -585,7 +585,7 @@ If ($SetRegistry -and $Hardened) {
 }
 
 If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
-	$ImagePath = (Resolve-Path -Path $ImagePath).Path
+    $ImagePath = (Resolve-Path -Path $ImagePath).Path
     $MountImage = Mount-DiskImage -ImagePath $ImagePath -StorageType ISO -PassThru
     $DriveLetter = ($MountImage | Get-Volume).DriveLetter
     $WimFile = "$($DriveLetter):\sources\install.wim"
@@ -595,33 +595,31 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
         [void]($ImageFolder = New-ImageDirectory)
         [void]($WorkFolder = New-WorkDirectory)
         [void]($TempFolder = New-TempDirectory)
-		Copy-Item -Path $WimFile -Destination $ImageFolder -Force
+        Copy-Item -Path $WimFile -Destination $ImageFolder -Force
         $ImageFile = "$ImageFolder\install.wim"
-		Dismount-DiskImage -ImagePath $ImagePath -StorageType ISO
-		$ImageFile = Get-Item -Path $ImageFile -Force
+        Dismount-DiskImage -ImagePath $ImagePath -StorageType ISO
+        $ImageFile = Get-Item -Path $ImageFile -Force
         If ($ImageFile.IsReadOnly) {
             Set-ItemProperty -Path $ImageFile -Name IsReadOnly -Value $false
         }
     }
     Else {
-		Write-Warning "$(Split-Path -Path $ImagePath -Leaf) does not contain valid Windows Installation media."
-		Break
+        Write-Warning "$(Split-Path -Path $ImagePath -Leaf) does not contain valid Windows Installation media."
+        Break
     }
 }
-ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
-{
-	$ImagePath = (Resolve-Path -Path $ImagePath).Path
+ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
+    $ImagePath = (Resolve-Path -Path $ImagePath).Path
     Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
     [void]($MountFolder = New-MountDirectory)
     [void]($ImageFolder = New-ImageDirectory)
     [void]($WorkFolder = New-WorkDirectory)
     [void]($TempFolder = New-TempDirectory)
     Copy-Item -Path $ImagePath -Destination $ImageFolder -Force
-	$ImageFile = "$ImageFolder\install.wim"
-	$ImageFile = Get-Item -Path $ImageFile -Force
-	If ($ImageFile.IsReadOnly)
-	{
-		Set-ItemProperty -Path $ImageFile -Name IsReadOnly -Value $false
+    $ImageFile = "$ImageFolder\install.wim"
+    $ImageFile = Get-Item -Path $ImageFile -Force
+    If ($ImageFile.IsReadOnly) {
+        Set-ItemProperty -Path $ImageFile -Name IsReadOnly -Value $false
     }
 }
 
@@ -1790,7 +1788,7 @@ Try {
         }
         If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0)) {
             [void](Mount-OfflineHives)
-			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
             [void](Dismount-OfflineHives)
         }
     }
@@ -2016,8 +2014,8 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change 
 DEL "%~f0"
 '@
             [void]($SB.Append($DefenderXbox))
-			Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-			$SetupScriptComplete = $true
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+            $SetupScriptComplete = $true
         }
         ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true) {
             $Defender = @'
@@ -2052,8 +2050,8 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS
 DEL "%~f0"
 '@
             [void]($SB.Append($Defender))
-			Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-			$SetupScriptComplete = $true
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+            $SetupScriptComplete = $true
         }
         ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true)) {
             $Xbox = @'
@@ -2084,13 +2082,12 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change 
 DEL "%~f0"
 '@
             [void]($SB.Append($Xbox))
-			Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-			$SetupScriptComplete = $true
+            Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+            $SetupScriptComplete = $true
         }
     }
-	ElseIf ($Hardened)
-	{
-		$SetupComplete = @'
+    ElseIf ($Hardened) {
+        $SetupComplete = @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "s-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2117,13 +2114,12 @@ GOTO :CONTINUE
 
 
 '@
-		[void]($SB = [System.Text.StringBuilder]::New($SetupComplete))
-		New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-		$SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
-	}
-	If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true))
-	{
-		$DefenderXbox = @'
+        [void]($SB = [System.Text.StringBuilder]::New($SetupComplete))
+        New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+        $SetupCompleteScript = Join-Path -Path "$MountFolder\Windows\Setup\Scripts" -ChildPath "SetupComplete.cmd"
+    }
+    If ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete.Equals($true)) {
+        $DefenderXbox = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
@@ -2161,13 +2157,12 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-		[void]($SB.Append($DefenderXbox))
-		Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-		$SetupScriptComplete = $true
-	}
-	ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true)
-	{
-		$Defender = @'
+        [void]($SB.Append($DefenderXbox))
+        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        $SetupScriptComplete = $true
+    }
+    ElseIf ($DisableDefenderComplete.Equals($true) -and $DisableXboxComplete -ne $true) {
+        $Defender = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
@@ -2203,13 +2198,12 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTAS
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >NUL
 DEL "%~f0"
 '@
-		[void]($SB.Append($Defender))
-		Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-		$SetupScriptComplete = $true
-	}
-	ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true))
-	{
-		$Xbox = @'
+        [void]($SB.Append($Defender))
+        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        $SetupScriptComplete = $true
+    }
+    ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete.Equals($true)) {
+        $Xbox = @'
 :CONTINUE
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
@@ -2243,23 +2237,21 @@ SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 DEL "%~f0"
 '@
-		[void]($SB.Append($Xbox))
-		Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
-		$SetupScriptComplete = $true
-	}
+        [void]($SB.Append($Xbox))
+        Set-Content -Path $SetupCompleteScript -Value $SB.ToString() -Encoding ASCII
+        $SetupScriptComplete = $true
+    }
 }
-Finally
-{
-	If ($SetupScriptComplete.Equals($true))
-	{
-		[void]($SB.Clear())
-	}
+Finally {
+    If ($SetupScriptComplete.Equals($true)) {
+        [void]($SB.Clear())
+    }
 }
 
 Try {
     If ($AddFeatures.HostsFile -ne $true) {
         Write-Output ''
-		Write-Log -Output "Blocking Microsoft spyware, Windows Update and telemetry domains." -LogPath $LogFile -Level Info
+        Write-Log -Output "Blocking Microsoft spyware, Windows Update and telemetry domains." -LogPath $LogFile -Level Info
         Copy-Item -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Destination "$MountFolder\Windows\System32\drivers\etc\hosts.bak" -Force
         Add-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Value "`r`n`n# Entries created by the Optimize-Offline PowerShell Script." -Encoding UTF8
         $Domains = @(
