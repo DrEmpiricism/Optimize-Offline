@@ -25,19 +25,20 @@
 		The build number of the image.
 	
 	.PARAMETER SelectApps
-		Prompts the user for approval before a Provisioning Application Package is removed.
+		Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.
 	
 	.PARAMETER AllApps
 		Automatically removes all Provisioning Application Packages.
 	
-	.PARAMETER WhiteListApps
+	.PARAMETER WhiteList
 		Automatically removes all Provisioning Application Packages not WhiteListed.
 	
 	.PARAMETER SetRegistry
-        	Sets optimized registry values into the offline registry hives.
-        
-    	.PARAMETER Hardened
+		Sets optimized registry values into the offline registry hives.
+	
+	.PARAMETER Harden
 		Increases device security and further restricts more access to such things as system and app sensors. Moreover, the SetupComplete script is quite a bit more substantive.
+		Enabling the Harden switch will also process all registry optimization. Both switches do not need to be enabled simultaneously.
 	
 	.PARAMETER Drivers
 		A resolvable path to a collection of driver packages, or a driver .inf file, to be injected into the image.
@@ -52,30 +53,33 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -Drivers "E:\DriverFolder" -SetRegistry -AdditionalFeatures
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -Hardened -AdditionalFeatures -Local
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -Harden -AdditionalFeatures -Local
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -WhiteListApps -Drivers "E:\DriverFolder" -Local
+		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -WhiteList -Drivers "E:\DriverFolder" -Local
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
 	
-	.NOTES
-        	The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays.
-        	You do not need to run the -SetRegistry and -Hardened switch simultaneously.  If you run the -Hardened switch, the registry optimizations will apply regardless.
+	.OUTPUTS
+		System.Object
 	
 	.NOTES
-        	===========================================================================
-        	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
+		===========================================================================
+		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 		Created on:   	11/30/2017
-		Created by:     DrEmpiricism
+		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.0.8.8
-		Last updated:	04/12/2018
+		Version:        3.0.8.9
+		Last updated:	04/19/2018
 		===========================================================================
+	
+	.INPUTS
+		System.Object
 #>
 [CmdletBinding()]
+[OutputType([System.Object])]
 Param
 (
     [Parameter(Mandatory = $true,
@@ -85,30 +89,31 @@ Param
             ElseIf ((Test-Path $(Resolve-Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
             Else { Throw "$_ is an invalid image path." }
         })]
-    [Alias('ISO', 'WIM')]
+    [Alias('ISO', 'WIM', 'Image', 'Source')]
     [string]$ImagePath,
     [Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')]
     [ValidateRange(1, 16)]
     [int]$Index = 1,
     [Parameter(Mandatory = $true,
         HelpMessage = 'The build number of the image.')]
-    [ValidateRange(15063, 16299)]
+    [ValidateRange(15063, 17134)]
     [int]$Build,
     [Parameter(HelpMessage = 'Prompts the user for approval before a Provisioning Application Package is removed by outputting its Display Name.')]
     [Alias('Select')]
     [switch]$SelectApps,
     [Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages.')]
+    [Alias('All')]
     [switch]$AllApps,
     [Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages not WhiteListed.')]
-    [Alias('WhiteList')]
-    [switch]$WhiteListApps,
+    [switch]$WhiteList,
     [Parameter(HelpMessage = 'Sets optimized registry values into the offline registry hives.')]
+    [Alias('RegEdit')]
     [switch]$SetRegistry,
     [Parameter(HelpMessage = 'Sets more restrictive registry values into the offline registry hives.')]
-    [switch]$Hardened,
+    [switch]$Harden,
     [Parameter(Mandatory = $false,
         HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-    [ValidateScript( { Test-Path $(Resolve-Path $_) })]
+    [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
     [string]$Drivers,
     [Parameter(HelpMessage = 'Calls the Additional-Features function script to apply additional customizations and tweaks included in its parameter hashtable.')]
     [switch]$AdditionalFeatures,
@@ -122,9 +127,8 @@ Param
 ## *                      ITEMS CAN SIMPLY BE COMMENTED OUT WITH THE # KEY.                        *
 ## *************************************************************************************************
 
-##*=============================================
-##* SYSTEM APPS TO BE REMOVED
-##*=============================================
+## SYSTEM APPS TO BE REMOVED
+
 $SystemAppsList = @(
     #"contactsupport" # It's recommended to remove this using its OnDemand Package instead by adding it to the $PackageRemovalList.
     "ContentDeliveryManager"
@@ -141,32 +145,32 @@ $SystemAppsList = @(
     "SecureAssessmentBrowser"
     #"XboxGameCallableUI" # Removing XboxGameCallableUI will prevent Microsoft's App Troubleshooter from functioning properly.
 )
-##*=============================================
-##* APP PACKAGES TO KEEP BY DISPLAY NAME.
-##*=============================================
+
+## APP PACKAGES TO KEEP BY DISPLAY NAME.
+
 $AppWhiteList = @(
     "Microsoft.DesktopAppInstaller"
     "Microsoft.Windows.Photos"
     #"Microsoft.WindowsCalculator"
     "Microsoft.Xbox.TCUI" # Removing Microsoft.Xbox.TCUI will prevent Microsoft's App Troubleshooter from functioning properly.
     "Microsoft.XboxIdentityProvider"
-    #"Microsoft.WindowsCamera"
-    #"Microsoft.WebMediaExtensions" 
+    "Microsoft.WindowsCamera"
+    "Microsoft.WebMediaExtensions"
     "Microsoft.StorePurchaseApp"
     "Microsoft.WindowsStore"
 )
-##*=============================================
-##* OPTIONAL FEATURES TO DISABLE. USE WILDCARDS.
-##*=============================================
+
+## OPTIONAL FEATURES TO DISABLE.
+
 $FeatureDisableList = @(
-    "WorkFolders-Client"
+    "*WorkFolders-Client*"
     "*WindowsMediaPlayer*"
     "*Internet-Explorer*"
     #"*MediaPlayback*"
 )
-##*=============================================
-##* ON-DEMAND PACKAGES TO REMOVE. USE WILDCARDS.
-##*=============================================
+
+## ON-DEMAND PACKAGES TO REMOVE.
+
 $PackageRemovalList = @(
     "*ContactSupport*"
     "*QuickAssist*"
@@ -174,9 +178,9 @@ $PackageRemovalList = @(
     #"*MediaPlayer*"
     #"*Hello-Face*"
 )
-##*=============================================
-##* ADDITIONAL-FEATURES FUNCTION SCRIPT PARAMS.
-##*=============================================
+
+## ADDITIONAL-FEATURES FUNCTION SCRIPT PARAMS.
+
 $AddFeatures = @{
     ContextMenu      = $true
     NetFx3           = $null
@@ -188,6 +192,7 @@ $AddFeatures = @{
     Win32Calc        = $true
     SysPrep          = $null
 }
+
 ## *************************************************************************************************
 ## *                                      END EDITABLE FIELDS.                                     *
 ## *************************************************************************************************
@@ -569,17 +574,17 @@ If ($SelectApps -and $AllApps) {
     Break
 }
 
-If ($SelectApps -and $WhiteListApps) {
+If ($SelectApps -and $WhiteList) {
     Write-Warning "The SelectApps switch and UseWhiteList switch cannot be enabled at the same time."
     Break
 }
 
-If ($AllApps -and $WhiteListApps) {
+If ($AllApps -and $WhiteList) {
     Write-Warning "The AllApps switch and UseWhiteList switch cannot be enabled at the same time."
     Break
 }
 
-If ($SetRegistry -and $Hardened) {
+If ($SetRegistry -and $Harden) {
     Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."
     Break
 }
@@ -590,7 +595,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $DriveLetter = ($MountImage | Get-Volume).DriveLetter
     $WimFile = "$($DriveLetter):\sources\install.wim"
     If (Test-Path -Path $WimFile -PathType Leaf) {
-        Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Leaf)" -Verbose
+        Write-Verbose "Copying WIM from $(Split-Path -Path $ImagePath -Leaf)" -Verbose
         [void]($MountFolder = New-MountDirectory)
         [void]($ImageFolder = New-ImageDirectory)
         [void]($WorkFolder = New-WorkDirectory)
@@ -610,7 +615,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
 }
 ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
     $ImagePath = (Resolve-Path -Path $ImagePath).Path
-    Write-Verbose "Copying the WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
+    Write-Verbose "Copying WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
     [void]($MountFolder = New-MountDirectory)
     [void]($ImageFolder = New-ImageDirectory)
     [void]($WorkFolder = New-WorkDirectory)
@@ -684,7 +689,7 @@ If ($ImageIsMounted.Equals($true)) {
     }
 }
 
-If ($WhiteListApps) {
+If ($WhiteList) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($_.DisplayName -notin $AppWhiteList) {
             Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
@@ -717,7 +722,7 @@ If ($AllApps) {
     }
 }
 
-If ($SetRegistry -or $Hardened) {
+If ($SetRegistry -or $Harden) {
     #region Default Registry Optimizations
     If (Test-Path -Path $WorkFolder\Registry-Optimizations.log) {
         Remove-Item -Path $WorkFolder\Registry-Optimizations.log -Force
@@ -1557,7 +1562,7 @@ If ($SetRegistry -or $Hardened) {
     #endregion Default Registry Optimizations
 }
 
-If ($Hardened) {
+If ($Harden) {
     #region Hardened Registry Optimizations
     [void](Mount-OfflineHives)
     Write-Output ''
@@ -1700,9 +1705,10 @@ If ($RegistryComplete.Equals($true)) {
     Start-Sleep 3
 }
 
-If ($SelectApps -or $AllApps -or $WhiteListApps -or $SetRegistry -or $Hardened) {
+If ($SelectApps -or $AllApps -or $WhiteList -or $SetRegistry -or $Harden) {
     Write-Output ''
     Write-Log -Output "Applying a custom Start Menu and Taskbar Layout." -LogPath $LogFile -Level Info
+    Start-Sleep 3
     $LayoutTemplate = @'
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
   <LayoutOptions StartTileGroupCellWidth="6" />
@@ -1765,9 +1771,9 @@ If ($SystemAppsList.Count -gt 0) {
     Write-Verbose "Removing System Applications." -Verbose
     [void](Mount-OfflineHives)
     $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-    ForEach ($SystemApp in $SystemAppsList) {
+    ForEach ($SystemApp In $SystemAppsList) {
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | ? { $_ -like "*$SystemApp*" }
-        ForEach ($InboxApp in $InboxApps) {
+        ForEach ($InboxApp In $InboxApps) {
             Write-Output "$TimeStamp INFO: Removing System Application: $($InboxApp.Split("_")[0])" >> $LogFile
             $FullKeyPath = "$($InboxAppsKey)\" + $InboxApp
             $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
@@ -1902,7 +1908,7 @@ If ($FeatureDisableList.Count -gt 0) {
     Write-Output ''
     Write-Log -Output "Disabling Windows Optional Features." -LogPath $LogFile -Level Info
     $WindowsFeatures = Get-WindowsOptionalFeature -Path $MountFolder
-    ForEach ($Feature in $FeatureDisableList) {
+    ForEach ($Feature In $FeatureDisableList) {
         $DisableFeature = @{
             Path             = $MountFolder
             ScratchDirectory = $TempFolder
@@ -1916,7 +1922,7 @@ If ($PackageRemovalList.Count -gt 0) {
     Write-Output ''
     Write-Log -Output "Removing Windows OnDemand Packages." -LogPath $LogFile -Level Info
     $WindowsPackages = Get-WindowsPackage -Path $MountFolder
-    ForEach ($Package in $PackageRemovalList) {
+    ForEach ($Package In $PackageRemovalList) {
         $RemovePackage = @{
             Path             = $MountFolder
             ScratchDirectory = $TempFolder
@@ -1946,7 +1952,7 @@ If ($Drivers) {
 }
 
 Try {
-    If (!$Hardened) {
+    If (!$Harden) {
         If ($RegistryComplete.Equals($true)) {
             $SetupComplete = @'
 SET DEFAULTUSER0="defaultuser0"
@@ -2086,7 +2092,7 @@ DEL "%~f0"
             $SetupScriptComplete = $true
         }
     }
-    ElseIf ($Hardened) {
+    ElseIf ($Harden) {
         $SetupComplete = @'
 SET DEFAULTUSER0="defaultuser0"
 
@@ -3041,64 +3047,82 @@ If ($Error.Count.Equals(0)) {
 Else {
     $SaveErrorLog = Join-Path -Path $env:TEMP -ChildPath "ErrorLog.log"
     Set-Content -Path $SaveErrorLog -Value $Error.ToArray() -Force
-    Move-Item -Path $env:TEMP\ErrorLog.log -Destination $SaveFolder -Force
+    Move-Item -Path $Env:TEMP\ErrorLog.log -Destination $SaveFolder -Force
     Write-Output ''
-    Write-Output "Newly optimized image has been saved to $SaveFolder."
+    Write-Output "Newly optimized image has been saved to $($SaveFolder.Name)"
     Write-Output ''
     Write-Log -Output "$Script completed with [$($Error.Count)] errors." -LogPath $LogFile -Level Warning
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
 }
+
 # SIG # Begin signature block
-# MIIJLQYJKoZIhvcNAQcCoIIJHjCCCRoCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# MIIMdgYJKoZIhvcNAQcCoIIMZzCCDGMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUr5R3ZnBu9P06z53ZOO8tGkLq
-# n5egggYxMIIDFDCCAgCgAwIBAgIQgnJLApNodKpGiwFxYC7KeTAJBgUrDgMCHQUA
-# MBgxFjAUBgNVBAMTDU9NTklDLlRFQ0gtQ0EwHhcNMTgwMzEzMTAxNDI3WhcNMzkx
-# MjMxMjM1OTU5WjAYMRYwFAYDVQQDEw1PTU5JQy5URUNILUNBMIIBIjANBgkqhkiG
-# 9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3DlhtznwS9RYFDwLLneugmUEZecwxytmEZU+
-# eXPfC3e7k85aYAhN9UEEhm/VsJB/NAFc5+khXqLVEWcuuD0xnnJholKRft3uP9ng
-# L/ebtVbuZR/nz8rSL6X3XrM9htU4sH2a6dzS4ESFbu6z3Xlg3sjrw7QN89XEcFEw
-# vKp5okD2sHaqP1AS/yJVNWLovBWY+W/RAWeVvLTjjSflcXNpbp2MgkrOHC65eB6w
-# PhgeATjP2/wprl6e2p7sVkRI9hQw6eQdDeWcYuTIY/9u/2uBVnjISnhrh3V58SpI
-# n3jV0apM8+H/YfuhEML2l7zc6xQ0358QoWIi9srkqH8sBFkrkQIDAQABo2IwYDAT
-# BgNVHSUEDDAKBggrBgEFBQcDAzBJBgNVHQEEQjBAgBB2Tn/VDn5XbZD6/biSSil9
-# oRowGDEWMBQGA1UEAxMNT01OSUMuVEVDSC1DQYIQgnJLApNodKpGiwFxYC7KeTAJ
-# BgUrDgMCHQUAA4IBAQDJ+S0c+mO4p+DsBF/kZYNqWcgJ3mD1keYX7O7aSEdG1pCX
-# +o9l4cj+u4NSGqc1sgO0U0Ftwq9El6Bk8k2YeWxJ8oUD3yQqPv1EXSs6tB53A6zA
-# 4nrm/1dmnqqQI9KSvEKZblr9KYTy6AoRcpzEezLM0sFXTaSqHGCPvCYP3Qar6oI7
-# eoaO8OkzcNH7dTxuXRrTWQ7IUeAr2/bUAJAbgnjwZpQ/yxdmjOnu+OdBXGtoe8Rv
-# G01nyxAj94TaCXsPcV8KxAusML4iEAlkmLsXtnpPY8jfnHpSx/LN0nEA5x3nwqPQ
-# DxRy0ZIeHb5ZXAo7v5E+G358O5CQ/TNGt2jGOrHqMIIDFTCCAgGgAwIBAgIQVJ8q
-# dzf/f7xETWjhXWNf/jAJBgUrDgMCHQUAMBgxFjAUBgNVBAMTDU9NTklDLlRFQ0gt
-# Q0EwHhcNMTgwMzEzMTAyMjA5WhcNMzkxMjMxMjM1OTU5WjAZMRcwFQYDVQQDEw5P
-# TU5JQy5URUNIIENTQzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAOCR
-# mWrJc2EZ6cvOJHj7YQEcijDJ0bLSV+3Gi6G9CB5tKjlubGu9KqzTugTUEzxww6qe
-# fE6YSE4XSLevdaOVqcRKmKZ2iwwGIK5VCw54XpQLNBVpDO+3j2tmm3en3zvtb2G0
-# 73FO9zio6IyLz+0eoIEiXRTlJow0c1LSLbEitGaG+0YD6gSre5bSz6CWxmAVQqcD
-# 2u1YtXGXs7LccHLo/xyJtWgqmo4F+/8GCbN/9OXpgVdGQ0DA04kDFZJ2Jp22+sd4
-# gfpyY8lLNURnKqGGHSND9PB4p+uH1KaIL8zULJxOumz7Te3lm/LxkAN/dUye7zFX
-# K+Xl1YiT0xfQIgx8yhUCAwEAAaNiMGAwEwYDVR0lBAwwCgYIKwYBBQUHAwMwSQYD
-# VR0BBEIwQIAQdk5/1Q5+V22Q+v24kkopfaEaMBgxFjAUBgNVBAMTDU9NTklDLlRF
-# Q0gtQ0GCEIJySwKTaHSqRosBcWAuynkwCQYFKw4DAh0FAAOCAQEAMpU5vXMt8BxR
-# wTMYnLyNsSGXPoF8PI9LuO+gytZwdzcPPAoU46OczHY/xw6XDxsvI+87ytSAgFBv
-# 9/mla+e+9g8AIZUH9wHAGKRbn9pqLST3q+xHtYdrPN+KKOaN4DsL81kCMolNEPMt
-# NrG2IqBMiJSKglsNNTHkuPB1yNSw3Ix9W7qTFcoByjObZsZBE9vz90AwyPzTMQwt
-# +FiyYwZI1ELp1cGrX1vW3QGnzkdl/h0VEt1SDYvS712tVGRm2U49dF43bSwsKHdA
-# sccJgiQaf2tld9QPRWbtUK0PgTosBCpzjsl8MFS7TsHJ2dFGLAHefFqMM+fZgQa8
-# iuBBshmR3TGCAmYwggJiAgEBMCwwGDEWMBQGA1UEAxMNT01OSUMuVEVDSC1DQQIQ
-# VJ8qdzf/f7xETWjhXWNf/jAJBgUrDgMCGgUAoIIBDzAZBgkqhkiG9w0BCQMxDAYK
-# KwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG
-# 9w0BCQQxFgQU5S/CyCFSSPb/NlxQdBwPKVZ6AwQwga4GCisGAQQBgjcCAQwxgZ8w
-# gZyggZmAgZYAQQAgAGYAdQBsAGwAeQAgAGEAdQB0AG8AbQBhAHQAZQBkACAAVwBp
-# AG4AZABvAHcAcwAgADEAMAAgAFIAUwAyACAAYQBuAGQAIABSAFMAMwAgAG8AZgBm
-# AGwAaQBuAGUAIABpAG0AYQBnAGUAIABvAHAAdABpAG0AaQB6AGEAdABpAG8AbgAg
-# AHMAYwByAGkAcAB0AC4wDQYJKoZIhvcNAQEBBQAEggEAmHa/Lvb6SxyZDsQVLLZx
-# GLws98Fx6KpeOPsYsyaSi66tao+i/NaEp4loAAZ/4qJwmUPUlQvl5omlKeWhL/1B
-# oqWXCBsGsFCFlLp/JgyFH+QjnmrxXzcYrd+Jaz1yNbKqPlcL5pIaxQNhQ8JFEo3R
-# YeU3bXwwiKwO1+GPWa9sV/Tq2BWWNLIYE9dY9PW2jt87ySa2fqLK3OheOKBH5BJ6
-# GvSxxX1ZF8nONhr2cogVRudgnasZdQWLHHP9sDgA8iaoSxeVbRNxKjnA1wA6fMs6
-# 2TfvUxgaEp7PVZPhCj1WPSwkLZrod1SnYRBSIIBBOFWaxHUAQe2/Pw0Di/6iZLlo
-# Sg==
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUBueNWuOTOag09DYgvnuoR+4e
+# ZQ+gggj8MIIDfTCCAmWgAwIBAgIQfY66zkudTZ9EnV2nSZm8oDANBgkqhkiG9w0B
+# AQsFADBFMRQwEgYKCZImiZPyLGQBGRYEVEVDSDEVMBMGCgmSJomT8ixkARkWBU9N
+# TklDMRYwFAYDVQQDEw1PTU5JQy5URUNILUNBMB4XDTE4MDMxMzIxNTY1OFoXDTIz
+# MDMxMzIyMDY1OFowRTEUMBIGCgmSJomT8ixkARkWBFRFQ0gxFTATBgoJkiaJk/Is
+# ZAEZFgVPTU5JQzEWMBQGA1UEAxMNT01OSUMuVEVDSC1DQTCCASIwDQYJKoZIhvcN
+# AQEBBQADggEPADCCAQoCggEBAO6V7MmlK+QuOqWIzrLbmhv9acRXB46vi4RV2xla
+# MTDUimrSyGtpoDQTYK2QZ3idDq1nxrnfAR2XytTwVCcCFoWLpFFRack5k/q3QFFV
+# WP2DbSqoWfNG/EFd0qx8p81X5mH09t1mnN/K+BX1jiBS60rQYTsSGMkSSn/IUxDs
+# sLvatjToctZnCDiqG8SgPdWtVfHRLLMmT0l8paOamO0bpaSSsTpBaan+qiYidnxa
+# eIR23Yvv26Px1kMFYNp5YrWfWJEw5udB4W8DASO8TriypXXpca2jCEkVswNwNW/n
+# Ng7QQqECDVwVm3BVSClNcf1J52uU+Nvx36gKRl5xcogW4h0CAwEAAaNpMGcwEwYJ
+# KwYBBAGCNxQCBAYeBABDAEEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQFMAMB
+# Af8wHQYDVR0OBBYEFH/3cqyAb+6RpNGa2+j3ldMI8axTMBAGCSsGAQQBgjcVAQQD
+# AgEAMA0GCSqGSIb3DQEBCwUAA4IBAQBYMivmEQPQpT1OfiPLVFaGFbnKmWo0dTWo
+# vkCQMq54NdUqvnCkOIC9O3nrsBqdQhTPAtDow1C1qWQipGf/JyMCTh9ZIEoz3u4z
+# RsiKMjIlPJkar1OsTsvKcAaya+a10LTcBMfF4DyOFaGqvKNrTaD3MmFQIBblQ8TS
+# QOzQPOXUwY/2IgI9w1AA8VO0N2coYzvj4i79RSQ77eg1iefjBRqs347o4/b7pWtS
+# 95+FBGr7JhhV3i9EI95172O4jmEkmoJQgr2mzvThjp9WiyeyjpnBAikV14YmEIyu
+# DmKue5ZuxG+D3W3ZwFyGytUCHYWwMshTRwI0z236dZG9OhYDSfibMIIFdzCCBF+g
+# AwIBAgITIQAAAAV87PzZFzK4xAAAAAAABTANBgkqhkiG9w0BAQsFADBFMRQwEgYK
+# CZImiZPyLGQBGRYEVEVDSDEVMBMGCgmSJomT8ixkARkWBU9NTklDMRYwFAYDVQQD
+# Ew1PTU5JQy5URUNILUNBMB4XDTE4MDQxODEyMjAzNloXDTE5MDQxODEyMjAzNlow
+# UzEUMBIGCgmSJomT8ixkARkWBFRFQ0gxFTATBgoJkiaJk/IsZAEZFgVPTU5JQzEO
+# MAwGA1UEAxMFVXNlcnMxFDASBgNVBAMTC0JlblRoZUdyZWF0MIIBIjANBgkqhkiG
+# 9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9xWMMTEOCpdnZu3eDTVbytEzoTnHQYeS/2jg
+# wGLYU3+43C3viMoNVj+nLANJydTIRW5Dca+6JfO8UH25kf0XQ+AiXirQfjb9ec9u
+# I+au+krmlL1fSR076lPgYzqnqPMQzOER8U2J2+uF18UtxEVO3rq7Cnxlich4jXzy
+# gTy8XiNSAfUGR1nfq7HjahJ/CKopwl/7NcfmV5ZDzogRob1eErOPJXGAkewJuKqp
+# /qItYzGH+9XADCyO0GYVIOsXNIE0Ho0bdBPZ3eDdamL1vocTlEkTe0/drs3o2AkS
+# qcgg2I0uBco/p8CxCR7Tfq2zX1DFW9B7+KGNobxq+l+V15rTMwIDAQABo4ICUDCC
+# AkwwJQYJKwYBBAGCNxQCBBgeFgBDAG8AZABlAFMAaQBnAG4AaQBuAGcwEwYDVR0l
+# BAwwCgYIKwYBBQUHAwMwDgYDVR0PAQH/BAQDAgeAMB0GA1UdDgQWBBSIikO7ZjAP
+# GlMAUcP2kulHiqpJnDAfBgNVHSMEGDAWgBR/93KsgG/ukaTRmtvo95XTCPGsUzCB
+# yQYDVR0fBIHBMIG+MIG7oIG4oIG1hoGybGRhcDovLy9DTj1PTU5JQy5URUNILUNB
+# LENOPURPUkFETyxDTj1DRFAsQ049UHVibGljJTIwS2V5JTIwU2VydmljZXMsQ049
+# U2VydmljZXMsQ049Q29uZmlndXJhdGlvbixEQz1PTU5JQyxEQz1URUNIP2NlcnRp
+# ZmljYXRlUmV2b2NhdGlvbkxpc3Q/YmFzZT9vYmplY3RDbGFzcz1jUkxEaXN0cmli
+# dXRpb25Qb2ludDCBvgYIKwYBBQUHAQEEgbEwga4wgasGCCsGAQUFBzAChoGebGRh
+# cDovLy9DTj1PTU5JQy5URUNILUNBLENOPUFJQSxDTj1QdWJsaWMlMjBLZXklMjBT
+# ZXJ2aWNlcyxDTj1TZXJ2aWNlcyxDTj1Db25maWd1cmF0aW9uLERDPU9NTklDLERD
+# PVRFQ0g/Y0FDZXJ0aWZpY2F0ZT9iYXNlP29iamVjdENsYXNzPWNlcnRpZmljYXRp
+# b25BdXRob3JpdHkwMQYDVR0RBCowKKAmBgorBgEEAYI3FAIDoBgMFkJlblRoZUdy
+# ZWF0QE9NTklDLlRFQ0gwDQYJKoZIhvcNAQELBQADggEBAD1ZkdqIaFcqxTK1YcVi
+# QENxxkixwVHJW8ZATwpQa8zQBh3B1cMromiR6gFvPmphMI1ObRtuTohvuZ+4tK7/
+# IohAt6TwzyDFqY+/HzoNCat07Vb7DrA2fa+QMOl421kVUnZyYLI+gEod/zJqyuk8
+# ULBmUxCXxxH26XVC016AuoOedKwzBgAFyIDlIAivZcSOtaSyALJSZ2Pk29R69dp5
+# ICb+zCXCWPQJkbsU6eTlZAwaMmR2Vx4TQeDl49YIIwoDXDT4zBTcJ6n2k6vHQDWR
+# K9zaF4qAD9pwlQICbLgTeZBz5Bz2sXzhkPsmY6LNKTAOnuk0QbjsKXSKoB/QRAip
+# FiUxggLkMIIC4AIBATBcMEUxFDASBgoJkiaJk/IsZAEZFgRURUNIMRUwEwYKCZIm
+# iZPyLGQBGRYFT01OSUMxFjAUBgNVBAMTDU9NTklDLlRFQ0gtQ0ECEyEAAAAFfOz8
+# 2RcyuMQAAAAAAAUwCQYFKw4DAhoFAKCCAV0wGQYJKoZIhvcNAQkDMQwGCisGAQQB
+# gjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkE
+# MRYEFOeJTqMhDl9RaSGlKmHmkYOJawv9MIH8BgorBgEEAYI3AgEMMYHtMIHqoIHn
+# gIHkAEEAIABXAGkAbgBkAG8AdwBzACAASQBtAGEAZwBlACAAKABXAEkATQApACAA
+# bwBwAHQAaQBtAGkAegBhAHQAaQBvAG4AIABzAGMAcgBpAHAAdAAgAGQAZQBzAGkA
+# ZwBuAGUAZAAgAGYAbwByACAAVwBpAG4AZABvAHcAcwAgADEAMAAgAEMAcgBlAGEA
+# dABvAHIAJwBzACAAVQBwAGQAYQB0AGUAIABiAHUAaQBsAGQAcwAgAFIAUwAyACwA
+# IABSAFMAMwAgAGEAbgBkACAAUgBTADQAIAA2ADQALQBiAGkAdAAuMA0GCSqGSIb3
+# DQEBAQUABIIBANNHCCAuJ59JWsp1BcYKR6V+pBIzkqnmJh+xC0N9WY6whODxjghw
+# gqDqUEQB+nzVrjXknAQ+zPr7HQBaF7lhf1+/CmhjYKLsllsHgLMVPCtJcXheTtT1
+# lNq6wz4N5f2FY9FXYSM+Uq+1tTqtOOf3UawLiRgKwqSIMKZIT7P0EcOl6/XH26U3
+# KWaoVff/gYWu97tR9Dgu47ZlobWpc1RJVu3iOJdyp5h5mwuj/y0n2OcS4aY09YXn
+# 3ckpclylzYm2daA4A4X0AecEKd0ObdhGnIO1TIIaDDAxY/J8V/U/I4GNOxLzVrCg
+# AICRJq3GH4im4muRWV+1zpWN3LxVfHzYEnY=
 # SIG # End signature block
