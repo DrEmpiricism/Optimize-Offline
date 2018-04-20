@@ -1,4 +1,18 @@
 Function Additional-Features {
+<#	
+	.NOTES
+		===========================================================================
+		Created on:   	12/26/2017
+		Created by:     DrEmpiricism
+		Contact:        Ben@Omnic.Tech
+		Filename:     	Additional-Features.ps1
+		Version:        2.0.8
+		Last updated:	04/19/2018    	
+		===========================================================================
+	.DESCRIPTION
+        	This is a function that can be called by the main Optimize-Offline script that will add additional features for a more device-specific final image.
+#>
+
     [CmdletBinding()]
     Param ()
 	
