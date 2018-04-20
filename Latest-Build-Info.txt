@@ -1,3 +1,15 @@
+## 3.0.8.9 ## (04-19-2018)
+
+- Changed two switch names to -WhiteList and -Harden (they were -WhiteListApps and -Hardened before).
+
+- Removed all switches for the Additional-Features function script as well as processes that dealt with unattend.xml creation.
+
+- This change is due to the fact the upcoming version (4.0) of the script will include a true, and full, unattend.xml builder with its GUI.
+
+- Added support for the latest fast ring Insider's Update (17134.1) RS4
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.8 ## (04-12-2018)
 
 - Changed Helper Function names to use approved PowerShell verbs.
