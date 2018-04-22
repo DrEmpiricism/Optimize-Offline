@@ -664,7 +664,8 @@ If ($ImageIsMounted.Equals($true)) {
 If ($WhiteList) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($_.DisplayName -notin $AppWhiteList) {
-            Write-Log -Output "`nRemoving Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+	    Write-Output ''
+            Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
             [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
         }
     }
@@ -673,9 +674,11 @@ If ($WhiteList) {
 If ($SelectApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($SelectApps) {
-            $AppSelect = Read-Host "`nRemove Provisioned App Package:" $_.DisplayName "(y/N)"
+	    Write-Output ''
+            $AppSelect = Read-Host "Remove Provisioned App Package:" $_.DisplayName "(y/N)"
             If ($AppSelect.Equals("y")) {
-                Write-Log -Output "`nRemoving Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+	    	Write-Output ''
+                Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
                 [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
                 $AppSelect = ''
             }
@@ -688,7 +691,8 @@ If ($SelectApps) {
 
 If ($AllApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
-        Write-Log -Output "`nRemoving Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
+    	Write-Output ''
+        Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
         [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
     }
 }
