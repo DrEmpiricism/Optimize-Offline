@@ -149,7 +149,7 @@ $AppWhiteList = @(
     #"Microsoft.WindowsCalculator"
     "Microsoft.Xbox.TCUI" # Removing Microsoft.Xbox.TCUI will prevent Microsoft's App Troubleshooter from functioning properly.
     "Microsoft.XboxIdentityProvider"
-    "Microsoft.WindowsCamera"
+    #"Microsoft.WindowsCamera"
     "Microsoft.WebMediaExtensions"
     "Microsoft.StorePurchaseApp"
     "Microsoft.WindowsStore"
@@ -422,7 +422,7 @@ namespace ProcessPrivileges
 
 Function New-WorkDirectory {
     If ($Local) {
-		New-Item -ItemType Directory -Path "$PSScriptRoot\WorkTemp_$(Get-Random)"
+        New-Item -ItemType Directory -Path "$PSScriptRoot\WorkTemp_$(Get-Random)"
     }
     Else {
         $WorkDir = [System.IO.Path]::GetTempPath()
@@ -434,7 +434,7 @@ Function New-WorkDirectory {
 
 Function New-TempDirectory {
     If ($Local) {
-		New-Item -ItemType Directory -Path "$PSScriptRoot\Temp_$(Get-Random)"
+        New-Item -ItemType Directory -Path "$PSScriptRoot\Temp_$(Get-Random)"
     }
     Else {
         $TempDir = [System.IO.Path]::GetTempPath()
@@ -446,7 +446,7 @@ Function New-TempDirectory {
 
 Function New-ImageDirectory {
     If ($Local) {
-		New-Item -ItemType Directory -Path "$PSScriptRoot\ImageTemp_$(Get-Random)"
+        New-Item -ItemType Directory -Path "$PSScriptRoot\ImageTemp_$(Get-Random)"
     }
     Else {
         $ImageDir = [System.IO.Path]::GetTempPath()
@@ -664,7 +664,7 @@ If ($ImageIsMounted.Equals($true)) {
 If ($WhiteList) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($_.DisplayName -notin $AppWhiteList) {
-	    Write-Output ''
+            Write-Output ''
             Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
             [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
         }
@@ -674,10 +674,10 @@ If ($WhiteList) {
 If ($SelectApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
         If ($SelectApps) {
-	    Write-Output ''
+            Write-Output ''
             $AppSelect = Read-Host "Remove Provisioned App Package:" $_.DisplayName "(y/N)"
             If ($AppSelect.Equals("y")) {
-	    	Write-Output ''
+                Write-Output ''
                 Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
                 [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
                 $AppSelect = ''
@@ -691,7 +691,7 @@ If ($SelectApps) {
 
 If ($AllApps) {
     Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
-    	Write-Output ''
+        Write-Output ''
         Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
         [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $_.PackageName -ScratchDirectory $TempFolder -LogPath $DISMLog)
     }
@@ -1531,100 +1531,100 @@ If ($SetRegistry -or $Harden) {
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Power" -Name "HibernteEnabled" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowHibernateOption" -Value 0 -Type DWord
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Open with Notepad' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "notepad.exe,-2" /f)
-	[void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "notepad.exe %1" /f)
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Copy-Move' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}"
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Extended Disk Clean-up' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up" -Name "Icon" -Value "cleanmgr.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command" -Name "(default)" `
-					 -Value "WScript C:\Windows\Extended-Disk-Cleanup.vbs" -Type String
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Create Quick Restore Point' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" -Name "Icon" -Value "SystemPropertiesProtection.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command" -Name "(default)" `
-					 -Value "WScript C:\Windows\Create-Restore-Point.vbs" -Type String
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Elevated Command-Prompt' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "(default)" -Value "Elevated Command-Prompt" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "Icon" -Value "cmd.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "SeparatorAfter" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "Position" -Value "Bottom" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command" -Name "(default)" -Value "CMD /S /K PUSHD `"%V`"" -Type ExpandString
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "(default)" -Value "Elevated Command-Prompt" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "Icon" -Value "cmd.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "SeparatorAfter" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "Position" -Value "Bottom" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command" -Name "(default)" -Value "CMD /S /K PUSHD `"%V`"" -Type ExpandString
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Elevated PowerShell' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "powershell.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Name "(default)" `
-					 -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type ExpandString
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Icon" -Value "powershell.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Name "(default)" `
-					 -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type ExpandString
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Install CAB' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "(default)" -Value "Install" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "HasLUAShield" -Value "" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -Name "(default)" `
-					 -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -Type ExpandString
-	#****************************************************************
-	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-	Write-Output "Adding 'Restart Explorer' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
-	#****************************************************************
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer"
-	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command"
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "icon" -Value "explorer.exe" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Position" -Value "bottom" -Type String
-	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "Restart-Explorer.cmd" -Type String
-	#****************************************************************
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Open with Notepad' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    [void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "notepad.exe,-2" /f)
+    [void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "notepad.exe %1" /f)
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Copy-Move' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}"
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Extended Disk Clean-up' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up" -Name "Icon" -Value "cleanmgr.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Extended Disk Clean-up\command" -Name "(default)" `
+        -Value "WScript C:\Windows\Extended-Disk-Cleanup.vbs" -Type String
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Create Quick Restore Point' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point" -Name "Icon" -Value "SystemPropertiesProtection.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\Create Restore Point\command" -Name "(default)" `
+        -Value "WScript C:\Windows\Create-Restore-Point.vbs" -Type String
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Elevated Command-Prompt' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "(default)" -Value "Elevated Command-Prompt" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "Icon" -Value "cmd.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "SeparatorAfter" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "Position" -Value "Bottom" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas\command" -Name "(default)" -Value "CMD /S /K PUSHD `"%V`"" -Type ExpandString
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "(default)" -Value "Elevated Command-Prompt" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "Icon" -Value "cmd.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "SeparatorAfter" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas" -Name "Position" -Value "Bottom" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\runas\command" -Name "(default)" -Value "CMD /S /K PUSHD `"%V`"" -Type ExpandString
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Elevated PowerShell' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "powershell.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Name "(default)" `
+        -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type ExpandString
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Icon" -Value "powershell.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Name "(default)" `
+        -Value "Powershell Start-Process PowerShell -Verb runas -ArgumentList '-NoExit', 'Push-Location -LiteralPath ''`"%V`"'''" -Type ExpandString
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Install CAB' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "(default)" -Value "Install" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "HasLUAShield" -Value "" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -Name "(default)" `
+        -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -Type ExpandString
+    #****************************************************************
+    Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+    Write-Output "Adding 'Restart Explorer' to the Context Menu." >> $WorkFolder\Registry-Optimizations.log
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "icon" -Value "explorer.exe" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Position" -Value "bottom" -Type String
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "Restart-Explorer.cmd" -Type String
+    #****************************************************************
     [void](Dismount-OfflineHives)
     $RegistryComplete = $true
     #endregion Default Registry Optimizations
@@ -1749,9 +1749,8 @@ If ($Harden) {
     #endregion Default Hardened Registry Optimizations
 }
 
-If ($RegistryComplete.Equals($true))
-{
-	$ExtendedDiskClean = @'
+If ($RegistryComplete.Equals($true)) {
+    $ExtendedDiskClean = @'
 If WScript.Arguments.length =0 Then
   Set Cleanup1 = CreateObject("Shell.Application")
   Cleanup1.ShellExecute "wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1
@@ -1761,7 +1760,7 @@ Else
 End If
 '@
 	
-	$CreateRestorePoint = @'
+    $CreateRestorePoint = @'
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
     Set colOS = objWMI.ExecQuery("Select * from Win32_OperatingSystem")
@@ -1802,7 +1801,7 @@ Sub CreateSRP
 End Sub
 '@
 	
-	$RestartExplorer = @'
+    $RestartExplorer = @'
 @ECHO OFF
 ECHO:
 ECHO Killing Explorer.exe
@@ -1818,12 +1817,12 @@ ECHO Explorer.exe has started successfully.
 TIMEOUT /T 3 /NOBREAK >NUL
 EXIT
 '@
-	$ExtendedDiskScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
-	Set-Content -Path $ExtendedDiskScript -Value $ExtendedDiskClean -Encoding UTF8
-	$RestorePointScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
-	Set-Content -Path $RestorePointScript -Value $CreateRestorePoint -Encoding UTF8
-	$RestartExplorerScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Restart-Explorer.cmd"
-	Set-Content -Path $RestartExplorerScript -Value $RestartExplorer -Encoding ASCII
+    $ExtendedDiskScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Extended-Disk-Cleanup.vbs"
+    Set-Content -Path $ExtendedDiskScript -Value $ExtendedDiskClean -Encoding UTF8
+    $RestorePointScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Create-Restore-Point.vbs"
+    Set-Content -Path $RestorePointScript -Value $CreateRestorePoint -Encoding UTF8
+    $RestartExplorerScript = Join-Path -Path "$MountFolder\Windows" -ChildPath "Restart-Explorer.cmd"
+    Set-Content -Path $RestartExplorerScript -Value $RestartExplorer -Encoding ASCII
 }
 
 If ($SelectApps -or $AllApps -or $WhiteList -or $SetRegistry -or $Harden) {
@@ -1892,7 +1891,7 @@ If ($SystemAppsList.Count -gt 0) {
     Write-Verbose "Removing System Applications." -Verbose
     [void](Mount-OfflineHives)
     $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-    ForEach ($SystemApp in $SystemAppsList) {
+    ForEach ($SystemApp In $SystemAppsList) {
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | ? { $_ -like "*$SystemApp*" }
         ForEach ($InboxApp In $InboxApps) {
             Write-Output "$TimeStamp INFO: Removing System Application: $($InboxApp.Split("_")[0])" >> $LogFile
@@ -2072,24 +2071,21 @@ If ($Drivers) {
     }
 }
 
-If ((Test-Path -Path "$PSScriptRoot\Win32Calc" -PathType Container) -and (Get-ChildItem -Path "$PSScriptRoot\Win32Calc" -Filter "*.wim"))
-{
-	Try
-	{
-		If ((Test-Path -Path "$PSScriptRoot\Win32Calc\Win32Calc.wim" -PathType Leaf) -and (Test-Path -Path "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -PathType Leaf))
-		{
-			Write-Output ''
-			Write-Log -Output "Applying the Win32 Calculator Package to the image." -LogPath $LogFile -Level Info
-			[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc.wim" -Index 1 `
-									   -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
-			[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc.wim" -Index 2 `
-									   -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
-			[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -Index 1 `
-									   -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
-			[void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -Index 2 `
-									   -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
-		}
-		$W32CalcStr = @'
+If ((Test-Path -Path "$PSScriptRoot\Win32Calc" -PathType Container) -and (Get-ChildItem -Path "$PSScriptRoot\Win32Calc" -Filter "*.wim")) {
+    Try {
+        If ((Test-Path -Path "$PSScriptRoot\Win32Calc\Win32Calc.wim" -PathType Leaf) -and (Test-Path -Path "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -PathType Leaf)) {
+            Write-Output ''
+            Write-Log -Output "Applying the Win32 Calculator Package to the image." -LogPath $LogFile -Level Info
+            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc.wim" -Index 1 `
+                    -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
+            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc.wim" -Index 2 `
+                    -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
+            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -Index 1 `
+                    -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
+            [void](Expand-WindowsImage -ApplyPath $MountFolder -ImagePath "$PSScriptRoot\Win32Calc\Win32Calc_en-US.wim" -Index 2 `
+                    -CheckIntegrity -Verify -LogPath $LogFile -ErrorAction Stop)
+        }
+        $W32CalcStr = @'
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes\calculator]
@@ -2157,28 +2153,27 @@ Windows Registry Editor Version 5.00
 "COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
 
 '@
-		$W32RegFile = Join-Path -Path $WorkFolder -ChildPath "Win32Calc.reg"
-		Set-Content -Path $W32RegFile -Value $W32CalcStr -Encoding Unicode -Force
-		[void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software")
-		REGEDIT /S "$WorkFolder\Win32Calc.reg"
-		[System.GC]::Collect()
-		[void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
-		$LnkINI = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-		$W32CalcLnk = "Calculator.lnk=@%SystemRoot%\system32\shell32.dll,-22019"
-		$LnkContent = (Get-Content -Path $LnkINI)
-		If ((Select-String -InputObject $LnkContent -Pattern $W32CalcLnk -NotMatch -Quiet) -eq $true)
-		{
-			ATTRIB -S -H $LnkINI
-			Add-Content -Path $LnkINI -Value $W32CalcLnk -Encoding Unicode -Force
-			ATTRIB +S +H $LnkINI
-		}
-	}
-	Catch
-	{
-		Write-Output ''
-		Write-Log -Output "Failed to apply the Win32Calc WIM files to the image." -LogPath $LogFile -Level Error
-		Exit-Script
-	}
+        $W32RegFile = Join-Path -Path $WorkFolder -ChildPath "Win32Calc.reg"
+        Set-Content -Path $W32RegFile -Value $W32CalcStr -Encoding Unicode -Force
+        [void](REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software")
+        REGEDIT /S "$WorkFolder\Win32Calc.reg"
+        [System.GC]::Collect()
+        [void](REG UNLOAD HKLM\WIM_HKLM_SOFTWARE)
+        $LnkINI = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+        $W32CalcLnk = "Calculator.lnk=@%SystemRoot%\system32\shell32.dll,-22019"
+        $LnkContent = (Get-Content -Path $LnkINI)
+        If ((Select-String -InputObject $LnkContent -Pattern $W32CalcLnk -NotMatch -Quiet) -eq $true) {
+            ATTRIB -S -H $LnkINI
+            Add-Content -Path $LnkINI -Value $W32CalcLnk -Encoding Unicode -Force
+            ATTRIB +S +H $LnkINI
+        }
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to apply the Win32Calc WIM files to the image." -LogPath $LogFile -Level Error
+        Exit-Script
+        Break
+    }
 }
 
 Try {
