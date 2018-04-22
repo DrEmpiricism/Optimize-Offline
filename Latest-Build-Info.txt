@@ -1,3 +1,17 @@
+## 3.0.9.0 ## (04-22-2018)
+
+- The Additional-Features function script has been removed, as most of its features have been incorporated into the primary script instead.
+
+- Adding System Images has been removed.
+
+- Corrected a process that was still looking for a renamed variable.
+
+- Reverted the Win32Calc back to its full package integration. The script will apply the Win32Calc add-on package if it detects the Win32Calc directory in the root path of the script, along with the two required recovery WIM files. If these are not detected, the script will silently move onto the next process.
+
+- Updated the LayoutModification.xml file that gets applied and added a custom shortcut to it that will reboot a system directly into its UEFI BIOS firmware.  This was a request by a handful of people who use fast start-up, thus rendering it very difficult to access the UEFI BIOS manually. Once selecting the new link, the PC will wait a few seconds then reboot directly into the system's UEFI BIOS firmware. To remove this link you can just right-click and delete, as it's not integrated into any .ini file or linked to any program itself.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.8.9 ## (04-19-2018)
 
 - Changed two switch names to -WhiteList and -Harden (they were -WhiteListApps and -Hardened before).
