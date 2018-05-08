@@ -1,3 +1,13 @@
+## 3.0.9.4 ## (05-08-2018)
+
+- Cleaned-up quite a bit of the code.
+
+- Included a -ComponentCleanup switch that will clean-up the component store. Note: This does NOT reset the image base.
+
+- Added additional registry optimizations.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.0.9.2 ## (04-29-2018)
 
 - System Applications, Optional Features and Windows Packages are all now controlled using their respective switch which will now output all contained within the image and allow for mass removals. They are no longer controlled by editing their arrays.
