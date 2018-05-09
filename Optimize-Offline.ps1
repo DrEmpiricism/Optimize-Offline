@@ -55,22 +55,16 @@
 		Sets the mount and save locations to the local (root) path of the script.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -Drivers "E:\DriverFolder" -SetRegistry
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SetRegistry -Drivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SystemApps -OptionalFeatures -OnDemandPackages -Harden -Local
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SystemApps -Harden -OptionalFeatures -OnDemandPackages -Local
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ISO "D:\Win Images\Win10Pro.iso" -Index 2 -Build 16299 -OnDemandPackages -Drivers "E:\DriverFolder" -ComponentCleanup -Local
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -WIM "D:\WIM Files\Win10Pro\install.wim" -Index 3 -Build 15063 -Select -SetRegistry -Drivers "E:\DriverFolder\OEM12.inf"
-	
-	.INPUTS
-		System.Object
-
-	.OUTPUTS
-		System.Object
 
 	.NOTES
 		If you are unsure about a System App, it's best to not remove it. System Apps like SecHealthUI (Windows Defender), Parental Controls, PPIProjection, etc. are safe to remove.
@@ -424,15 +418,15 @@ Function Set-FolderOwnership
 	)
 	
 	Set-FileOwnership -Path $Path
-	ForEach ($Object In Get-ChildItem $Path -Recurse -Force)
+	ForEach ($Object In Get-ChildItem -Path $Path -Recurse -Force)
 	{
 		If (Test-Path -Path $Object -PathType Container)
 		{
-			Set-FolderOwnership $Object.FullName
+			Set-FolderOwnership -Path $Object.FullName
 		}
 		Else
 		{
-			Set-FileOwnership $Object.FullName
+			Set-FileOwnership -Path $Object.FullName
 		}
 	}
 }
@@ -529,7 +523,7 @@ Function Dismount-OfflineHives
 Function Test-OfflineHives
 {
 	@("HKLM:\WIM_HKLM_SOFTWARE", "HKLM:\WIM_HKLM_SYSTEM",
-		"HKLM:\WIM_HKCU", "HKLM:\WIM_HKU_DEFAULT") | % { If (Test-Path -Path $_) { $HivesLoaded = $true } }
+		"HKLM:\WIM_HKCU", "HKLM:\WIM_HKU_DEFAULT") | ForEach { If (Test-Path -Path $_) { $HivesLoaded = $true } }
 	Return $HivesLoaded
 }
 
@@ -599,7 +593,7 @@ Function New-Container
 
 If (!(Test-Admin))
 {
-	Write-Warning "Administrative access is required. Please re-launch $Script in an elevated shell."
+	Write-Warning "Administrative access is required. Please re-launch $Script with elevation."
 	Break
 }
 
@@ -688,12 +682,12 @@ Try
 		$Error.Clear()
 		Write-Log -Output "Mounting Image." -LogPath $LogFile -Level Info
 		$MountWindowsImage = @{
-			ImagePath	  = $ImageFile
-			Index		  = $Index
-			Path		  = $MountFolder
-			ScratchDirectory  = $TempFolder
-			LogPath		  = $DISMLog
-			ErrorAction	  = "Stop"
+			ImagePath		   = $ImageFile
+			Index			   = $Index
+			Path			   = $MountFolder
+			ScratchDirectory   	   = $TempFolder
+			LogPath		       	   = $DISMLog
+			ErrorAction	       	   = "Stop"
 		}
 		[void](Mount-WindowsImage @MountWindowsImage)
 		$ImageIsMounted = $true
@@ -750,7 +744,7 @@ If ($SelectApps)
 		$PackageName = $RemoveAppx.PackageName
 		If ($RemoveAppx)
 		{
-			$PackageName | % {
+			$PackageName | ForEach {
 				Write-Log -Output "Removing Provisioned App Package: $($_.Split('_')[0])" -LogPath $LogFile -Level Info
 				[void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $($_) -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
 			}
@@ -770,7 +764,7 @@ If ($AllApps)
 {
 	Try
 	{
-		Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | % {
+		Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
 			Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -LogPath $LogFile -Level Info
 			[void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $($_.PackageName) -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
 		}
@@ -796,7 +790,7 @@ If ($SystemApps)
 			Write-Warning "Do not remove any System Applications if you are unsure about them."
 			Start-Sleep 5
 			Write-Output ''
-			$InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | ? { $_ -like "*Microsoft.*" }
+			$InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | Where { $_ -like "*Microsoft.*" }
 			ForEach ($InboxApp In $InboxApps)
 			{
 				$FullKeyPath = "$($InboxAppsKey)\" + $InboxApp
@@ -870,45 +864,45 @@ If ($SetRegistry -or $Harden)
 	#****************************************************************
 	New-Container -Path "HKLM:\SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
 	$CortanaUriServer = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana ActionUriServer.exe"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\ActionUriServer.exe|Name=Block Cortana ActionUriServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana ActionUriServer.exe"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\ActionUriServer.exe|Name=Block Cortana ActionUriServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaUriServer
 	$CortanaPlacesServer = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana PlacesServer.exe"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\PlacesServer.exe|Name=Block Cortana PlacesServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana PlacesServer.exe"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\PlacesServer.exe|Name=Block Cortana PlacesServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaPlacesServer
 	$CortanaReminderServer = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana RemindersServer.exe"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersServer.exe|Name=Block Cortana RemindersServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana RemindersServer.exe"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersServer.exe|Name=Block Cortana RemindersServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaReminderServer
 	$CortanaReminderApp = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana RemindersShareTargetApp.exe"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersShareTargetApp.exe|Name=Block Cortana RemindersShareTargetApp.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana RemindersShareTargetApp.exe"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersShareTargetApp.exe|Name=Block Cortana RemindersShareTargetApp.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaReminderApp
 	$CortanaSearchUI = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana SearchUI.exe"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe|Name=Block Cortana SearchUI.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana SearchUI.exe"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe|Name=Block Cortana SearchUI.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaSearchUI
 	$CortanaPackage = @{
-		Path   = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-		Name   = "Block Cortana Package"
-		Value  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|Name=Block Cortana Package|Desc=Block Cortana Outbound UDP/TCP Traffic|AppPkgId=S-1-15-2-1861897761-1695161497-2927542615-642690995-327840285-2659745135-2630312742|Platform=2:6:2|Platform2=GTEQ|"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+		Name    = "Block Cortana Package"
+		Value   = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|Name=Block Cortana Package|Desc=Block Cortana Outbound UDP/TCP Traffic|AppPkgId=S-1-15-2-1861897761-1695161497-2927542615-642690995-327840285-2659745135-2630312742|Platform=2:6:2|Platform2=GTEQ|"
+		Type    = "String"
 	}
 	Set-ItemProperty @CortanaPackage
 	#****************************************************************
@@ -1135,7 +1129,7 @@ If ($SetRegistry -or $Harden)
 		"SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
 		"SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled",
 		"SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled",
-		"SubscribedContent-353698Enabled") | % {
+		"SubscribedContent-353698Enabled") | ForEach {
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $_ -Value 0 -Type DWord
 	}
 	New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\PenWorkspace"
@@ -1290,18 +1284,18 @@ If ($SetRegistry -or $Harden)
 	#****************************************************************
 	New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"
 	$NewStart = @{
-		Path   = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"
-		Name   = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
-		Value  = 0
-		Type   = "DWord"
+		Path    = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"
+		Name    = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+		Value   = 0
+		Type    = "DWord"
 	}
 	Set-ItemProperty @NewStart
 	New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"
 	$ClassicStart = @{
-		Path   = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"
-		Name   = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
-		Value  = 0
-		Type   = "DWord"
+		Path    = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"
+		Name    = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+		Value   = 0
+		Type    = "DWord"
 	}
 	Set-ItemProperty @ClassicStart
 	#****************************************************************
@@ -1311,18 +1305,18 @@ If ($SetRegistry -or $Harden)
 	Set-RegistryOwner -Hive HKLM -SubKey "WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell"
 	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery"
 	$RecoveryIcon = @{
-		Path   = "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery"
-		Name   = "Icon"
-		Value  = "%SystemRoot%\System32\imageres.dll,-110"
-		Type   = "ExpandString"
+		Path    = "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery"
+		Name    = "Icon"
+		Value   = "%SystemRoot%\System32\imageres.dll,-110"
+		Type    = "ExpandString"
 	}
 	Set-ItemProperty @RecoveryIcon
 	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command"
 	$RecoveryCommand = @{
-		Path   = "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command"
-		Name   = "(default)"
-		Value  = "shutdown.exe -r -o -f -t 00"
-		Type   = "String"
+		Path    = "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command"
+		Name    = "(default)"
+		Value   = "shutdown.exe -r -o -f -t 00"
+		Type    = "String"
 	}
 	Set-ItemProperty @RecoveryCommand
 	#****************************************************************
@@ -1368,7 +1362,7 @@ If ($SetRegistry -or $Harden)
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jpg\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.obj\Shell\3D Edit",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.ply\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.png\Shell\3D Edit",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.stl\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tif\Shell\3D Edit",
-			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit") | % { Remove-Item -Path $_ -Recurse -Force }
+			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit") | ForEach { Remove-Item -Path $_ -Recurse -Force }
 	}
 	ElseIf ($Build -lt '16273')
 	{
@@ -1381,7 +1375,7 @@ If ($SetRegistry -or $Harden)
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jfif\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jpe\Shell\3D Edit",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jpeg\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.jpg\Shell\3D Edit",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.png\Shell\3D Edit", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tif\Shell\3D Edit",
-			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit") | % { Remove-Item -Path $_ -Recurse -Force }
+			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.tiff\Shell\3D Edit") | ForEach { Remove-Item -Path $_ -Recurse -Force }
 	}
 	If ($Build -ge "15063")
 	{
@@ -1392,16 +1386,16 @@ If ($SetRegistry -or $Harden)
 		@("HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3ds\Shell\3D Print", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.3mf\Shell\3D Print",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.dae\Shell\3D Print", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.dxf\Shell\3D Print",
 			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.obj\Shell\3D Print", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.ply\Shell\3D Print",
-			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.stl\Shell\3D Print", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.wrl\Shell\3D Print") | % { Remove-Item -Path $_ -Recurse -Force }
+			"HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.stl\Shell\3D Print", "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\.wrl\Shell\3D Print") | ForEach { Remove-Item -Path $_ -Recurse -Force }
 	}
 	#****************************************************************
 	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 	Write-Output "Restoring Windows Photo Viewer." >> $WorkFolder\Registry-Optimizations.log
 	#****************************************************************
-	@(".bmp", ".gif", ".jfif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".wdp") | % {
-		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_";
-		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids";
-		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String;
+	@(".bmp", ".gif", ".jfif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".wdp") | ForEach {
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_"
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids"
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" `
 						 -Value (New-Object Byte[] 0) -Type Binary
 	}
@@ -1416,7 +1410,7 @@ If ($SetRegistry -or $Harden)
 		"HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}",
 		"HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{450D8FBA-AD25-11D0-98A8-0800361B1103}\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}",
 		"HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}",
-		"HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}") | % { Remove-Item -Path $_ -Recurse -Force }
+		"HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}") | ForEach { Remove-Item -Path $_ -Recurse -Force }
 	#****************************************************************
 	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 	Write-Output "Removing 'Share' from the Context Menu." >> $WorkFolder\Registry-Optimizations.log
@@ -1565,20 +1559,20 @@ If ($SetRegistry -or $Harden)
 		If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI")
 		{
 			$ImmersiveLinks1 = @{
-				Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-				Name   = "SettingsPageVisibility"
-				Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider;windowsdefender"
-				Type   = "String"
+				Path    = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+				Name    = "SettingsPageVisibility"
+				Value   = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider;windowsdefender"
+				Type    = "String"
 			}
 			Set-ItemProperty @ImmersiveLinks1
 		}
 		Else
 		{
 			$ImmersiveLinks2 = @{
-				Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-				Name   = "SettingsPageVisibility"
-				Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider"
-				Type   = "String"
+				Path    = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+				Name    = "SettingsPageVisibility"
+				Value   = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider"
+				Type    = "String"
 			}
 			Set-ItemProperty @ImmersiveLinks2
 		}
@@ -1593,20 +1587,20 @@ If ($SetRegistry -or $Harden)
 		If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI")
 		{
 			$ImmersiveLinks3 = @{
-				Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-				Name   = "SettingsPageVisibility"
-				Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider;windowsdefender"
-				Type   = "String"
+				Path    = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+				Name    = "SettingsPageVisibility"
+				Value   = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider;windowsdefender"
+				Type    = "String"
 			}
 			Set-ItemProperty @ImmersiveLinks3
 		}
 		Else
 		{
 			$ImmersiveLinks4 = @{
-				Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-				Name   = "SettingsPageVisibility"
-				Value  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider"
-				Type   = "String"
+				Path    = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+				Name    = "SettingsPageVisibility"
+				Value   = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider"
+				Type    = "String"
 			}
 			Set-ItemProperty @ImmersiveLinks4
 		}
@@ -1633,10 +1627,10 @@ If ($SetRegistry -or $Harden)
 	#****************************************************************
 	Set-RegistryOwner -Hive HKLM -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}"
 	$DefaultUser0 = @{
-		Path   = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}"
-		Name   = "AutoElevationAllowed"
-		Value  = 1
-		Type   = "DWord"
+		Path    = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}"
+		Name    = "AutoElevationAllowed"
+		Value   = 1
+		Type    = "DWord"
 	}
 	Set-ItemProperty @DefaultUser0
 	#****************************************************************
@@ -1770,8 +1764,8 @@ If ($Harden)
 	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 	Write-Output "Disabling System and Settings Syncronization." >> $WorkFolder\Registry-Optimizations.log
 	#****************************************************************
-	@("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") | % {
-		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_";
+	@("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") | ForEach {
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_"
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
 	}
 	Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
@@ -1799,18 +1793,18 @@ If ($Harden)
 	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 	Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> $WorkFolder\Registry-Optimizations.log
 	#****************************************************************
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Type" /t REG_SZ /d "LooselyCoupled" /f)
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
-    	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "InitialAppValue" /t REG_SZ /d "Unspecified" /f)
-   	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
-    	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
-    	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
-    	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
-    	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
-    	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Type" /t REG_SZ /d "LooselyCoupled" /f)
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
+	[void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "InitialAppValue" /t REG_SZ /d "Unspecified" /f)
+	New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
+	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
+	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
+	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
+	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
+	Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
 	#****************************************************************
 	Write-Output '' >> $WorkFolder\Registry-Optimizations.log
 	Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
@@ -2023,13 +2017,13 @@ Try
 	{
 		Write-Output ''
 		Write-Log -Output "Disabling removed Provisoned App Package services." -LogPath $LogFile -Level Info
-		If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0))
+		If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0))
 		{
 			[void](Mount-OfflineHives)
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
 			[void](Dismount-OfflineHives)
 		}
-		If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0))
+		If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0))
 		{
 			[void](Mount-OfflineHives)
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
@@ -2073,7 +2067,7 @@ Try
 		{
 			[void](Remove-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth")
 		}
-		@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | % {
+		@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach {
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
 		}
 		[void](Dismount-OfflineHives)
@@ -2082,10 +2076,10 @@ Try
 			Write-Output ''
 			Write-Log -Output "Disabling Windows-Defender-Default-Defintions." -LogPath $LogFile -Level Info
 			$DisableDefenderFeature = @{
-				Path		  = $MountFolder
-				FeatureName	  = "Windows-Defender-Default-Definitions"
-				ScratchDirectory  = $TempFolder
-				LogPath		  = $DISMLog
+				Path			   = $MountFolder
+				FeatureName	       	   = "Windows-Defender-Default-Definitions"
+				ScratchDirectory   	   = $TempFolder
+				LogPath		       	   = $DISMLog
 			}
 			[void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
 		}
@@ -2102,7 +2096,7 @@ Catch
 
 Try
 {
-	If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.PackageName -like "*Xbox*" }).Count -lt 5))
+	If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Xbox*" }).Count -lt 5))
 	{
 		Write-Output ''
 		Write-Log -Output "Disabling remaining Xbox services and drivers." -LogPath $LogFile -Level Info
@@ -2120,7 +2114,7 @@ Try
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
 		Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
-		@("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | % {
+		@("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach {
 			Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
 		}
 		[void](Dismount-OfflineHives)
@@ -2154,19 +2148,19 @@ If ($OnDemandPackages)
 		}
 		$RemoveOnDemand = $OnDemandPackageList | Out-GridView -Title "Select any OnDemand Packages to remove." -PassThru
 		$PackageName = $RemoveOnDemand.PackageName
-		$PackageName | % { $Append = $_.Replace("Package", "").Split("~")[0] }
+		$PackageName | ForEach { $Append = $_.Replace("Package", "").Split("~")[0] }
 		If ($RemoveOnDemand)
 		{
-			$PackageName | % {
+			$PackageName | ForEach {
 				$Append = $_.Replace("Package", "").Split("~")[0]
 				Write-Output ''
 				Write-Log -Output "Removing Windows Package: $($Append.TrimEnd("-"))" -LogPath $LogFile -Level Info
 				$RemoveOnDemandPackage = @{
-					Path		  = $MountFolder
-					PackageName	  = $_
-					ScratchDirectory  = $TempFolder
-					LogPath		  = $DISMLog
-					ErrorAction	  = "Stop"
+					Path			   = $MountFolder
+					PackageName	       	   = $_
+					ScratchDirectory   	   = $TempFolder
+					LogPath		       	   = $DISMLog
+					ErrorAction	       	   = "Stop"
 				}
 				[void](Remove-WindowsPackage @RemoveOnDemandPackage)
 			}
@@ -2203,16 +2197,16 @@ If ($OptionalFeatures)
 		$FeatureName = $RemoveFeatures.FeatureName
 		If ($RemoveFeatures)
 		{
-			$FeatureName | % {
+			$FeatureName | ForEach {
 				Write-Output ''
 				Write-Log -Output "Disabling Optional Feature: $($_)" -LogPath $LogFile -Level Info
 				$DisableWindowsOptionalFeature = @{
-					Path		  = $MountFolder
-					FeatureName	  = $_
-					Remove		  = $true
-					ScratchDirectory  = $TempFolder
-					LogPath		  = $DISMLog
-					ErrorAction	  = "Stop"
+					Path			   = $MountFolder
+					FeatureName	       	   = $_
+					Remove			   = $true
+					ScratchDirectory   	   = $TempFolder
+					LogPath		       	   = $DISMLog
+					ErrorAction	       	   = "Stop"
 				}
 				[void](Disable-WindowsOptionalFeature @DisableWindowsOptionalFeature)
 			}
@@ -2251,7 +2245,7 @@ If ($Drivers)
 	}
 }
 
-If ((Get-AppxProvisionedPackage -Path $MountFolder | ? { $_.PackageName -like "*Calculator*" }).Count.Equals(0))
+If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0))
 {
 	If ((Test-Path -Path "$PSScriptRoot\Win32Calc\win32calc.exe") -and (Test-Path -Path "$PSScriptRoot\Win32Calc\win32calc.exe.mui"))
 	{
@@ -2438,12 +2432,12 @@ Try
 	Write-Output ''
 	Write-Log -Output "Saving Image and Dismounting." -LogPath $LogFile -Level Info
 	$DismountWindowsImage = @{
-		Path		  = $MountFolder
-		Save		  = $true
-		CheckIntegrity    = $true
-		ScratchDirectory  = $TempFolder
-		LogPath		  = $DISMLog
-		ErrorAction	  = "Stop"
+		Path			   = $MountFolder
+		Save			   = $true
+		CheckIntegrity	   	   = $true
+		ScratchDirectory   	   = $TempFolder
+		LogPath		       	   = $DISMLog
+		ErrorAction	       	   = "Stop"
 	}
 	[void](Dismount-WindowsImage @DismountWindowsImage)
 }
@@ -2460,14 +2454,14 @@ Try
 	Write-Output ''
 	Write-Log -Output "Rebuilding and compressing the new image." -LogPath $LogFile -Level Info
 	$ExportImage = @{
-		CheckIntegrity	      = $true
-		CompressionType	      = "Maximum"
-		SourceImagePath	      = $ImageFile
-		SourceIndex	      = $Index
-		DestinationImagePath  = "$WorkFolder\install.wim"
-		ScratchDirectory      = $TempFolder
-		LogPath		      = $DISMLog
-		ErrorAction	      = "Stop"
+		CheckIntegrity		   = $true
+		CompressionType	       	   = "Maximum"
+		SourceImagePath	       	   = $ImageFile
+		SourceIndex		   = $Index
+		DestinationImagePath   	   = "$WorkFolder\install.wim"
+		ScratchDirectory	   = $TempFolder
+		LogPath			   = $DISMLog
+		ErrorAction		   = "Stop"
 	}
 	[void](Export-WindowsImage @ExportImage)
 }
