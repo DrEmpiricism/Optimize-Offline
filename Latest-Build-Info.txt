@@ -10,9 +10,7 @@
 
 - The script now backs up the offline registry hives and will restore said backups if certain processes have returned an error. A few of the processes will allow for continuance of the script after the backups have been restored.
 
-**NOTE**
-
-  After this update, only minimal updates will be added to this script version, as the WinForm/GUI version is in its final phase of beta testing and debugging. This project will implement a substantial amount of additional features including the remastering of UEFI ISO files, unattended Answer File creation, full component removals, compression selections, the expanding of images to virtual and physical drives, capturing partition and data images. Moreover, all features will be processed natively using the WimGapi API and P/Invoke.
+- After this update, only minimal updates will be added to this script version, as the WinForm/GUI version is in its final phase of beta testing and debugging. This project will implement a substantial amount of additional features including the remastering of UEFI ISO files, unattended Answer File creation, full component removals, compression selections, the expanding of images to virtual and physical drives, capturing partition and data images. Moreover, all features will be processed natively using the WimGapi API and P/Invoke.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
