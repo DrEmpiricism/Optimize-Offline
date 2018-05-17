@@ -67,7 +67,7 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.0
+		Version:        3.1.0.1
 		Last updated:	05/17/2018
 		===========================================================================
 #>
@@ -480,30 +480,6 @@ Function Test-OfflineHives {
     Return $HivesLoaded
 }
 
-Function Backup-OfflineHives {
-    If (!(Test-Path -Path "$WorkFolder\OfflineHiveBackup")) {
-        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
-    }
-    Else {
-        [void](Remove-Item -Path "$WorkFolder\OfflineHiveBackup" -Recurse -Force)
-        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
-    }
-    If (!(Test-OfflineHives)) {
-        [void](Mount-OfflineHives)
-    }
-    Else {
-        [void](Dismount-OfflineHives)
-        Start-Sleep 3
-        [void](Mount-OfflineHives)
-    }
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SYSTEM.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKCU.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKU.reg HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -Verb RunAs -WindowStyle Hidden -Wait
-    [void](Dismount-OfflineHives)
-}
-
-
 Function Exit-Script {
     Start-Sleep 3
     Write-Output ''
@@ -681,9 +657,6 @@ If ($ImageIsMounted -eq $true) {
         Write-Output ''
         Write-Output "The image is healthy."
         Start-Sleep 3
-        Write-Output ''
-        Write-Output "Backing-up the image registry hives. Please wait."
-        Backup-OfflineHives
         Clear-Host
     }
     Else {
