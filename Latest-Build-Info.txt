@@ -2,9 +2,9 @@
 
 - Optimized a substantial amount of code.
 
-- Applies the Microsoft Diagnostic and Recovery Toolset (DaRT) for Windows 10 base package, and Debugging Tools for Windows 10, to the Windows Recovery image. There is no switch for this, and works identically to the Win32 Calculator: if the script detects the DaRT directory, as well as its required .esd files, it will first detect the build name of the mounted install.wim, mount the Recovery Image, apply MS DaRT 10 and its Debugging Tools using the detected build name, and then save and dismount the Recovery Image.
+<!--    - Applies the Microsoft Diagnostic and Recovery Toolset (DaRT) for Windows 10 base package, and Debugging Tools for Windows 10, to the Windows Recovery image. There is no switch for this, and works identically to the Win32 Calculator: if the script detects the DaRT directory, as well as its required .esd files, it will first detect the build name of the mounted install.wim, mount the Recovery Image, apply MS DaRT 10 and its Debugging Tools using the detected build name, and then save and dismount the Recovery Image.
 
-- All MS DaRT 10 files are compressed into solid ESD files with their respective build name. This ensures the proper MS DaRT package is applied to the image with its most recent build files.
+        - All MS DaRT 10 files are compressed into solid ESD files with their respective build name. This ensures the proper MS DaRT. -->
 
 - Win32Calc has been re-created and updated. It is now compressed into a solid ESD as a System Application and will replace the Metro Calculator App if the Provisioned App Package for the Calculator has been removed. The script automatically checks whether this Provisioned App Package has been removed or not. If it has not been removed, the script will not apply the Win32 Calculator Package. If it has been removed, and the script detects the required .ESD file, the Win32 Calculator Package will be applied.
 
@@ -17,7 +17,6 @@
 **NOTE**
 
   After this update, only minimal updates will be added to this script version, as the WinForm/GUI version is in its final phase of beta testing and debugging. This project will implement a substantial amount of additional features including the remastering of UEFI ISO files, unattended Answer File creation, full component removals, compression selections, the expanding of images to virtual and physical drives, capturing partition and data images. Moreover, all features will be processed natively using the WimGapi API and P/Invoke.
-
 --------------------------------------------------------------------------------------------------------------------------------
 
 ## 3.0.9.4 ## (05-08-2018)
