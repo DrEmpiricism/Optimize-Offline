@@ -1,3 +1,12 @@
+## 3.1.0.1 ## (05-17-2018)
+
+- Removed the registry backup function and process temporarily, as it was causing a significant increase in script duration.
+
+- Fixed some Setup Script context and variables.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
 ## 3.1.0.0 ## (05-17-2018)
 
 - Optimized a substantial amount of code.
