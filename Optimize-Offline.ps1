@@ -2619,7 +2619,7 @@ IF %ERRORLEVEL% NEQ 0 (
     EXIT
 ) ELSE (
     ECHO Running as Administrator.
-	CD /D "%Scripts%"
+    CD /D "%Scripts%"
     TIMEOUT /T 2 >NUL
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\TasksandServices.ps1
 )
