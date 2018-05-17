@@ -2209,7 +2209,7 @@ If ($Drivers) {
 }
 
 If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0)) {
-    If (Test-Path -LiteralPath "$PSScriptRoot\Win32Calc" -PathType Container -Filter "Win32Calc.wim") {
+    If (Test-Path -LiteralPath "$PSScriptRoot\Win32Calc" -PathType Container -Filter "Win32Calc.esd") {
         Try {
             If ($OnDemandPackages -and !$OptionalFeatures) { Clear-Host }
             ElseIf (!$OnDemandPackages -and $OptionalFeatures) { Clear-Host }
@@ -2217,7 +2217,7 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -lik
             Write-Log -Output "Applying the Win32 Calculator." -LogPath $LogFile -Level Info
             $ApplyWin32Calc = @{
                 ApplyPath        = $MountFolder
-                ImagePath        = "$PSScriptRoot\Win32Calc\Win32Calc.wim"
+                ImagePath        = "$PSScriptRoot\Win32Calc\Win32Calc.esd"
                 Index            = 1
                 CheckIntegrity   = $true
                 Verify           = $true
@@ -2293,7 +2293,7 @@ Windows Registry Editor Version 5.00
 "COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
 
 '@
-            Out-File -FilePath "$WorkFolder\Win32Reg.reg" -InputObject $W32CalcReg
+            Out-File -FilePath "$WorkFolder\Win32Reg.reg" -InputObject $W32CalcReg -Force
             [void](Mount-OfflineHives)
             Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
             Start-Process -FilePath REGEDIT -ArgumentList ("/S $WorkFolder\Win32Reg.reg") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
@@ -2321,9 +2321,75 @@ Windows Registry Editor Version 5.00
         }
         Finally {
             If (Test-Path -Path "$WorkFolder\WIM_HKLM_SOFTWARE.reg") {
-                [void](Remove-Item -Path "$WorkFolder\WIM_HKLM_SOFTWARE.reg" -Force)
+                Remove-Item -Path "$WorkFolder\WIM_HKLM_SOFTWARE.reg" -Force
             }
         }
+    }
+}
+
+If (Test-Path -LiteralPath "$PSScriptRoot\DaRT" -PathType Container -Filter "MSDarT10_$($BuildName).esd") {
+    If ($Win32CalcApplied -eq $true) { Write-Output '' }
+    Write-Log -Output "Applying Microsoft DaRT 10 $($BuildName) to the Recovery Image." -LogPath $LogFile -Level Info
+    $WinRE = "$MountFolder\Windows\System32\Recovery\winre.wim"
+    Start-Sleep 3
+    Try {
+        If (Test-Path -Path $WinRE -PathType Leaf) {
+            Start-Process -FilePath ATTRIB -ArgumentList ("-S -H -I $WinRE") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
+            Copy-Item -Path $WinRE -Destination $Env:TEMP
+            $RecoveryWim = Get-Item -Path "$Env:TEMP\winre.wim" -Force
+            $NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $Env:TEMP -ChildPath "RecoveryMount_$(Get-Random)" -ErrorAction Stop))
+            If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath "$Env:TEMP\$NewRecoveryMount" }
+            $MountRecoveryImage = @{
+                Path             = $RecoveryMount
+                ImagePath        = $RecoveryWim
+                Index            = 1
+                ScratchDirectory = $TempFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Mount-WindowsImage @MountRecoveryImage)
+            If (Test-Path "$MountFolder\Windows\System32\Recovery\winre.wim") {
+                $ApplyMSDaRT10 = @{
+                    ImagePath        = "$PSScriptRoot\DaRT\MSDarT10_$($BuildName).esd"
+                    Index            = 1
+                    ApplyPath        = $RecoveryMount
+                    CheckIntegrity   = $true
+                    Verify           = $true
+                    ScratchDirectory = $TempFolder
+                    LogPath          = $DISMLog
+                    ErrorAction      = "Stop"
+                }
+                [void](Expand-WindowsImage @ApplyMSDaRT10)
+                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll")) {
+                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorAction Stop
+                }
+                $Winpeshl = @'
+[LaunchApps]
+%WINDIR%\system32\wpeinit.exe
+%WINDIR%\system32\netstart.exe
+%SYSTEMDRIVE%\sources\recovery\recenv.exe
+
+'@
+                Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -InputObject $Winpeshl -Force -ErrorAction Stop
+                [void](Dismount-WindowsImage -Path $RecoveryMount -Save -CheckIntegrity -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
+                Copy-Item -Path $RecoveryWim -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorAction Stop
+                Start-Process -FilePath ATTRIB -ArgumentList ("+S +H +I $WinRE") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
+                Remove-Item -Path $RecoveryWim -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path $RecoveryMount -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        $MSDaRTApplied = $true
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to apply Microsoft DaRT 10 to the Recovery Image." -LogPath $LogFile -Level Warning
+        If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim") {
+            Write-Output ''
+            Write-Log -Output "Dismounting and Discarding the Recovery Image." -LogPath $LogFile -Level Info
+            [void](Dismount-WindowsImage -Path $RecoveryMount -Discard)
+        }
+        If (Test-Path -Path $RecoveryWim) { Remove-Item -Path $RecoveryWim -Force }
+        If (Test-Path -Path $RecoveryMount) { Remove-Item -Path $RecoveryMount -Recurse -Force }
     }
 }
 
