@@ -1709,10 +1709,10 @@ If ($SetRegistry -or $Harden) {
 If ($Harden) {
     #region Hardened Registry Optimizations
     Try {
-        [void](Mount-OfflineHives)
         Write-Output ''
         Write-Log -Output "Adding Hardened Registry Values." -LogPath $LogFile -Level Info
         [void](New-Item -Path "$WorkFolder\HardenBackup" -ItemType Directory -Force)
+        [void](Mount-OfflineHives)
         Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\HardenBackup\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
         Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\HardenBackup\WIM_HKLM_SYSTEM.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -Verb RunAs -WindowStyle Hidden -Wait
         Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\HardenBackup\WIM_HKCU.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -Verb RunAs -WindowStyle Hidden -Wait
@@ -1797,6 +1797,15 @@ If ($Harden) {
             -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
+        #****************************************************************
+        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Disabling Shared Experiences." >> "$WorkFolder\Registry-Optimizations.log"
+        #***************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableMmx" -Value 0 -Type DWord -ErrorAction Stop
         #****************************************************************
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Disabling Shared Experiences." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1927,9 +1936,9 @@ ECHO Explorer has started successfully.
 TIMEOUT /T 3 /NOBREAK >NUL
 EXIT
 '@
-    Out-File -FilePath "$MountFolder\Windows\Extended-Disk-Cleanup.vbs" -InputObject $ExtendedDiskClean -Encoding UTF8
-    Out-File -FilePath "$MountFolder\Windows\Create-Restore-Point.vbs" -InputObject $CreateRestorePoint -Encoding UTF8
-    Out-File -FilePath "$MountFolder\Windows\Restart-Explorer.cmd" -InputObject $RestartExplorer -Encoding ASCII
+    Out-File -FilePath "$MountFolder\Windows\Extended-Disk-Cleanup.vbs" -InputObject $ExtendedDiskClean -Force
+    Out-File -FilePath "$MountFolder\Windows\Create-Restore-Point.vbs" -InputObject $CreateRestorePoint -Force
+    Out-File -FilePath "$MountFolder\Windows\Restart-Explorer.cmd" -InputObject $RestartExplorer -Force
 }
 
 Try {
@@ -1962,7 +1971,7 @@ Try {
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 '@
-    Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -InputObject $LayoutTemplate -Encoding UTF8
+    Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -InputObject $LayoutTemplate
     Write-Output ''
     Write-Log -Output "Creating required Shortcuts." -LogPath $LogFile -Level Info
     Start-Sleep 3
@@ -2200,7 +2209,7 @@ If ($Drivers) {
 }
 
 If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0)) {
-    If ((Test-Path -LiteralPath "$PSScriptRoot\Win32Calc" -PathType Container) -and (Get-ChildItem -LiteralPath "$PSScriptRoot\Win32Calc" -Filter "*.esd")) {
+    If (Test-Path -LiteralPath "$PSScriptRoot\Win32Calc" -PathType Container -Filter "Win32Calc.wim") {
         Try {
             If ($OnDemandPackages -and !$OptionalFeatures) { Clear-Host }
             ElseIf (!$OnDemandPackages -and $OptionalFeatures) { Clear-Host }
@@ -2208,7 +2217,7 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -lik
             Write-Log -Output "Applying the Win32 Calculator." -LogPath $LogFile -Level Info
             $ApplyWin32Calc = @{
                 ApplyPath        = $MountFolder
-                ImagePath        = "$PSScriptRoot\Win32Calc\Win32Calc.esd"
+                ImagePath        = "$PSScriptRoot\Win32Calc\Win32Calc.wim"
                 Index            = 1
                 CheckIntegrity   = $true
                 Verify           = $true
@@ -2284,14 +2293,14 @@ Windows Registry Editor Version 5.00
 "COMMONSTART/Programs/Accessories/Calculator.lnk"="SOFTWARE_CATEGORY_UTILITIES"
 
 '@
-            Out-File -FilePath "$WorkFolder\Win32Reg.reg" -InputObject $W32CalcReg -Encoding Unicode
+            Out-File -FilePath "$WorkFolder\Win32Reg.reg" -InputObject $W32CalcReg
             [void](Mount-OfflineHives)
-            Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
-            Start-Process -FilePath REGEDIT -ArgumentList ("/S $WorkFolder\Win32Reg.reg") -Verb RunAs -WindowStyle Hidden -Wait
+            Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
+            Start-Process -FilePath REGEDIT -ArgumentList ("/S $WorkFolder\Win32Reg.reg") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
             [void](Dismount-OfflineHives)
             $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
             $CalcStr = "Calculator.lnk=@%SystemRoot%\system32\shell32.dll,-22019"
-            Start-Process -FilePath ATTRIB -ArgumentList ("-S -H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait
+            Start-Process -FilePath ATTRIB -ArgumentList ("-S -H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
             If (!(Select-String -Path $IniFile -Pattern $CalcStr -SimpleMatch -Quiet)) {
                 Add-Content -Path $IniFile -Value $CalcStr
             }
@@ -2299,6 +2308,7 @@ Windows Registry Editor Version 5.00
                 (Get-Content -Path $IniFile) | Where { $_ -ne $CalcStr } | Set-Content -Path $IniFile
                 Add-Content -Path $IniFile -Value $CalcStr
             }
+            Start-Process -FilePath ATTRIB -ArgumentList ("+S +H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
             $Win32CalcApplied = $true
         }
         Catch {
@@ -2310,77 +2320,10 @@ Windows Registry Editor Version 5.00
             Start-Sleep 3
         }
         Finally {
-            Start-Process -FilePath ATTRIB -ArgumentList ("+S +H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait
             If (Test-Path -Path "$WorkFolder\WIM_HKLM_SOFTWARE.reg") {
                 [void](Remove-Item -Path "$WorkFolder\WIM_HKLM_SOFTWARE.reg" -Force)
             }
         }
-    }
-}
-
-If ((Test-Path -LiteralPath "$PSScriptRoot\DaRT" -PathType Container) -and (Get-ChildItem -LiteralPath "$PSScriptRoot\DaRT" -Filter "MSDarT10_$($BuildName).esd")) {
-    If ($Win32CalcApplied -eq $true) { Write-Output '' }
-    Write-Log -Output "Applying Microsoft DaRT 10 $($BuildName) to the Recovery Image." -LogPath $LogFile -Level Info
-    $WinRE = "$MountFolder\Windows\System32\Recovery\winre.wim"
-    Start-Sleep 3
-    Try {
-        If (Test-Path -Path $WinRE -PathType Leaf) {
-            Start-Process -FilePath ATTRIB -ArgumentList ("-S -H -I $WinRE") -Verb RunAs -WindowStyle Hidden -Wait
-            Copy-Item -Path $WinRE -Destination $Env:TEMP
-            $RecoveryWim = Get-Item -Path "$Env:TEMP\winre.wim" -Force
-            $NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $Env:TEMP -ChildPath "RecoveryMount_$(Get-Random)" -ErrorAction Stop))
-            If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath "$Env:TEMP\$NewRecoveryMount" }
-            $MountRecoveryImage = @{
-                Path             = $RecoveryMount
-                ImagePath        = $RecoveryWim
-                Index            = 1
-                ScratchDirectory = $TempFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
-            }
-            [void](Mount-WindowsImage @MountRecoveryImage)
-            If (Test-Path "$MountFolder\Windows\System32\Recovery\winre.wim") {
-                $ApplyMSDaRT10 = @{
-                    ImagePath        = "$PSScriptRoot\DaRT\MSDarT10_$($BuildName).esd"
-                    Index            = 1
-                    ApplyPath        = $RecoveryMount
-                    CheckIntegrity   = $true
-                    Verify           = $true
-                    ScratchDirectory = $TempFolder
-                    LogPath          = $DISMLog
-                    ErrorAction      = "Stop"
-                }
-                [void](Expand-WindowsImage @ApplyMSDaRT10)
-                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll")) {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorAction Stop
-                }
-                $Winpeshl = @'
-[LaunchApps]
-%WINDIR%\system32\wpeinit.exe
-%WINDIR%\system32\netstart.exe
-%SYSTEMDRIVE%\sources\recovery\recenv.exe
-
-'@
-                Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -InputObject $Winpeshl -Encoding UTF8 -ErrorAction Stop
-                [void](Dismount-WindowsImage -Path $RecoveryMount -Save -CheckIntegrity -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
-                Copy-Item -Path $RecoveryWim -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorAction Stop
-            }
-        }
-        $MSDaRTApplied = $true
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to apply Microsoft DaRT 10 to the Recovery Image." -LogPath $LogFile -Level Warning
-        If (Get-ChildItem -Path $RecoveryMount -Recurse -Force) {
-            Write-Output ''
-            Write-Log -Output "Dismounting and Discarding the Recovery Image." -LogPath $LogFile -Level Info
-            [void](Dismount-WindowsImage -Path $RecoveryMount -Discard)
-        }
-    }
-    Finally {
-        If (Test-Path -Path $WinRE) { Start-Process -FilePath ATTRIB -ArgumentList ("+S +H +I $WinRE") -Verb RunAs -WindowStyle Hidden -Wait }
-        If (Test-Path -Path $RecoveryWim) { Remove-Item -Path $RecoveryWim -Force }
-        If (Test-Path -Path $RecoveryMount) { Remove-Item -Path $RecoveryMount -Recurse -Force }
     }
 }
 
@@ -2459,16 +2402,16 @@ DEL "%~f0"
 		
         New-Container -Path "$MountFolder\Windows\Setup\Scripts"
         $SetupScriptPath = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-        Out-File -FilePath $SetupScriptPath -InputObject $SetupComplete -Encoding ASCII
+        Out-File -FilePath $SetupScriptPath -InputObject $SetupComplete
 		
         If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Xbox, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Xbox, $Finalize -Append
         }
         ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Finalize -Append
         }
         ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Finalize -Append
         }
     }
     ElseIf ($SetRegistryComplete -eq $true -and $HardenRegistryComplete -eq $true) {
@@ -2541,9 +2484,27 @@ Function Remove-TasksandServices
 	[CmdletBinding()]
 	Param ()
 	
-	Function New-Container($Path)
+	Function New-Container
 	{
+		[CmdletBinding()]
+		Param
+		(
+			[Parameter(Mandatory = $true)]
+			[string]$Path
+		)
+		
 		If (!(Test-Path -Path $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force) }
+	}
+	
+	Function Reset-Network
+	{
+		[void](Invoke-Expression -Command ('& NBTSTAT -R') -ErrorAction SilentlyContinue)
+		[void](Invoke-Expression -Command ('& IPCONFIG /FLUSHDNS') -ErrorAction SilentlyContinue)
+		If ((Get-Service -Name "Dnscache" -ErrorAction SilentlyContinue).Status -eq "Running")
+		{
+			[void](Stop-Service -Name "Dnscache" -Force -NoWait -ErrorAction SilentlyContinue); Start-Sleep 8
+			[void](Start-Service -Name "Dnscache" -ErrorAction SilentlyContinue)
+		}
 	}
 	
 	Get-Service -Name @("Diagtrack", "diagnosticshub.standardcollector.service", "dmwappushservice", "DoSvc", "DsSvc",
@@ -2565,28 +2526,28 @@ Function Remove-TasksandServices
 		"7D7E8402-7C54-4821-A34E-AEEFD62DED93", "52079E78-A92B-413F-B213-E8FE35712E72", "2EEF81BE-33FA-4800-9670-1CD474972C3F", "C1D23ACC-752B-43E5-8448-8D0E519CD6D6",
 		"8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6",
 		"A8804298-2D5F-42E3-9531-9C8C39EB29CE", "8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6") | ForEach {
-		New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}";
+		New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -ErrorAction SilentlyContinue
 		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
 	}
 	
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled"
+	New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction SilentlyContinue
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String -ErrorAction SilentlyContinue
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction SilentlyContinue
-	ForEach ($Key In (Get-ChildItem "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global"))
+	ForEach ($Key In (Get-ChildItem -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global"))
 	{
 		If ($Key.PSChildName -EQ "LooselyCoupled")
 		{
 			Continue
 		}
-		Set-ItemProperty ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Type" -Value "InterfaceClass" -Type String -ErrorAction SilentlyContinue
-		Set-ItemProperty ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
-		Set-ItemProperty ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction SilentlyContinue
+		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Type" -Value "InterfaceClass" -Type String -ErrorAction SilentlyContinue
+		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
+		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction SilentlyContinue
 	}
-	ForEach ($Key In (Get-ChildItem "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"))
+	ForEach ($Key In (Get-ChildItem -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"))
 	{
-		Set-ItemProperty ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\" + $Key.PSChildName) -Name "Disabled" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\" + $Key.PSChildName) -Name "Disabled" -Value 1 -Type DWord -ErrorAction SilentlyContinue
 	}
 	
 	New-Container -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
@@ -2596,17 +2557,19 @@ Function Remove-TasksandServices
 	
 	$CurrentUser = New-Object System.Security.Principal.NTAccount($Env:USERNAME)
 	$SID = $CurrentUser.Translate([System.Security.Principal.SecurityIdentifier]).Value
-	New-Container ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID)
-	Set-ItemProperty ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID) -Name "FeatureStates" -Value 0x33c -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseCredShared" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseOpen" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots"
-	New-Container "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting"
+	New-Container -Path ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID) -ErrorAction SilentlyContinue
+	Set-ItemProperty -Path ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID) -Name "FeatureStates" -Value 0x33c -Type DWord -ErrorAction SilentlyContinue
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseCredShared" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseOpen" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+	New-Container -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" -ErrorAction SilentlyContinue
+	New-Container -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -ErrorAction SilentlyContinue
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config"
-	Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+	New-Container -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -ErrorAction SilentlyContinue
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+	
+	Reset-Network
 }
 
 Remove-TasksandServices
@@ -2615,7 +2578,6 @@ Remove-TasksandServices
         $CallScript = @'
 @ECHO OFF
 CD /D "%~dp0"
-SET "Scripts=%WINDIR%\Setup\Scripts"
 
 NET SESSION >NUL 2>&1
 IF %ERRORLEVEL% NEQ 0 (
@@ -2625,19 +2587,16 @@ IF %ERRORLEVEL% NEQ 0 (
     EXIT
 ) ELSE (
     ECHO Running as Administrator.
-    CD /D "%Scripts%"
     TIMEOUT /T 2 >NUL
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\TasksandServices.ps1
 )
 PAUSE
 EXIT
-DEL /F /Q "%Scripts%\TasksandServices.ps1" >NUL
-DEL "%~f0"
 '@
         New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -InputObject $SetupComplete -Encoding ASCII
-        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\TasksandServices.ps1" -InputObject $TasksServices -Encoding UTF8
-        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\CallScript.cmd" -InputObject $CallScript -Encoding ASCII
+        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -InputObject $SetupComplete
+        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\TasksandServices.ps1" -InputObject $TasksServices
+        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\CallScript.cmd" -InputObject $CallScript
     }
 }
 
