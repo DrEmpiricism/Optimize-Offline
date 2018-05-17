@@ -1,18 +1,309 @@
 ## 3.1.0.0 ## (05-17-2018)
 
-	- Optimized a substantial amount of code.
+- Optimized a substantial amount of code.
 
-	- Applies the Microsoft Diagnostic and Recovery Toolset (DaRT) for Windows 10 base package, and Debugging Tools for Windows 10, to the Windows Recovery image. There is no switch for this, and works 	identically to the Win32 Calculator: if the script detects the DaRT directory, as well as its required .esd files, it will first detect the build name of the mounted install.wim, mount the Recovery Image, apply MS DaRT 10 and its Debugging Tools using the detected build name, and then save and dismount the Recovery Image.
+- Win32Calc has been re-created and updated.
 
-	- All MS DaRT 10 files are compressed into solid ESD files with their respective build name. This ensures the proper MS DaRT.
+- Added additional registry values for the -Harden switch and added its own Setup script.
 
-	- Win32Calc has been re-created and updated. It is now compressed into a solid ESD as a System Application and will replace the Metro Calculator App if the Provisioned App Package for the Calculator has been removed. The script automatically checks whether this Provisioned App Package has been removed or not. If it has not been removed, the script will not apply the Win32 Calculator Package. If it has been removed, and the script detects the required .ESD file, the Win32 Calculator Package will be applied.
+- Removed -ComponentCleanup
 
-	- Added additional registry values for the -Harden switch and added its own Setup script.
+- The script now backs up the offline registry hives and will restore said backups if certain processes have returned an error. A few of the processes will allow for continuance of the script after the backups have been restored.
 
-	- Removed -ComponentCleanup
+**NOTE**
 
-	- The script now backs up the offline registry hives and will restore said backups if certain processes have returned an error. A few of the processes will allow for continuance of the script after the backups have been restored.
+  After this update, only minimal updates will be added to this script version, as the WinForm/GUI version is in its final phase of beta testing and debugging. This project will implement a substantial amount of additional features including the remastering of UEFI ISO files, unattended Answer File creation, full component removals, compression selections, the expanding of images to virtual and physical drives, capturing partition and data images. Moreover, all features will be processed natively using the WimGapi API and P/Invoke.
 
-	**NOTE**
-	- After this update, only minimal updates will be added to this script version, as the WinForm/GUI version is in its final phase of beta testing and debugging. This project will implement a substantial amount of additional features including the remastering of UEFI ISO files, unattended Answer File creation, full component removals, compression selections, the expanding of images to virtual and physical drives, capturing partition and data images. Moreover, all features will be processed natively using the WimGapi API and P/Invoke.
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.9.4 ## (05-08-2018)
+
+- Cleaned-up quite a bit of the code.
+
+- Included a -ComponentCleanup switch that will clean-up the component store. Note: This does NOT reset the image base.
+
+- Added additional registry optimizations.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.9.2 ## (04-29-2018)
+
+- System Applications, Optional Features and Windows Packages are all now controlled using their respective switch which will now output all contained within the image and allow for mass removals. They are no longer controlled by editing their arrays.
+
+- Optional Feature disabling and removal, and Windows OnDemand Package removals output the data to a Gridview as opposed to the console, as this makes it easier for people to read.  Likewise, the Provisioned App Package select switch also outputs to a Gridview as opposed to the console.
+
+- Optimized the registry and setup code.
+
+- Win32Calc now checks if the Calculator App was removed before it applies itself. If the Calculator App is present, Win32Calc does not apply itself. Nor will it apply itself if the two required files are not located in the script's root path.
+
+- Added additional error catching.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.9.0 ## (04-22-2018)
+
+- The Additional-Features function script has been removed, as most of its features have been incorporated into the primary script instead.
+
+- Adding System Images has been removed.
+
+- Corrected a process that was still looking for a renamed variable.
+
+- Reverted the Win32Calc back to its full package integration. The script will apply the Win32Calc add-on package if it detects the Win32Calc directory in the root path of the script, along with the two required recovery WIM files. If these are not detected, the script will silently move onto the next process.
+
+- Updated the LayoutModification.xml file that gets applied and added a custom shortcut to it that will reboot a system directly into its UEFI BIOS firmware.  This was a request by a handful of people who use fast start-up, thus rendering it very difficult to access the UEFI BIOS manually. Once selecting the new link, the PC will wait a few seconds then reboot directly into the system's UEFI BIOS firmware. To remove this link you can just right-click and delete, as it's not integrated into any .ini file or linked to any program itself.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.9 ## (04-19-2018)
+
+- Changed two switch names to -WhiteList and -Harden (they were -WhiteListApps and -Hardened before).
+
+- Removed all switches for the Additional-Features function script as well as processes that dealt with unattend.xml creation.
+
+- This change is due to the fact the upcoming version (4.0) of the script will include a true, and full, unattend.xml builder with its GUI.
+
+- Added support for the latest fast ring Insider's Update (17134.1) RS4
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.8 ## (04-12-2018)
+
+- Changed Helper Function names to use approved PowerShell verbs.
+
+- Fixed the logging so entries were once again appended to the .log file instead of overwriting each entry.
+
+- Added the removal of unused Desktop.ini entries and their respective program links.
+
+- Removed the current mount clean-up check and Helper Function.
+
+- Further isolated the -Hardened switch processes as to not blend in with other processes.
+
+- Added additional string appending for the SetupComplete.cmd generated with the -Hardened switch.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.6 ## (04-06-2018)
+
+- The Additional-Features function script has been updated with a new Win32Calc application. The function no longer applies the WIM files to the image; rather, it simply copies over the essential files and also edits the appropriate Desktop.ini
+
+- The default Hosts file has been significantly increased in spy and telemetry domains. All of those that are added have been verified as of 3/28/2018 (but I still recommend Steven Black's Hosts file).
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.5 ## (04-02-2018)
+
+- Fixed it so 'Share' and 'Cast to Device' context menu options are also removed from build RS2.
+
+- The Additional-Features function script has been updated.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.4 ## (03-27-2018)
+
+- The main script has primarily just had a few updates with the functions it uses.
+
+- The Additional-Features function script has been updated.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.3 ## (03-25-2018)
+
+- I have updated the Hosts file the script applies with updated resolvable DNS names (as of a today, actually). That said, I still recommend to instead have the script apply the full Hosts file from Steven Black's weekly updated repository, especially if you do a lot of web browsing.
+
+- I have updated a handful of registry entries that somehow got their formatting screwed up in yesterday's push to GitHub.
+
+- The Additional-Features function script is going to be getting a rework, but that was also updated to change some of the unattend.xml templates' values.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.8.2 ## (03-23-2018)
+
+- More Scheduled Tasks have been added to be automatically disabled during installation.
+
+- Incorporated an array of spying and telemetry resolvable DNS names that get formatted and applied to the default Hosts file. Prior to applying any changes, the OEM Hosts file is backed up to the same location at "hosts.bak". These entries are only added if the script detects the full Hosts file, that gets web invoked and applied within the Additional-Features function script, has its $AddFeatures hashtable parameter NOT set to $true. Moreover, it's still recommended to use the full Hosts file, as it includes over 85k additional entries and is updated weekly. 
+
+- Added the disabling of two additional Windows Defender services and drivers.
+
+- Incorporated multiple additional registry entries that further prevent spyware, logging and tracking.
+
+- Increased the restrictiveness of Apps' access to the device.
+
+- Removed a few registry properties that dealt with a few very picky device sensors. A few of the device sensors must be applied once the image is in an online state because it requires the GUID of user applying them for them to function.
+
+- Added the disabling of Provisoned App Services if it's determined their corresponding Provisoned App Packages have been removed.
+
+- Corrected some syntax errors that were being parsed to SetupComplete.cmd
+
+- Incorporated value type when setting an item property in the registry.
+
+- Combined a handful of similar registry process together.
+
+- The Additional-Features function script has had some very minor changes, though nothing that modifies any of its processed modifications.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.8 ## (03-13-2018)
+
+- Re-incorporated the AdditionalFeatures function script. Its parameters can be set by editing its hashtable within the main Optimize-Offline script.
+
+- Re-created the Win32 Calc WIMs using Windows 10 Enterprise LTSB 2016. They are compressed using non-solid LZMS "recovery" compression.
+
+- Be aware of image requirements before trying to apply SystemImages to the image.
+
+- The SetupComplete.cmd is now appended using the .NET Stringbuilder. The script does not search for a Setup folder in its root directory any longer.
+
+- The default Windows Photo Viewer now displays as it should.
+
+- The C# Process Privilege method and the Set-RegistryOwner function have been updated.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.7 ## (03-09-2018)
+
+- SetupComplete.cmd has been removed from the script. Instead, the script will check if there's a folder called "Setup" in the root directory of the script, then check that folder for any .cmd scripts. If any are found, it will recursively add them to \Windows\Setup\Scripts (where all startup scripts go). This way, if any scripts should be added to the image, one simply just needs to make a "Setup" folder in the script's root directory and place their scripts in there.
+
+- If no Setup folder is found, the script continues to finalize and dismount. 
+
+- No output is performed, and the scripts it finds are added silently.
+
+- Added a few checks for what Provisioned Application Packages were removed from the image to then further disable other features (like Xbox bloat). Previously, it just checked if the XboxCallableUI was among the system apps removed.
+
+The GUI project of this script should be out of its beta stage soon.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.5 ## (03-07-2018)
+
+- Firewall rules for blocking Cortana's transmission of data has been added to the registry.  The search function remains 100% operational, as these entries simply prevent her "listening" UI from accessing the internet.
+
+- Multiple syntax changes within the registry optimizations.
+
+- Renamed the -AddDrivers parameter to just -Drivers, -UseWhiteList to -WhiteListApps and the registry optimization switch to -SetRegistry.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.5 ## (03-01-2018)
+
+- The removal of System Applications, OnDemand Packages and Optional Features are determined by whether or not they are present in the editable arrays and are no longer controlled with switches.
+- In order to prevent them from running completely, you can comment out the array with a # right before '$'.
+- The only exception is the AppWhiteList, which is enabled by using its respective switch when calling the script.
+- This was changed to reduce the amount of switch requirements, and because using a switch while also having to edit a variable are counter-productive.  As such, one can comment out or uncomment out/add what they require and the script will rely on a simple check of the array contents using a .Count comparison operator.
+
+- Changed the output when using the WhiteList, and it now displays each App it's removing as opposed to just displaying the whitelisted apps and silently removing those apps not included in the list. Furthermore, the log now reflects those apps that were removed, as opposed to those whitelisted.
+
+- Multiple overly-sensitive registry settings have been lightened, primarily those that dealt with locking down system and store apps, which could reduce functionality on manufactured devices that rely on their personal software and apps to interact across the hardware of a device.
+
+- Combined multiple separate processes into a parent process to prevent redundant processes taking place like registry hive loading and unloading.
+
+- Renamed the -AddDrivers parameter to just -Drivers, -UseWhiteList to -WhiteListApps and the registry optimization switch to -SetRegistry.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.3 ## (02-27-18)
+
+- Made some changes to operational variables to further filter unsupported builds.
+
+- Severely reduced the amount of services set to be disabled during start-up in order to give more flexibility to those also running online optimization tools and scripts.
+
+- Improved driver injection package detection.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.7.1 ## (02-11-18)
+
+The Assorted-Features secondary function script has been removed temporarily as it's being merged into the full project (v4.0) that will be released within a few weeks.
+
+A few registry settings' values were changed; a handful were removed and syntax on service removal was modified.
+
+Changed some variables and function names to reflect the proper Powershell verb list.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.6 ## (02-07-18)
+
+Assorted code changes.
+Removed a registry entry that would occasionally cause a hang during the installation of the image.
+Optimized the various processes.
+Increased mounting speed.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.5 ## (02-05-18)
+
+Some minor registry settings have been made
+
+Made a few modifications to the cleaning-up of a current mount point and script termination.
+
+This is an extremely minor update to accommodate the new -Local switch a bit better.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.0.4 ## (02-03-18)
+
+The registry tweaks have been rewritten to use PowerShell's native cmdlet, as well as a small function I made to create the required keys.
+
+A -Local switch has been added which will use the root path of the script ($PSScriptRoot) as the location it will mount and save the images to.
+
+This switch was added for those who do not want to use a primary SSD and would rather use a secondary HDD.
+
+Be warned that meddling in any of the temporary directories while the script is processing will likely corrupt the image, so it's best to leave them alone.
+
+The Additional-Features function parameters were changed from a string to a hashtable for easier on/off switching.
+
+The help information was cleaned up and more was included to detail what the functions do.
+
+Additional registry tweaks were added for performance and speed; likewise, a few more security-related values were also added.
+
+I am implementing a handful of advanced features for v4.0, which will be released as a full project.  All the cmdlets and modules for it are complete; I'm just finishing up some C# code that will be wrapped in it, too.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## Version 3.0.3 ## (02-01-2018)
+
+Minor processing adjustments have been made to clean-up some redundant or unnecessary code.
+
+Improved the validity script for resolvable paths to ensure they meet the criteria required for the script to successfully run.
+
+Added more detailed notes to further detail exactly what certain advanced functions and/or processes are doing.
+
+Improved the Additional-Features function script in how it detected path types, added a few additional context menu additions and optimized some of the code that it generates for certain switches.
+
+Cleaned up the help files and parameter/switch notes and information.
+
+Changed the -AddFeatures switch to -AdditionalFeatures, as some were assuming the former switch was for adding features much like the -RemoveFeatures switch removes them.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## Version 3.0 ## (01-30-2018)
+
+Version 3.0 has been released and includes some significant updates, changes and modifications.
+
+The Helper-Script.ps1 has been removed.
+
+There's a new function that allows for ownership of registry keys and subkeys to be granted to the BUILTIN\Administrator account, using Access Token privileges.
+
+There are additional services and drivers disabled through the offline registry hives.
+
+There are additional notes with some pertinent information regarding Provisioning Application Packages and System Applications.
+
+Re-wrote the process where System Applications are "de-provisioned" and removed.
+
+Added additional security registry settings.
+
+The Additional-Features function script has been almost entirely re-written.
+
+Now values are applied directly to the offline registry hives as opposed to using "REGEDIT /S" via OOBE.cmd
+
+OOBE.cmd is now omitted, as it's no longer required with the elevated registry function.
+
+The Windows 10 Enterprise LTSB 2016 Calculator (Win32Calc) is now able to be applied to the image. This is valuable if the regular calculator Provisioning Application Package is removed yet one still wants a built-in calculator.
+
+A -SysPrep switch has been added that will auto-boot the image into Audit System for System Preparation.
+
+A -GenuineTicket switch has been added that will apply a GenuineTicket.xml to the image for automatic activation upon installation.
+
+And -Unattend switch has been added that will apply a custom unattend.xml to the image.
+
+Generated scripts have been tweaked and modified to omit versions of Windows prior to Windows 10.
+
+There's additional checking to ensure the build being optimized is supported (currently, there's no support for Insider Updates).
