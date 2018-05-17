@@ -58,11 +58,8 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SystemApps -Harden -OptionalFeatures -OnDemandPackages
 	
 	.NOTES
-		If you are unsure about a System App, it's best to not remove it. System Apps like SecHealthUI (Windows Defender), Parental Controls, PPIProjection, etc. are safe to remove.
-		ImmersiveControlPanel, on the other hand, is not safe to remove. Similarly, the removal of Cortana will render the built-in search feature non-functional.
-
-		Enabling the Harden switch will also process all registry optimizations. Both switches do not need to be enabled simultaneously.
-
+		If you are unsure about a System App, do not remove it.
+        
 	.NOTES
 		===========================================================================
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
@@ -1752,37 +1749,26 @@ If ($Harden) {
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
+        New-Container -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        @("BFA794E4-F964-4FDB-90F6-51056BFE4B44", "E6AD100E-5F4E-44CD-BE0F-2265D88D14F5", "E5323777-F976-4f5b-9B55-B94699C46E44", "D89823BA-7180-4B81-B50C-7E471E6121A3",
-            "7D7E8402-7C54-4821-A34E-AEEFD62DED93", "52079E78-A92B-413F-B213-E8FE35712E72", "2EEF81BE-33FA-4800-9670-1CD474972C3F", "C1D23ACC-752B-43E5-8448-8D0E519CD6D6",
-            "8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6",
-            "A8804298-2D5F-42E3-9531-9C8C39EB29CE", "8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6") `
-            | ForEach {
-            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -ErrorAction Stop
-            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
-        }
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" `
-            -Name "Type" -Value "LooselyCoupled" -Type String -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" `
-            -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" `
-            -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction Stop
-        @("LetAppsAccessAccountInfo", "LetAppsAccessCalendar", "LetAppsAccessCallHistory", "LetAppsAccessCamera", "LetAppsAccessContacts", "LetAppsAccessEmail", "LetAppsAccessLocation",
-            "LetAppsAccessMessaging", "LetAppsAccessMicrophone", "LetAppsAccessMotion", "LetAppsAccessNotifications", "LetAppsAccessPhone", "LetAppsAccessRadios", "LetAppsAccessTrustedDevices",
-            "LetAppsSyncWithDevices") | ForEach {
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name $_ -Value 2 -Type DWord -ErrorAction Stop
-        }
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
-            -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" `
-            -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord -ErrorAction Stop
@@ -2491,7 +2477,6 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-:CONTINUE
 SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
@@ -2619,7 +2604,7 @@ IF %ERRORLEVEL% NEQ 0 (
     EXIT
 ) ELSE (
     ECHO Running as Administrator.
-    CD /D "%Scripts%"
+	CD /D "%Scripts%"
     TIMEOUT /T 2 >NUL
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\TasksandServices.ps1
 )
