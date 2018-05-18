@@ -582,7 +582,7 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
         [void]($WorkFolder = New-WorkDirectory)
         [void]($TempFolder = New-TempDirectory)
         Copy-Item -Path $ImagePath -Destination $ImageFolder -Force
-        $ImageFile = Get-Item -Path "$ImageFolder\install.wim" -Forcee
+        $ImageFile = Get-Item -Path "$ImageFolder\install.wim" -Force
         If ($ImageFile.IsReadOnly) { Set-ItemProperty -Path $ImageFile -Name IsReadOnly -Value $false }
     }
     Else {
