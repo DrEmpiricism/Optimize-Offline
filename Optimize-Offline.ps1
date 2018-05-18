@@ -480,6 +480,30 @@ Function Test-OfflineHives {
     Return $HivesLoaded
 }
 
+Function Backup-OfflineHives {
+    If (!(Test-Path -Path "$WorkFolder\OfflineHiveBackup")) {
+        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
+    }
+    Else {
+        [void](Remove-Item -Path "$WorkFolder\OfflineHiveBackup" -Recurse -Force)
+        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
+    }
+    If (!(Test-OfflineHives)) {
+        [void](Mount-OfflineHives)
+    }
+    Else {
+        [void](Dismount-OfflineHives)
+        Start-Sleep 3
+        [void](Mount-OfflineHives)
+    }
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SYSTEM.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -Verb RunAs -WindowStyle Hidden -Wait
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKCU.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -Verb RunAs -WindowStyle Hidden -Wait
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKU.reg HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -Verb RunAs -WindowStyle Hidden -Wait
+    [void](Dismount-OfflineHives)
+}
+
+
 Function Exit-Script {
     Start-Sleep 3
     Write-Output ''
@@ -657,6 +681,9 @@ If ($ImageIsMounted -eq $true) {
         Write-Output ''
         Write-Output "The image is healthy."
         Start-Sleep 3
+        Write-Output ''
+        Write-Output "Backing-up the image registry hives. Please wait."
+        Backup-OfflineHives
         Clear-Host
     }
     Else {
@@ -2269,21 +2296,23 @@ NBTSTAT -R >NUL
 IPCONFIG /FLUSHDNS >NUL
 NET STOP DNSCACHE >NUL
 NET START DNSCACHE >NUL
-DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL
-DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL
+DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
+DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 DEL "%~f0"
 '@
 		
         New-Container -Path "$MountFolder\Windows\Setup\Scripts"
         $SetupScriptPath = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+        Out-File -FilePath $SetupScriptPath -InputObject $SetupComplete -Encoding ASCII
+        
         If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Defender, $Finalize -Encoding ASCII
+            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Xbox, $Finalize -Encoding ASCII -Append
         }
         ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Finalize -Encoding ASCII
+            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Finalize -Encoding ASCII -Append
         }
         ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Finalize -Encoding ASCII
+            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Finalize -Encoding ASCII -Append
         }
     }
     ElseIf ($HardenRegistryComplete -eq $true) {
@@ -2314,8 +2343,8 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-TASKKILL /F /IM MSASCuiL.exe >NUL 2>&1
-REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL 2>&1
+TASKKILL /F /IM MSASCuiL.exe >NUL
+REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 CMD /C "%CALLSCRIPT%" >NUL 2>&1
