@@ -67,8 +67,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.1
-		Last updated:	05/17/2018
+		Version:        3.1.0.2
+		Last updated:	05/21/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -124,7 +124,6 @@ $Host.UI.RawUI.WindowTitle = "Optimizing image."
 $ProgressPreference = 'SilentlyContinue'
 $TimeStamp = Get-Date -Format "[MM-dd-yyyy hh:mm:ss]"
 $Script = "Optimize-Offline"
-$LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
 $Desktop = [Environment]::GetFolderPath("Desktop")
 $ProvisionedAppList = [System.Collections.ArrayList]@()
@@ -480,30 +479,6 @@ Function Test-OfflineHives {
     Return $HivesLoaded
 }
 
-Function Backup-OfflineHives {
-    If (!(Test-Path -Path "$WorkFolder\OfflineHiveBackup")) {
-        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
-    }
-    Else {
-        [void](Remove-Item -Path "$WorkFolder\OfflineHiveBackup" -Recurse -Force)
-        [void](New-Item -Path "$WorkFolder\OfflineHiveBackup" -ItemType Directory -Force)
-    }
-    If (!(Test-OfflineHives)) {
-        [void](Mount-OfflineHives)
-    }
-    Else {
-        [void](Dismount-OfflineHives)
-        Start-Sleep 3
-        [void](Mount-OfflineHives)
-    }
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SOFTWARE.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKLM_SYSTEM.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKCU.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $WorkFolder\OfflineHiveBackup\WIM_HKU.reg HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -Verb RunAs -WindowStyle Hidden -Wait
-    [void](Dismount-OfflineHives)
-}
-
-
 Function Exit-Script {
     Start-Sleep 3
     Write-Output ''
@@ -557,20 +532,11 @@ Function New-Container {
 }
 #endregion Helper Primary Functions
 
-If (!(Test-Admin)) {
-    Write-Warning "Administrative access is required. Please re-launch $Script with elevation."
-    Break
-}
+If (!(Test-Admin)) { Write-Warning "Administrative access is required. Please re-launch $Script with elevation."; Break }
 
-If ($SelectApps -and $AllApps) {
-    Write-Warning "The SelectApps switch and AllApps switch cannot be enabled at the same time."
-    Break
-}
+If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApps switch cannot be enabled at the same time."; Break }
 
-If ($SetRegistry -and $Harden) {
-    Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."
-    Break
-}
+If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $ImagePath = (Resolve-Path -Path $ImagePath).Path
@@ -619,19 +585,21 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
     }
 }
 
+If ($Local) { $LogFile = "$PSScriptRoot\Optimize-Offline.log" }
+Else { $LogFile = "$Env:TEMP\Optimize-Offline.log" }
+
 If (Test-Path -Path "$Env:windir\Logs\DISM\dism.log") { Remove-Item -Path "$Env:windir\Logs\DISM\dism.log" -Force }
+
 If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force }
+
 If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force }
 
 Try {
-    $GetBuild = (Get-WindowsImage -ImagePath $ImageFile -Index $Index -LogPath $DISMLog -ErrorAction Stop).Build
-    If ($GetBuild -eq '15063') { $BuildName = "RS2" }
-    ElseIf ($GetBuild -eq '16299') { $BuildName = "RS3" }
-    ElseIf ($GetBuild -eq '17134') { $BuildName = "RS4" }
+    If ((Get-WindowsImage -ImagePath $ImageFile -Index $Index -LogPath $DISMLog).Version -notlike "10.*") { Break }
 }
 Catch {
     Write-Output ''
-    Write-Error "Failed to obtain the image build."
+    Write-Error "The supplied image is not Windows 10 and is not supported."
     Remove-Item -Path $MountFolder -Recurse -Force
     Remove-Item -Path $ImageFolder -Recurse -Force
     Remove-Item -Path $WorkFolder -Recurse -Force
@@ -640,6 +608,7 @@ Catch {
 }
 
 Try {
+    $GetBuild = (Get-WindowsImage -ImagePath $ImageFile -Index $Index -LogPath $DISMLog).Build
     If ($GetBuild -lt '15063') {
         Write-Output ''
         Write-Error "The image build [$($GetBuild.ToString())] is not supported." -ErrorAction Stop
@@ -681,9 +650,6 @@ If ($ImageIsMounted -eq $true) {
         Write-Output ''
         Write-Output "The image is healthy."
         Start-Sleep 3
-        Write-Output ''
-        Write-Output "Backing-up the image registry hives. Please wait."
-        Backup-OfflineHives
         Clear-Host
     }
     Else {
@@ -696,15 +662,15 @@ If ($ImageIsMounted -eq $true) {
 
 If ($SelectApps) {
     Try {
-        $GetApps = Get-AppxProvisionedPackage -Path $MountFolder
+        $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder
         $Int = 1
-        ForEach ($App In $GetApps) {
-            $GetApps = New-Object -TypeName PSObject
-            $GetApps | Add-Member -MemberType NoteProperty -Name Num -Value $Int
-            $GetApps | Add-Member -MemberType NoteProperty -Name DisplayName -Value $App.DisplayName
-            $GetApps | Add-Member -MemberType NoteProperty -Name PackageName -Value $App.PackageName
+        ForEach ($Appx In $GetAppx) {
+            $GetAppx = New-Object -TypeName PSObject
+            $GetAppx | Add-Member -MemberType NoteProperty -Name Num -Value $Int
+            $GetAppx | Add-Member -MemberType NoteProperty -Name DisplayName -Value $Appx.DisplayName
+            $GetAppx | Add-Member -MemberType NoteProperty -Name PackageName -Value $Appx.PackageName
             $Int++
-            [void]($ProvisionedAppList.Add($GetApps))
+            [void]$ProvisionedAppList.Add($GetAppx)
         }
         $RemoveAppx = $ProvisionedAppList | Out-GridView -Title "Remove Provisioned App Packages." -PassThru
         $PackageName = $RemoveAppx.PackageName
@@ -742,30 +708,29 @@ If ($AllApps) {
 If ($SystemApps) {
     Try {
         Clear-Host
-        [void](Mount-OfflineHives)
+        Write-Warning "Do NOT remove any System Applications if you are unsure of its affects on a live installation."
+        Start-Sleep 5
+        Write-Output ''
+        [void](Invoke-Expression -Command ('REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software"'))
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-        If (Test-Path -Path $InboxAppsKey) {
-            Write-Warning "Do not remove any System Applications if you are unsure about them."
-            Start-Sleep 5
-            Write-Output ''
-            $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split("\") | Where { $_ -like "*Microsoft.*" }
-            ForEach ($InboxApp In $InboxApps) {
-                $FullKeyPath = "$($InboxAppsKey)\" + $InboxApp
+        $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
+	$SelectSystemApps = $InboxApps | Select-Object -Property `
+								@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+								@{ Label = 'PackageName'; Expression = { ($_) } } |
+	Out-GridView -Title "Remove System Applications." -PassThru
+        $AppName = $SelectSystemApps.Name
+        $AppPackage = $SelectSystemApps.PackageName
+        If ($SelectSystemApps) {
+            $AppPackage | ForEach {
+                $FullKeyPath = "$($InboxAppsKey)\" + $($_)
                 $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
-                Write-Host "Remove System Application: $($InboxApp.Split("_")[0])" -ForegroundColor Cyan; $Verify = Read-Host "(y/N)"
-                If ($Verify -eq "y") {
-                    Write-Log -Output "Removing System Application: $($InboxApp.Split("_")[0])" -LogPath $LogFile -Level Info
-                    [void](Invoke-Expression -Command ("REG DELETE $AppKey /F") -ErrorAction Stop)
-                    [void]($SystemAppsList.Add($($InboxApp.Split("_")[0])))
-                    Start-Sleep 3
-                    $Verify = ''
-                }
-                Else {
-                    $Verify = ''
-                }
+                Write-Log -Output "Removing System Application: $($_.Split('_')[0])" -LogPath $LogFile -Level Info
+                [void](Invoke-Expression -Command ("REG DELETE $AppKey /F") -ErrorAction Stop)
+                [void]$SystemAppsList.Add($($_.Split('_')[0]))
+                Start-Sleep 2
             }
-            $SystemAppsComplete = $true
         }
+        $SystemAppsComplete = $true
     }
     Catch {
         Write-Output ''
@@ -774,7 +739,7 @@ If ($SystemApps) {
         Break
     }
     Finally {
-        [void](Dismount-OfflineHives)
+        [void](Invoke-Expression -Command ('REG UNLOAD HKLM\WIM_HKLM_SOFTWARE'))
     }
 }
 
@@ -2087,15 +2052,15 @@ If ($OnDemandPackages) {
             $GetOnDemand | Add-Member -MemberType NoteProperty -Name PackageName -Value $Package.PackageName
             $GetOnDemand | Add-Member -MemberType NoteProperty -Name PackageState -Value $Package.PackageState
             $Int++
-            [void]($OnDemandPackageList.Add($GetOnDemand))
+            [void]$OnDemandPackageList.Add($GetOnDemand)
         }
         $RemoveOnDemand = $OnDemandPackageList | Out-GridView -Title "Select any OnDemand Packages to remove." -PassThru
         $PackageName = $RemoveOnDemand.PackageName
         If ($RemoveOnDemand) {
             Clear-Host
             $PackageName | ForEach {
-                $Append = $_.Replace("Package", "").Split("~")[0]
-                Write-Log -Output "Removing Windows Package: $($Append.TrimEnd("-"))" -LogPath $LogFile -Level Info
+                $Append = $_.Replace("Package", "").Split('~')[0]
+                Write-Log -Output "Removing Windows Package: $($Append.TrimEnd('-'))" -LogPath $LogFile -Level Info
                 $RemoveOnDemandPackage = @{
                     Path             = $MountFolder
                     PackageName      = $_
@@ -2126,18 +2091,17 @@ If ($OptionalFeatures) {
             $GetFeatures | Add-Member -MemberType NoteProperty -Name FeatureName -Value $Feature.FeatureName
             $GetFeatures | Add-Member -MemberType NoteProperty -Name State -Value $Feature.State
             $Int++
-            [void]($OptionalFeaturesList.Add($GetFeatures))
+            [void]$OptionalFeaturesList.Add($GetFeatures)
         }
-        $RemoveFeatures = $OptionalFeaturesList | Out-GridView -Title "Disable and Remove Optional Features." -PassThru
+        $RemoveFeatures = $OptionalFeaturesList | Out-GridView -Title "Disable Optional Features." -PassThru
         $FeatureName = $RemoveFeatures.FeatureName
         If ($RemoveFeatures) {
             Clear-Host
             $FeatureName | ForEach {
-                Write-Log -Output "Disabling and Removing Optional Feature: $($_)" -LogPath $LogFile -Level Info
+                Write-Log -Output "Disabling Optional Feature: $($_)" -LogPath $LogFile -Level Info
                 $DisableWindowsOptionalFeature = @{
                     Path             = $MountFolder
                     FeatureName      = $_
-                    Remove           = $true
                     ScratchDirectory = $TempFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
@@ -2179,13 +2143,11 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -lik
     If ($OnDemandPackages -and !$OptionalFeatures) { Clear-Host }
     ElseIf (!$OnDemandPackages -and $OptionalFeatures) { Clear-Host }
     ElseIf (!$OnDemandPackages -and !$OptionalFeatures) { Write-Output '' }
-	
     If ((Test-Path -Path "$PSScriptRoot\Win32Calc\win32calc.exe") -and (Test-Path -Path "$PSScriptRoot\Win32Calc\win32calc.exe.mui")) {
         Try {
             Write-Log -Output "Applying the Win32 Calculator." -LogPath $LogFile -Level Info
             Copy-Item -Path "$PSScriptRoot\Win32Calc\win32calc.exe" -Destination "$MountFolder\Windows\System32\win32calc.exe" -Force -ErrorAction Stop
             Copy-Item -Path "$PSScriptRoot\Win32Calc\win32calc.exe.mui" -Destination "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -Force -ErrorAction Stop
-			
             [void](Mount-OfflineHives)
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
@@ -2194,14 +2156,12 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -lik
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
             [void](Dismount-OfflineHives)
-			
             $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
             $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
             $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
             $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
             $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
             $CalcShortcut.Save()
-			
             $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
             $CalcStr = "Calculator.lnk=@%SystemRoot%\system32\shell32.dll,-22019"
             Start-Process -FilePath ATTRIB -ArgumentList ("-S -H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
@@ -2213,7 +2173,6 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -lik
                 Add-Content -Path $IniFile -Value $CalcStr -Encoding Unicode -Force
             }
             Start-Process -FilePath ATTRIB -ArgumentList ("+S +H $IniFile") -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction Stop
-            $Win32CalcApplied = $true
         }
         Catch {
             Write-Output ''
@@ -2268,8 +2227,6 @@ SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "\
 SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL  
-SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticResolver" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
@@ -2277,12 +2234,12 @@ SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Micros
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 '@
 		
-        $Xbox = @'
+        $XboxTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 '@
 		
-        $Defender = @'
+        $DefenderTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
@@ -2291,7 +2248,7 @@ TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
 '@
 		
-        $Finalize = @'
+        $SetupEnd = @'
 NBTSTAT -R >NUL
 IPCONFIG /FLUSHDNS >NUL
 NET STOP DNSCACHE >NUL
@@ -2302,23 +2259,25 @@ DEL "%~f0"
 '@
 		
         New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-        $SetupScriptPath = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-        Out-File -FilePath $SetupScriptPath -InputObject $SetupComplete -Encoding ASCII
-        
+        $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+        Out-File -FilePath $SetupScript -InputObject $SetupComplete -Encoding ASCII
+		
         If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Xbox, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $SetupEnd -Encoding ASCII -Append
         }
         ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Defender, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $SetupEnd -Encoding ASCII -Append
         }
         ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) {
-            Out-File -FilePath $SetupScriptPath -InputObject $Xbox, $Finalize -Encoding ASCII -Append
+            Out-File -FilePath $SetupScript -InputObject $XboxTasks, $SetupEnd -Encoding ASCII -Append
+        }
+        Else {
+            Out-File -FilePath $SetupScript -InputObject $SetupEnd -Encoding ASCII -Append
         }
     }
     ElseIf ($HardenRegistryComplete -eq $true) {
         $SetupComplete = @'
 SET DEFAULTUSER0="defaultuser0"
-SET "CALLSCRIPT=%~dp0CallScript.cmd"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
 GOTO :CONTINUE
@@ -2343,139 +2302,43 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
+SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefresh" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefresh" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "TelTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\TelTask" /DISABLE >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
+NBTSTAT -R >NUL
+IPCONFIG /FLUSHDNS >NUL
+NET STOP DNSCACHE >NUL
+NET START DNSCACHE >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
-CMD /C "%CALLSCRIPT%" >NUL 2>&1
-'@
-		
-        $TasksServices = @'
-Function Remove-TasksandServices
-{
-	[CmdletBinding()]
-	Param ()
-	
-	Function New-Container
-	{
-		[CmdletBinding()]
-		Param
-		(
-			[Parameter(Mandatory = $true)]
-			[string]$Path
-		)
-		
-		If (!(Test-Path -Path $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force) }
-	}
-	
-	Function Reset-Network
-	{
-		[void](Invoke-Expression -Command ('& NBTSTAT -R') -ErrorAction SilentlyContinue)
-		[void](Invoke-Expression -Command ('& IPCONFIG /FLUSHDNS') -ErrorAction SilentlyContinue)
-		If ((Get-Service -Name "Dnscache" -ErrorAction SilentlyContinue).Status -eq "Running")
-		{
-			[void](Stop-Service -Name "Dnscache" -Force -NoWait -ErrorAction SilentlyContinue); Start-Sleep 8
-			[void](Start-Service -Name "Dnscache" -ErrorAction SilentlyContinue)
-		}
-	}
-	
-	Get-Service -Name @("Diagtrack", "diagnosticshub.standardcollector.service", "dmwappushservice", "DoSvc", "DsSvc",
-		"DusmSvc", "HomeGroupListener", "HomeGroupProvider", "icssvc", "OneSyncSvc", "PcaSvc", "PhoneSvc", "RetailDemo",
-		"TabletInputService", "WerSvc", "WMPNetworkSvc", "XblAuthManager", "XblGameSave", "XboxNetApiSvc", "xboxgip", "xbgm") -ErrorAction SilentlyContinue `
-	| Stop-Service -PassThru -ErrorAction SilentlyContinue `
-	| Set-Service -StartupType Disabled -ErrorAction SilentlyContinue
-	
-	Get-ScheduledTask -TaskName @("AitAgent", "AnalyzeSystem", "Background Synchronization", "BackgroundUploadTask", "BackupTask", "BthSQM", "Cellular", "CleanupOfflineContent",
-		"Consolidator", "CreateObjectTask", "Diagnostics", "DmClient", "DmClientOnScenarioDownload", "FamilySafetyMonitor", "FamilySafetyMonitorToastTask", "FamilySafetyRefreshTask",
-		"FamilySafetyRefresh", "File History (maintenance mode)", "GatherNetworkInfo", "KernelCeipTask", "Logon Synchronization", "MapsToastTask", "MapsUpdateTask",
-		"Microsoft Compatibility Appraiser", "Microsoft-Windows-DiskDiagnosticDataCollector", "Microsoft-Windows-DiskDiagnosticResolver", "Pre-staged app cleanup", "ProgramDataUpdater",
-		"Proxy", "QueueReporting", "ResPriStaticDbSync", "SmartScreenSpecific", "SpeechModelDownloadTask", "StorageSense", "Sqm-Tasks", "TelTask", "UpdateLibrary", "Uploader", "UsbCeip",
-		"WiFiTask", "WindowsActionDialog", "Windows Defender Cache Maintenance", "Windows Defender Cleanup", "Windows Defender Scheduled Scan", "Windows Defender Verification",
-		"WsSwapAssessmentTask", "XblGameSaveTask", "XblGameSaveTaskLogon") -ErrorAction SilentlyContinue `
-	| Disable-ScheduledTask -ErrorAction SilentlyContinue
-	
-	@("BFA794E4-F964-4FDB-90F6-51056BFE4B44", "E6AD100E-5F4E-44CD-BE0F-2265D88D14F5", "E5323777-F976-4f5b-9B55-B94699C46E44", "D89823BA-7180-4B81-B50C-7E471E6121A3",
-		"7D7E8402-7C54-4821-A34E-AEEFD62DED93", "52079E78-A92B-413F-B213-E8FE35712E72", "2EEF81BE-33FA-4800-9670-1CD474972C3F", "C1D23ACC-752B-43E5-8448-8D0E519CD6D6",
-		"8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6",
-		"A8804298-2D5F-42E3-9531-9C8C39EB29CE", "8BC668CF-7728-45BD-93F8-CF2B3B41D7AB", "992AFA70-6F47-4148-B3E9-3003349C1548", "21157C1F-2651-4CC1-90CA-1F28B02263F6") | ForEach {
-		New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -ErrorAction SilentlyContinue
-		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{$_}" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
-	}
-	
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction SilentlyContinue
-	ForEach ($Key In (Get-ChildItem -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global"))
-	{
-		If ($Key.PSChildName -EQ "LooselyCoupled")
-		{
-			Continue
-		}
-		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Type" -Value "InterfaceClass" -Type String -ErrorAction SilentlyContinue
-		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
-		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\" + $Key.PSChildName) -Name "InitialAppValue" -Value "Unspecified" -Type String -ErrorAction SilentlyContinue
-	}
-	ForEach ($Key In (Get-ChildItem -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"))
-	{
-		Set-ItemProperty -Path ("HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\" + $Key.PSChildName) -Name "Disabled" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-	}
-	
-	New-Container -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
-	@("LetAppsAccessAccountInfo", "LetAppsAccessCalendar", "LetAppsAccessCallHistory", "LetAppsAccessCamera", "LetAppsAccessContacts", "LetAppsAccessEmail", "LetAppsAccessLocation",
-		"LetAppsAccessMessaging", "LetAppsAccessMicrophone", "LetAppsAccessMotion", "LetAppsAccessNotifications", "LetAppsAccessPhone", "LetAppsAccessRadios", "LetAppsAccessTrustedDevices",
-		"LetAppsSyncWithDevices") | ForEach { Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name $_ -Value 2 -Type DWord -ErrorAction SilentlyContinue }
-	
-	$CurrentUser = New-Object System.Security.Principal.NTAccount($Env:USERNAME)
-	$SID = $CurrentUser.Translate([System.Security.Principal.SecurityIdentifier]).Value
-	New-Container -Path ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID) -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path ("HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features\" + $SID) -Name "FeatureStates" -Value 0x33c -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseCredShared" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\features" -Name "WiFiSenseOpen" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" -ErrorAction SilentlyContinue
-	New-Container -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	New-Container -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-	
-	Reset-Network
-	Remove-Item -Path .\SetupComplete.cmd -Force -ErrorAction SilentlyContinue
-	Remove-Item -Path .\CallScript.cmd -Force -ErrorAction SilentlyContinue
-}
-
-Set-Location -Path $Env:windir\Setup\Scripts
-Remove-TasksandServices
-Remove-Item -Path .\TasksandServices.ps1 -Force -ErrorAction SilentlyContinue
-'@
-		
-        $CallScript = @'
-@ECHO OFF
-CD /D "%~dp0"
-SET LOCALAPPDATA=%USERPROFILE%\AppData\Local
-SET PSExecutionPolicyPreference=Unrestricted
-
-NET SESSION >NUL 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-    ECHO Permission denied. This script must be run as an Administrator.
-    ECHO:
-    PAUSE
-    EXIT
-) ELSE (
-    ECHO Running as Administrator.
-    TIMEOUT /T 2 >NUL
-    PowerShell.exe -File "%WINDIR%\Setup\Scripts\TasksandServices.ps1" -Argument > "%WINDIR%\Setup\Scripts\TasksandServices.log" 2>&1
-)
-PAUSE
-SET PSExecutionPolicyPreference=Restricted
-EXIT
+DEL "%~f0"
 '@
         New-Container -Path "$MountFolder\Windows\Setup\Scripts"
         Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -InputObject $SetupComplete -Encoding ASCII
-        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\TasksandServices.ps1" -InputObject $TasksServices -Encoding UTF8
-        Out-File -FilePath "$MountFolder\Windows\Setup\Scripts\CallScript.cmd" -InputObject $CallScript -Encoding ASCII
     }
 }
 
