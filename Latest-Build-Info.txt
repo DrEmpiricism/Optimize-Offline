@@ -1,5 +1,13 @@
 ## 3.1.0.1 ## (05-17-2018)
 
+- The System Application removal now outputs the full poulated list to a Gridview.
+
+- Some additional small changes.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.1.0.1 ## (05-17-2018)
+
 - Removed the registry backup function and process temporarily, as it was causing a significant increase in script duration.
 
 - Fixed some Setup Script context and variables.
