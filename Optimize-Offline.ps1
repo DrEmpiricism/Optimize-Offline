@@ -444,8 +444,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $MountImage = Mount-DiskImage -ImagePath $ImagePath -StorageType ISO -PassThru
     $DriveLetter = ($MountImage | Get-Volume).DriveLetter
     $InstallWim = "$($DriveLetter):\sources\install.wim"
-    $BootWim = "$($DriveLetter):\sources\boot.wim"
-    If ((Test-Path -Path $InstallWim -PathType Leaf) -and (Test-Path -Path $BootWim -PathType Leaf)) {
+    If (Test-Path -Path $InstallWim -PathType Leaf) {
         Write-Verbose "Copying WIM from $(Split-Path -Path $ImagePath -Leaf)" -Verbose
         [void]($MountFolder = New-MountDirectory)
         [void]($ImageFolder = New-ImageDirectory)
@@ -615,7 +614,7 @@ If ($AllApps) {
 If ($SystemApps) {
     Try {
         Clear-Host
-        Write-Warning "Do NOT remove any System Applications if you are unsure of its affects on a live installation."
+        Write-Warning "Do NOT remove any System Applications if you are unsure of its effects on a live installation."
         Start-Sleep 5
         Write-Output ''
         [void](Invoke-Expression -Command ('REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software"'))
