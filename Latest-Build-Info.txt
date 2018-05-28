@@ -1,3 +1,17 @@
+## 3.1.0.2 ## (05-27-2018)
+
+- Updated many of the Helper Functions used and trimmed many of them down.
+
+- Added a few more registry optimizations, including the incorporation of the Fraunhofer IIS MP3 Professional Codec and forcing Windows to only use the latest .NET Framework.
+
+- The script now cleans-up the image prior to saving and dismounting.
+
+- Re-wrote a few of the additional scripts that get applied to the image.
+
+- And some additional changes to the code, command execution, etc.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.1 ## (05-17-2018)
 
 - The System Application removal now outputs the full poulated list to a Gridview.
