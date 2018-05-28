@@ -52,7 +52,7 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SetRegistry -Drivers "E:\DriverFolder" -OptionalFeatures
 	
 	.NOTES
-        If you are unsure about a System App, do not remove it.
+        	If you are unsure about a System App, do not remove it.
         
 	.NOTES
 		===========================================================================
