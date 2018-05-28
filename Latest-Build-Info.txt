@@ -4,6 +4,8 @@
 
 - Added a few more registry optimizations, including the incorporation of the Fraunhofer IIS MP3 Professional Codec and forcing Windows to only use the latest .NET Framework.
 
+- There is no longer a -Local switch. Instead the script uses its root directory universally now.
+
 - The script now cleans-up the image prior to saving and dismounting.
 
 - Re-wrote a few of the additional scripts that get applied to the image.
