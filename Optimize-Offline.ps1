@@ -620,10 +620,10 @@ If ($SystemApps) {
         [void](Invoke-Expression -Command ('REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software"'))
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-        $SelectSystemApps = $InboxApps | Select-Object -Property `
-        @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-        @{ Label = 'PackageName'; Expression = { ($_) } } |
-            Out-GridView -Title "Remove System Applications." -PassThru
+	$SelectSystemApps = $InboxApps | Select-Object -Property `
+							@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+							@{ Label = 'PackageName'; Expression = { ($_) } } |
+	Out-GridView -Title "Remove System Applications." -PassThru
         $AppName = $SelectSystemApps.Name
         $AppPackage = $SelectSystemApps.PackageName
         If ($SelectSystemApps) {
