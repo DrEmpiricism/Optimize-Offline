@@ -417,10 +417,6 @@ Function Exit-Script {
     If ($SetRegistry -or $Harden) {
         Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force
     }
-    Remove-Item -Path $WorkFolder -Recurse -Force
-    Remove-Item -Path $TempFolder -Recurse -Force
-    Remove-Item -Path $ImageFolder -Recurse -Force
-    Remove-Item -Path $MountFolder -Recurse -Force
     Remove-Item -Path $ScriptDirectory -Recurse -Force
 }
 
@@ -444,7 +440,8 @@ If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApp
 If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 Try {
-    Get-ChildItem -Path $PSScriptRoot -Attributes Hidden -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Attributes Hidden -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | 
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 Finally {
     $CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
@@ -607,15 +604,15 @@ If ($AllApps) {
 If ($SystemApps) {
     Try {
         Clear-Host
-        Write-Warning "Do NOT remove any System Applications if you are unsure how it may impact a live installation."
+        Write-Warning "Do NOT remove any System Applications if you are unsure how they may impact a live installation."
         Start-Sleep 5
         [void](Invoke-Expression -Command ('REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software"'))
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-	$SelectSystemApps = $InboxApps | Select-Object -Property `
-							@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-							@{ Label = 'PackageName'; Expression = { ($_) } } |
-	Out-GridView -Title "Remove System Applications." -PassThru
+	    $SelectSystemApps = $InboxApps | Select-Object -Property `
+							                            @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+							                            @{ Label = 'PackageName'; Expression = { ($_) } } |
+	    Out-GridView -Title "Remove System Applications." -PassThru
         $AppName = $SelectSystemApps.Name
         $AppPackage = $SelectSystemApps.PackageName
         If ($SelectSystemApps) {
