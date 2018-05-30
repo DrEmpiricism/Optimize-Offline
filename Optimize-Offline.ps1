@@ -457,20 +457,16 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     $MountImage = Mount-DiskImage -ImagePath $ImagePath -StorageType ISO -PassThru
     $DriveLetter = ($MountImage | Get-Volume).DriveLetter
     $InstallWim = "$($DriveLetter):\sources\install.wim"
-    $BootWim = "$($DriveLetter):\sources\boot.wim"
-    If ((Test-Path -Path $InstallWim -PathType Leaf) -and (Test-Path -Path $BootWim -PathType Leaf)) {
+    If (Test-Path -Path $InstallWim -PathType Leaf) {
         Write-Verbose "Copying WIM from $(Split-Path -Path $ImagePath -Leaf)" -Verbose
         [void]($MountFolder = New-MountDirectory)
         [void]($ImageFolder = New-ImageDirectory)
         [void]($WorkFolder = New-WorkDirectory)
         [void]($TempFolder = New-TempDirectory)
         Copy-Item -Path $InstallWim -Destination $ImageFolder -Force
-        Copy-Item -Path $BootWim -Destination $ImageFolder -Force
         $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force
-        $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force
         Dismount-DiskImage -ImagePath $ImagePath -StorageType ISO
         Set-ItemProperty -Path $InstallWim -Name IsReadOnly -Value $false
-        Set-ItemProperty -Path $BootWim -Name IsReadOnly -Value $false
     }
     Else {
         Write-Warning "$(Split-Path -Path $ImagePath -Leaf) does not contain valid Windows Installation media."
