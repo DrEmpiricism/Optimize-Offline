@@ -1,3 +1,16 @@
+
+## 3.1.0.4 ## (05-30-2018)
+
+- Added additional registry optimizations.
+
+- Updated the code and registry settings for the elevated PowerShell context menu item.
+
+- The script now manually cleans-up the image prior to saving and dismounting it.
+
+- And some additional changes to the code, command execution, etc.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.2 ## (05-27-2018)
 
 - Updated many of the Helper Functions used and trimmed many of them down.
