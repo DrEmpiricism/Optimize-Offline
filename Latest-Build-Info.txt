@@ -1,3 +1,12 @@
+## 3.1.0.5 ## (06-03-2018)
+
+- Added additional error-handeling.
+
+- Added addititional direct image checking for certain packages and features before processing specific automated removals.
+
+- Removed setting the Hidden attribute on the WorkFolder.
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 ## 3.1.0.4 ## (05-30-2018)
 
