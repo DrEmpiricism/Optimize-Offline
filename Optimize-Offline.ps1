@@ -437,12 +437,11 @@ If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApp
 If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 Try {
-    Get-ChildItem -Path $PSScriptRoot -Attributes Hidden -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 Finally {
     $CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
     If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $PSScriptRoot\$CreateScriptDir }
-    Start-Process -FilePath ATTRIB -ArgumentList ("+H `"$ScriptDirectory`"") -WindowStyle Hidden -Wait
 }
 
 If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
@@ -2317,7 +2316,6 @@ If ($Error.Count.Equals(0)) {
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
-    Break
 }
 Else {
     $SaveErrorLog = Join-Path -Path $Env:TEMP -ChildPath ErrorLog.log
@@ -2330,7 +2328,6 @@ Else {
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
-    Break
 }
 # SIG # Begin signature block
 # MIIMDgYJKoZIhvcNAQcCoIIL/zCCC/sCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
