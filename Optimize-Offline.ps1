@@ -55,17 +55,14 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SystemApps -Harden -OptionalFeatures -OnDemandPackages
 	
 	.NOTES
-		If you are unsure about a System App, particularly how it will affect your system, do not remove it.
-	
-	.NOTES
 		===========================================================================
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 		Created on:   	11/30/2017
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.4
-		Last updated:	05/30/2018
+		Version:        3.1.0.5
+		Last updated:	06/03/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -378,18 +375,18 @@ Function New-SaveDirectory {
 }
 
 Function Mount-OfflineHives {
-    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKCU `"$MountFolder\Users\Default\NTUSER.DAT`"") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKU_DEFAULT `"$MountFolder\Windows\System32\config\default`"") -Verb RunAs -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKCU `"$MountFolder\Users\Default\NTUSER.DAT`"") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKU_DEFAULT `"$MountFolder\Windows\System32\config\default`"") -WindowStyle Hidden -Wait
 }
 
 Function Dismount-OfflineHives {
     [System.GC]::Collect()
-    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SOFTWARE") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SYSTEM") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKCU") -Verb RunAs -WindowStyle Hidden -Wait
-    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKU_DEFAULT") -Verb RunAs -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKCU") -WindowStyle Hidden -Wait
+    Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKU_DEFAULT") -WindowStyle Hidden -Wait
 }
 
 Function Test-OfflineHives {
@@ -440,8 +437,7 @@ If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApp
 If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 Try {
-    Get-ChildItem -Path $PSScriptRoot -Attributes Hidden -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | 
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Attributes Hidden -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 Finally {
     $CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
@@ -461,8 +457,8 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
         [void]($WorkFolder = New-WorkDirectory)
         [void]($TempFolder = New-TempDirectory)
         Copy-Item -Path $InstallWim -Destination $ImageFolder -Force
-        $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force
         Dismount-DiskImage -ImagePath $ImagePath -StorageType ISO
+        $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force
         Set-ItemProperty -Path $InstallWim -Name IsReadOnly -Value $false
     }
     Else {
@@ -472,7 +468,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO") {
     }
 }
 ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
-    If (Test-Path -LiteralPath $ImagePath -Filter "install.wim") {
+    If (Test-Path -Path $ImagePath -Filter "install.wim") {
         $ImagePath = (Resolve-Path -Path $ImagePath).ProviderPath
         Write-Verbose "Copying WIM from $(Split-Path -Path $ImagePath -Parent)" -Verbose
         [void]($MountFolder = New-MountDirectory)
@@ -497,17 +493,17 @@ If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force }
 If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force }
 
 Try {
-    If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index -LogPath $DISMLog).Version -notlike "10.*") { Break }
+    If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index -ScratchDirectory $TempFolder -LogPath $DISMLog).Version -notlike "10.*") { Break }
 }
 Catch {
     Write-Output ''
-    Write-Error "The supplied image is not Windows 10 and is not supported."
+    Write-Error "The supplied image version is not supported: Requires Windows 10."
     Remove-Item -Path $ScriptDirectory -Recurse -Force
     Break
 }
 
 Try {
-    $GetBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -LogPath $DISMLog).Build
+    $GetBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -ScratchDirectory $TempFolder -LogPath $DISMLog).Build
     If ($GetBuild -lt '15063') {
         Write-Output ''
         Write-Error "The image build [$($GetBuild.ToString())] is not supported." -ErrorAction Stop
@@ -532,6 +528,11 @@ Try {
     }
 }
 Catch {
+    If (Get-WindowsImage -Mounted) {
+        Write-Output ''
+        Write-Error "Failed to fully mount the image. Discarding."
+        [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $TempFolder -LogPath $DISMLog)
+    }
     Remove-Item -Path $ScriptDirectory -Recurse -Force
     Remove-Item -Path $LogFile -Force
     Remove-Item -Path $DISMLog -Force
@@ -539,18 +540,25 @@ Catch {
 }
 
 If ($ImageIsMounted -eq $true) {
-    Write-Output ''
-    Write-Log -Output "Verifying image health." -Level Info
-    $StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth -LogPath $DISMLog)
-    If ($StartHealthCheck.ImageHealthState -eq "Healthy") {
+    Try {
         Write-Output ''
-        Write-Output "The image is healthy."
-        Start-Sleep 3
-        Clear-Host
+        Write-Log -Output "Verifying image health." -Level Info
+        $StartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop
+        If ($StartHealthCheck.ImageHealthState -eq "Healthy") {
+            Write-Output ''
+            Write-Output "The image is healthy."
+            Start-Sleep 3
+            Clear-Host
+        }
+        Else {
+            Write-Output ''
+            Write-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
+            Break
+        }
     }
-    Else {
+    Catch {
         Write-Output ''
-        Write-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
+        Write-Log -Output "Failed to verify the image health." -Level Error
         Exit-Script
         Break
     }
@@ -558,7 +566,7 @@ If ($ImageIsMounted -eq $true) {
 
 If ($SelectApps) {
     Try {
-        $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder
+        $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog
         $Int = 1
         ForEach ($Appx In $GetAppx) {
             $GetAppx = New-Object -TypeName PSObject
@@ -573,7 +581,14 @@ If ($SelectApps) {
         If ($RemoveAppx) {
             $PackageName | ForEach {
                 Write-Log -Output "Removing Provisioned App Package: $($_.Split('_')[0])" -Level Info
-                [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $($_) -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
+                $RemoveSelectAppx = @{
+                    Path             = $MountFolder
+                    PackageName      = $($_)
+                    ScratchDirectory = $TempFolder
+                    LogPath          = $DISMLog
+                    ErrorAction      = "Stop"
+                }
+                [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
             }
         }
         $Int = ''
@@ -590,7 +605,14 @@ If ($AllApps) {
     Try {
         Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | ForEach {
             Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -Level Info
-            [void](Remove-AppxProvisionedPackage -Path $MountFolder -PackageName $($_.PackageName) -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop)
+            $RemoveAllAppx = @{
+                Path             = $MountFolder
+                PackageName      = $($_.PackageName)
+                ScratchDirectory = $TempFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
         }
     }
     Catch {
@@ -604,21 +626,20 @@ If ($AllApps) {
 If ($SystemApps) {
     Try {
         Clear-Host
-        Write-Warning "Do NOT remove any System Applications if you are unsure how they may impact a live installation."
+        Write-Warning "Do NOT remove any System Application if you are unsure of its impact on a live installation."
         Start-Sleep 5
-        [void](Invoke-Expression -Command ('REG LOAD HKLM\WIM_HKLM_SOFTWARE "$MountFolder\Windows\System32\config\software"'))
+        Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-	    $SelectSystemApps = $InboxApps | Select-Object -Property `
-							                            @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-							                            @{ Label = 'PackageName'; Expression = { ($_) } } |
-	    Out-GridView -Title "Remove System Applications." -PassThru
-        $AppName = $SelectSystemApps.Name
+	$SelectSystemApps = $InboxApps | Select-Object -Property `
+							@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+							@{ Label = 'PackageName'; Expression = { ($_) } } |
+	Out-GridView -Title "Remove System Applications." -PassThru
         $AppPackage = $SelectSystemApps.PackageName
         If ($SelectSystemApps) {
             Clear-Host
             $AppPackage | ForEach {
-                $FullKeyPath = "$($InboxAppsKey)\" + $($_)
+                $FullKeyPath = $InboxAppsKey + '\' + $($_)
                 $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
                 Write-Log -Output "Removing System Application: $($_.Split('_')[0])" -Level Info
                 [void](Invoke-Expression -Command ('REG DELETE $AppKey /F') -ErrorAction Stop)
@@ -635,15 +656,13 @@ If ($SystemApps) {
         Break
     }
     Finally {
-        [void](Invoke-Expression -Command ('REG UNLOAD HKLM\WIM_HKLM_SOFTWARE'))
+        Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
     }
 }
 
 If ($SetRegistry -or $Harden) {
     #region Default Registry Optimizations
-    If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") {
-        Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force
-    }
+    If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
     Clear-Host
     Write-Log -Output "Enhancing system security, usability and performance with registry optimizations." -Level Info
     Try {
@@ -1487,38 +1506,38 @@ If ($SetRegistry -or $Harden) {
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Adding 'Elevated PowerShell' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell\command" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell\command" -ErrorAction Stop
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell\command" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell\command" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "(default)" -Value "Elevated PowerShell" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "HasLUAShield" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "Icon" -Value "PowerShell.exe" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "SeparatorBefore" -Value "" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
         #****************************************************************
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Adding 'Install CAB' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1813,14 +1832,14 @@ If ($SelectApps -or $AllApps) {
     Try {
         Write-Output ''
         Write-Log -Output "Disabling removed Provisoned App Package services." -Level Info
-        If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0)) {
+        If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Where { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0)) {
             [void](Mount-OfflineHives)
             If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") {
                 Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
             }
             [void](Dismount-OfflineHives)
         }
-        If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0)) {
+        If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Where { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0)) {
             [void](Mount-OfflineHives)
             If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") {
                 Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
@@ -1837,9 +1856,9 @@ If ($SelectApps -or $AllApps) {
 }
 
 If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI" -or $HardenRegistryComplete -eq $true) {
-    Write-Output ''
-    Write-Log -Output "Disabling remaining Windows Defender services and drivers." -Level Info
     Try {
+        Write-Output ''
+        Write-Log -Output "Disabling remaining Windows Defender services and drivers." -Level Info
         [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -ErrorAction Stop
@@ -1875,22 +1894,31 @@ If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Wind
     }
 }
 
-If ($Build -ge '16273') {
-    Write-Output ''
-    Write-Log -Output "Disabling Windows-Defender-Default-Defintions." -Level Info
-    $DisableDefenderFeature = @{
-        Path             = $MountFolder
-        FeatureName      = "Windows-Defender-Default-Definitions"
-        ScratchDirectory = $TempFolder
-        LogPath          = $DISMLog
+If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $TempFolder -LogPath $DISMLog).State -eq "Enabled") {
+    Try {
+        Write-Output ''
+        Write-Log -Output "Disabling Windows-Defender-Default-Defintions." -Level Info
+        $DisableDefenderFeature = @{
+            Path             = $MountFolder
+            FeatureName      = "Windows-Defender-Default-Definitions"
+            ScratchDirectory = $TempFolder
+            LogPath          = $DISMLog
+            ErrorAction      = "Stop"
+        }
+        [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
     }
-    [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to disable Windows-Defender-Default-Definitions." -Level Error
+        Exit-Script
+        Break
+    }
 }
 
-If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or $HardenRegistryComplete -eq $true -or ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Xbox*" }).Count -lt 5)) {
-    Write-Output ''
-    Write-Log -Output "Disabling remaining Xbox services and drivers." -Level Info
+If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or $HardenRegistryComplete -eq $true -or ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Where { $_.PackageName -like "*Xbox*" }).Count -lt 5)) {
     Try {
+        Write-Output ''
+        Write-Log -Output "Disabling remaining Xbox services and drivers." -Level Info
         [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -ErrorAction Stop
@@ -1922,7 +1950,7 @@ If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or $H
 If ($OnDemandPackages) {
     Clear-Host
     Try {
-        $GetOnDemand = Get-WindowsPackage -Path $MountFolder
+        $GetOnDemand = Get-WindowsPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog
         $Int = 1
         ForEach ($Package In $GetOnDemand) {
             $GetOnDemand = New-Object -TypeName PSObject
@@ -1961,7 +1989,7 @@ If ($OnDemandPackages) {
 If ($OptionalFeatures) {
     Clear-Host
     Try {
-        $GetFeatures = Get-WindowsOptionalFeature -Path $MountFolder
+        $GetFeatures = Get-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog
         $Int = 1
         ForEach ($Feature In $GetFeatures) {
             $GetFeatures = New-Object -TypeName PSObject
@@ -1997,27 +2025,52 @@ If ($OptionalFeatures) {
 }
 
 If ($Drivers) {
-    If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
-        Write-Output ''
-        Write-Log -Output "Injecting driver packages into the image." -Level Info
-        [void](Add-WindowsDriver -Path $MountFolder -Driver $Drivers -Recurse -ForceUnsigned -ScratchDirectory $TempFolder -LogPath $DISMLog)
-        Get-WindowsDriver -Path $MountFolder | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+    Try {
+        If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
+            Write-Output ''
+            Write-Log -Output "Injecting driver packages into the image." -Level Info
+            $InjectDriverPackages = @{
+                Path             = $MountFolder
+                Driver           = $Drivers
+                Recurse          = $true
+                ForceUnsigned    = $true
+                ScratchDirectory = $TempFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsDriver @InjectDriverPackages)
+            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+        }
+        ElseIf (Test-Path -Path $Drivers -PathType Leaf -Filter "*.inf") {
+            Write-Output ''
+            Write-Log -Output "Injecting driver package into the image." -Level Info
+            $InjectDriverPackage = @{
+                Path             = $MountFolder
+                Driver           = $Drivers
+                ForceUnsigned    = $true
+                ScratchDirectory = $TempFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsDriver @InjectDriverPackage)
+            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+        }
+        Else {
+            Write-Output ''
+            Write-Log -Output "$Drivers is not a valid driver package path." -Level Warning
+        }
     }
-    ElseIf (Test-Path -Path $Drivers -PathType Leaf -Filter "*.inf") {
+    Catch {
         Write-Output ''
-        Write-Log -Output "Injecting driver package into the image." -Level Info
-        [void](Add-WindowsDriver -Path $MountFolder -Driver $Drivers -ForceUnsigned -ScratchDirectory $TempFolder -LogPath $DISMLog)
-        Get-WindowsDriver -Path $MountFolder | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-    }
-    Else {
-        Write-Output ''
-        Write-Log -Output "$Drivers is not a valid driver package path." -Level Warning
+        Write-Log -Output "Failed to inject driver packages into the image." -Level Error
+        Exit-Script
+        Break
     }
 }
 
-If ((Get-AppxProvisionedPackage -Path $MountFolder | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0)) {
+If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0)) {
     $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\Win32Calc' -Resolve
-    If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe") -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui")) {
+    If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe" -PathType Leaf) -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui" -PathType Leaf)) {
         Try {
             Write-Output ''
             Write-Log -Output "Applying the Win32 Calculator." -Level Info
@@ -2166,7 +2219,7 @@ If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true) {
 }
 
 Try {
-    Write-Output ''
+    Clear-Host
     Write-Log -Output "Verifying the image health before finalizing." -Level Info
     $EndHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth -ScratchDirectory $TempFolder -LogPath $DISMLog -ErrorAction Stop
     If ($EndHealthCheck.ImageHealthState -eq "Healthy") {
@@ -2191,14 +2244,6 @@ Catch {
 Try {
     Write-Output ''
     Write-Log -Output "Saving and Dismounting the image." -Level Info
-    $DismountWindowsImage = @{
-        Path             = $MountFolder
-        Save             = $true
-        CheckIntegrity   = $true
-        ScratchDirectory = $TempFolder
-        LogPath          = $DISMLog
-        ErrorAction      = "Stop"
-    }
     $RecycleBin = "$MountFolder\" + '$Recycle.Bin'
     If (Test-Path -Path $RecycleBin) { Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\PerfLogs") { Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
@@ -2208,12 +2253,20 @@ Try {
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\inf\*.log") { Remove-Item -Path "$MountFolder\Windows\inf\*.log" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*") { Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    $DismountWindowsImage = @{
+        Path             = $MountFolder
+        Save             = $true
+        CheckIntegrity   = $true
+        ScratchDirectory = $TempFolder
+        LogPath          = $DISMLog
+        ErrorAction      = "Stop"
+    }
     [void](Dismount-WindowsImage @DismountWindowsImage)
     [void](Clear-WindowsCorruptMountPoint)
 }
 Catch {
     Write-Output ''
-    Write-Log -Output "Unable to save and dismount the image." -Level Error
+    Write-Log -Output "Failed to save and dismount the image." -Level Error
     Exit-Script
     Break
 }
@@ -2235,7 +2288,7 @@ Try {
 }
 Catch {
     Write-Output ''
-    Write-Log -Output "Unable to rebuild and compress the image." -Level Error
+    Write-Log -Output "Failed to rebuild and compress the image." -Level Error
     Exit-Script
     Break
 }
@@ -2247,7 +2300,6 @@ Try {
     Move-Item -Path "$WorkFolder\*.txt" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\*.log" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
-    If (Test-Path -Path "$ImageFolder\boot.wim") { Move-Item -Path "$ImageFolder\boot.wim" -Destination $SaveFolder -Force }
     Move-Item -Path $DISMLog -Destination $SaveFolder -Force
     Start-Sleep 3
 }
@@ -2265,9 +2317,10 @@ If ($Error.Count.Equals(0)) {
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
+    Break
 }
 Else {
-    $SaveErrorLog = Join-Path -Path $Env:TEMP -ChildPath "ErrorLog.log"
+    $SaveErrorLog = Join-Path -Path $Env:TEMP -ChildPath ErrorLog.log
     Set-Content -Path $SaveErrorLog -Value $Error.ToArray() -Force
     Move-Item -Path $Env:TEMP\ErrorLog.log -Destination $SaveFolder -Force
     Write-Output ''
@@ -2277,6 +2330,7 @@ Else {
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
+    Break
 }
 # SIG # Begin signature block
 # MIIMDgYJKoZIhvcNAQcCoIIL/zCCC/sCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
