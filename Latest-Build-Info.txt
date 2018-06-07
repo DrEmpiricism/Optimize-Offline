@@ -6,6 +6,8 @@
 
 - Removed setting the Hidden attribute on the WorkFolder.
 
+- Optional Features now only displays features which are enabled when it outputs the list to the Gridview.
+
 --------------------------------------------------------------------------------------------------------------------------------
 
 ## 3.1.0.4 ## (05-30-2018)
