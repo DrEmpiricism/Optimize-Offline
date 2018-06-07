@@ -1988,7 +1988,7 @@ If ($OnDemandPackages) {
 If ($OptionalFeatures) {
     Clear-Host
     Try {
-        $GetFeatures = Get-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog
+        $GetFeatures = (Get-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $TempFolder -LogPath $DISMLog) | Where { $_.State -eq "Enabled" }
         $Int = 1
         ForEach ($Feature In $GetFeatures) {
             $GetFeatures = New-Object -TypeName PSObject
