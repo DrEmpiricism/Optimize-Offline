@@ -22,7 +22,7 @@ The -Harden switch introduces a few additional registry entries and values that 
 The SetupComplete.cmd is a setup script that automatically runs after the OOBE component pass completes during the setup of a new Windows 10 installation. It includes the further automatic disabling of tasks for services or applications that were removed. It also includes an automatic detection and removal of the "DefaultUser0" ghost account that can often times be created. A reboot is recommended after the first bootup of the optimized image in order to complete the "DefaultUser0" ghost account removal.
 
 # Are any of these settings dangerous?
-No, none of the automatic processes are dangerous; however one must be careful when selecting what System Applications are removed, as the removal of some can render undesirable effects.
+No, none of the automatic processes are dangerous; however one must be careful when selecting what System Applications are removed.
 
 # How does the System Application removal work?
 System Applications are a lot like Provisioned Application Packages in respect that they are provisioned and installed during the setup of Windows. During the WindowsPE component pass, setup looks for these System Applications in the default registry and provisiones them for installation only if their entries are present. By removing their respective registry entries, Windows Setup does not provision them for installation.
