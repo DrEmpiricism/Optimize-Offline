@@ -14,7 +14,7 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 It is the responsibility of the end-user to be aware of what each parameter and switch does.
 
 # What does the -SetRegistry and -Harden switches do specifically?
-The -SetRegistry switch applies an array of registry entries and values designed to further enhance both the security of the default image as well as its usability and aesthetics. For example, it completely disables Cortana without completely disabling the default search feature, disables a significant amount of telemetry and background feedback submission, removes bloatware link creation and disables a plethora of annoying default features.
+The -SetRegistry switch applies an array of registry entries and values designed to further enhance both the security of the default image as well as its usability and aesthetics. For example, it completely disables Cortana without removing the default search feature, disables a significant amount of telemetry and background feedback submission, removes bloatware link creation and disables a plethora of annoying default features.
 
 The -Harden switch introduces a few additional registry entries and values that disable Provisioned Application and System Application access to various device sensors that are not specifically granted.
 
@@ -40,4 +40,4 @@ ShellExperienceHost should never be removed.
 The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Store Apps Troubleshooter from working properly and likewise affect the Windows Store. It is not recommended to remove these if the Windows Store is required in the image.
 
 # Will Microsot DaRT 10 be implemented again?
-Yes, Microsoft DaRT 10, as well as the Microsoft Debugging Tools, will be implemented into both the script and the GUI version.
+Yes, Microsoft DaRT 10, as well as the Microsoft Debugging Tools, will be re-implemented into both the script and the GUI version.
