@@ -61,8 +61,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.5
-		Last updated:	06/03/2018
+		Version:        3.1.0.6
+		Last updated:	06/13/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -431,9 +431,7 @@ Function New-Container {
 #endregion Helper Functions
 
 If (!(Test-Admin)) { Write-Warning "Administrative access is required. Please re-launch $Script with elevation."; Break }
-
 If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApps switch cannot be enabled at the same time."; Break }
-
 If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 Try {
@@ -486,9 +484,7 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM") {
 }
 
 If (Test-Path -Path "$Env:windir\Logs\DISM\dism.log") { Remove-Item -Path "$Env:windir\Logs\DISM\dism.log" -Force }
-
 If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force }
-
 If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force }
 
 Try {
@@ -630,10 +626,10 @@ If ($SystemApps) {
         Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-	$SelectSystemApps = $InboxApps | Select-Object -Property `
-							@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-							@{ Label = 'PackageName'; Expression = { ($_) } } |
-	Out-GridView -Title "Remove System Applications." -PassThru
+        $SelectSystemApps = $InboxApps | Select-Object -Property `
+        							@{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+        							@{ Label = 'PackageName'; Expression = { ($_) } } |
+        Out-GridView -Title "Remove System Applications." -PassThru
         $AppPackage = $SelectSystemApps.PackageName
         If ($SelectSystemApps) {
             Clear-Host
@@ -1557,7 +1553,7 @@ If ($SetRegistry -or $Harden) {
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "Restart-Explorer.cmd" -Type String
         #****************************************************************
         [void](Dismount-OfflineHives)
-		
+
         $null = @'
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
@@ -1598,7 +1594,7 @@ Sub CreateSRP
 	End If
 End Sub
 '@ | Out-File -FilePath "$MountFolder\Windows\Create-Restore-Point.vbs" -ErrorAction Stop
-		
+
         $null = @'
 If WScript.Arguments.length =0 Then
   Set CleanupObj = CreateObject("Shell.Application")
@@ -1608,7 +1604,7 @@ Else
    Cleanup.run ("CMD.EXE /C CLEANMGR /SAGESET:65535 & CLEANMGR /SAGERUN:65535"), 0
 End If
 '@ | Out-File -FilePath "$MountFolder\Windows\Extended-Disk-Cleanup.vbs" -ErrorAction Stop
-		
+
         $null = @'
 @ECHO OFF
 ECHO:
@@ -1769,7 +1765,6 @@ Try {
     Write-Output ''
     Write-Log -Output "Applying a custom Start Menu and Taskbar Layout." -Level Info
     Start-Sleep 3
-	
     $null = @'
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
   <LayoutOptions StartTileGroupCellWidth="6" />
@@ -1796,7 +1791,6 @@ Try {
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 '@ | Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -ErrorAction Stop
-	
     Write-Output ''
     Write-Log -Output "Creating Shortcut Links." -Level Info
     Start-Sleep 3
@@ -1967,7 +1961,7 @@ If ($OnDemandPackages) {
                 Write-Log -Output "Removing Windows Package: $($Append.TrimEnd('-'))" -Level Info
                 $RemoveOnDemandPackage = @{
                     Path             = $MountFolder
-                    PackageName      = $_
+                    PackageName      = $($_)
                     ScratchDirectory = $TempFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
@@ -2005,7 +1999,7 @@ If ($OptionalFeatures) {
                 Write-Log -Output "Disabling Optional Feature: $($_)" -Level Info
                 $DisableWindowsOptionalFeature = @{
                     Path             = $MountFolder
-                    FeatureName      = $_
+                    FeatureName      = $($_)
                     ScratchDirectory = $TempFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
@@ -2075,7 +2069,6 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder
             Write-Log -Output "Applying the Win32 Calculator." -Level Info
             Copy-Item -Path "$Win32CalcPath\win32calc.exe" -Destination "$MountFolder\Windows\System32\win32calc.exe" -Force -ErrorAction Stop
             Copy-Item -Path "$Win32CalcPath\win32calc.exe.mui" -Destination "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -Force -ErrorAction Stop
-			
             [void](Mount-OfflineHives)
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
@@ -2084,7 +2077,6 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String
             [void](Dismount-OfflineHives)
-			
             $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
             $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
             $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
@@ -2093,7 +2085,6 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder
             $CalcShortcut.Save()
             $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
             $CalcLink = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-			
             Start-Process -FilePath ATTRIB -ArgumentList ("-S -H `"$IniFile`"") -WindowStyle Hidden -Wait
             If (!(Select-String -Path $IniFile -Pattern $CalcLink -SimpleMatch -Quiet)) {
                 Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
@@ -2103,7 +2094,6 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder
                 Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
             }
             Start-Process -FilePath ATTRIB -ArgumentList ("+S +H `"$IniFile`"") -WindowStyle Hidden -Wait
-			
         }
         Catch {
             Write-Output ''
@@ -2117,7 +2107,9 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $TempFolder
 }
 
 If ($SetRegistryComplete -eq $true) {
-    $SetupComplete = @'
+    New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+    $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+    $null = @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2162,13 +2154,13 @@ SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
-'@
-	
+'@ | Out-File -FilePath $SetupScript -Encoding ASCII
+
     $XboxTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 '@
-	
+
     $DefenderTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
@@ -2177,7 +2169,7 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
 '@
-	
+
     $SetupEnd = @'
 NBTSTAT -R >NUL
 IPCONFIG /FLUSHDNS >NUL
@@ -2187,23 +2179,11 @@ DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 DEL "%~f0"
 '@
-	
-    New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-    $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-    Out-File -FilePath $SetupScript -InputObject $SetupComplete -Encoding ASCII
-	
-    If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) {
-        Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $SetupEnd -Append -Encoding ASCII
-    }
-    ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) {
-        Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $SetupEnd -Append -Encoding ASCII
-    }
-    ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) {
-        Out-File -FilePath $SetupScript -InputObject $XboxTasks, $SetupEnd -Append -Encoding ASCII
-    }
-    Else {
-        Out-File -FilePath $SetupScript -InputObject $SetupEnd -Append -Encoding ASCII
-    }
+
+    If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $SetupEnd -Append -Encoding ASCII }
+    ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $SetupEnd -Append -Encoding ASCII }
+    ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $SetupEnd -Append -Encoding ASCII }
+    Else { Out-File -FilePath $SetupScript -InputObject $SetupEnd -Append -Encoding ASCII }
 }
 
 If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true) {
