@@ -19,7 +19,7 @@ The -SetRegistry switch applies an array of registry entries and values designed
 The -Harden switch introduces a few additional registry entries and values that disable Provisioned Application and System Application access to various device sensors that are not specifically granted.
 
 # What does the SetupComplete.cmd script do?
-The SetupComplete.cmd is a setup script that automatically runs after the OOBE component pass completes during the setup of a new Windows 10 installation. It includes further automatically disabling of tasks for services or applications that were removed. It also includes an automatic detection and removal of the "DefaultUser0" ghost account that can often times be created. A reboot is recommended after the first bootup of the optimized image in order to complete the "DefaultUser0" ghost account removal.
+The SetupComplete.cmd is a setup script that automatically runs after the OOBE component pass completes during the setup of a new Windows 10 installation. It includes the further automatic disabling of tasks for services or applications that were removed. It also includes an automatic detection and removal of the "DefaultUser0" ghost account that can often times be created. A reboot is recommended after the first bootup of the optimized image in order to complete the "DefaultUser0" ghost account removal.
 
 # Are any of these settings dangerous?
 No, none of the automatic processes are dangerous; however one must be careful when selecting what System Applications are removed, as the removal of some can render undesirable effects.
