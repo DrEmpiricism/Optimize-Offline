@@ -1,3 +1,13 @@
+## 3.1.0.6 ## (06-13-2018)
+
+- Modified some of the removal processes.
+
+- Added an additional build check for Skip Ahead Insider Update builds.
+
+- Removed some redundancies.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.5 ## (06-03-2018)
 
 - Added additional error-handeling.
