@@ -2227,10 +2227,10 @@ Try {
     If (Test-Path -Path $RecycleBin) { Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\PerfLogs") { Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin") { Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\inf\*.log") { Remove-Item -Path "$MountFolder\Windows\inf\*.log" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*") { Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\CbsTemp\") { Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     $DismountWindowsImage = @{
         Path             = $MountFolder
         Save             = $true
