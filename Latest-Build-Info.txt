@@ -14,7 +14,7 @@
 
 - Added some information pertaining to what certain functions and lines of code do in case there's any ambiguity.
 
-- To run this script with a single-click, use the Run.cmd script (after editing any variables within). This will call the Optimize-Offline.ps1 script without having to enter any parameters or switches manually within a PowerShell console window.
+- To run this script with a single-click, use Start.cmd (after editing any variables within). This will call the Optimize-Offline.ps1 script without having to enter any parameters or switches manually within a PowerShell console window.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
