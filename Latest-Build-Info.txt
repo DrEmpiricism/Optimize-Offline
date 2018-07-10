@@ -1,3 +1,23 @@
+## 3.1.0.7 ## (07-10-2018)
+
+- Changed the parameters for the removal of Provisioned Application Packages, and the applying of registry optimizations, and combined both old switch parameters into string values.
+
+- The removal of Provisioned Application Packages is now determined on whether or not the value of "Select" or "All" is chosen. Likewise, the applying of registry optimizations is now determened on whether or not the value of "Default" or "Harden" is chosen.
+
+- To remove Provisioned Application Packages by selection, the string parameter -MetroApps "Select" must be used. To apply hardened registry optimizations, the string parameter -Registry "Harden" must be used. If these parameter values are not entered, they use their default values, so they're not mandatory.
+
+- A few other switches have been renamed for convenience.
+
+- You may now apply of the .NET Framework 3 payload files which will also enable the NetFx3 Windows Optional Feature. Just like the -Drivers parameter, this new -NetFx3 parameter requires a resolvable path to a directory containing the .NET payload .CAB files, which are used as the source packages to enable the NetFx3 feature. These .CAB files are location on the installation media in the /sources/sxs folder.
+
+- Combined multiple previously separate processes into single processes, and also optimized much of the code.
+
+- Added some information pertaining to what certain functions and lines of code do in case there's any ambiguity.
+
+- To run this script with a single-click, use the Run.cmd script (after editing any variables within). This will call the Optimize-Offline.ps1 script without having to enter any parameters or switches manually within a PowerShell console window.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.6 ## (06-13-2018)
 
 - Modified some of the removal processes.
