@@ -2,7 +2,7 @@
 #Requires -Version 5
 <#
 	.SYNOPSIS
-		Optimize-Offline is a Windows Image (WIM) optimization script designed for 64-bit Windows 10 builds RS2, RS3 and RS4.
+		Optimize-Offline is a Windows Image (WIM) optimization script designed for 64-bit Windows 10 builds RS2 and above.
 	
 	.DESCRIPTION
 		Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
@@ -24,35 +24,35 @@
 	.PARAMETER Build
 		The build number of the Windows image being optimized.
 	
-	.PARAMETER SelectApps
-		Populates and outputs a Gridview list of all Provisioned Application Packages for selected removal.
-	
-	.PARAMETER AllApps
-		Automatically removes all Provisioning Application Packages.
+	.PARAMETER MetroApps
+		Select = Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal.
+		All = Automatically removes all Provisioning Application Packages.
 	
 	.PARAMETER SystemApps
-		Outputs System Applications that can be removed, thus preventing them from being provisioned and installed during Windows Setup.
+		Populates and outputs a Gridview list of all System Applications for selective removal.
 	
-	.PARAMETER SetRegistry
-		Sets optimized registry values into the offline registry hives.
+	.PARAMETER Registry
+		Default = Sets optimized registry values into the offline registry hives.
+		Harden = Sets the default optimized registry values as well as additional values to further increase device security and restrict access system and app sensors.
 	
-	.PARAMETER Harden
-		Increases device security and further restricts access to such things as system and app sensors.
+	.PARAMETER Packages
+		Populates and outputs a Gridview list of all OnDemand and Language Packages for selective removal.
+	
+	.PARAMETER Features
+		Populates and outputs a Gridview list of all Optional Features for selective disabling.
 	
 	.PARAMETER Drivers
-		The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.
-	
-	.PARAMETER OnDemandPackages
-		Populates and outputs a Gridview list of all OnDemand and Language Packages for selected removal.
-	
-	.PARAMETER OptionalFeatures
-		Populates and outputs a Gridview list of all Optional Features for selected removal.
+        	The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.
+        
+    	.PARAMETER NetFx3
+		The full path to the .NET Framework payload files to be applied and used to enable the NetFx3 Optional Feature.
+		These .cab files are located in the 'sources\sxs' folder on the Windows Installation media.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -AllApps -SetRegistry -Drivers "E:\DriverFolder" -OptionalFeatures
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -MetroApps "Select" -SystemApps -Registry "Default" -Packages -Features -Drivers "E:\DriverFolder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -SelectApps -SystemApps -Harden -OptionalFeatures -OnDemandPackages
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\Win10Pro.iso" -Build 15063 -MetroApps "All" -SystemApps -Registry "Harden" -Features -Packages -NetFx3 "E:\sxs folder"
 	
 	.NOTES
 		===========================================================================
@@ -61,9 +61,9 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.6
-		Last updated:	06/13/2018
-		===========================================================================
+		Version:        3.1.0.7
+		Last updated:	07/10/2018
+        ===========================================================================
 #>
 [CmdletBinding()]
 [OutputType([System.Object])]
@@ -85,29 +85,23 @@ Param
         HelpMessage = 'The build number of the Windows image being optimized.')]
     [ValidateRange(15063, 17134)]
     [int]$Build,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selected removal.')]
-    [Alias('Select')]
-    [switch]$SelectApps,
-    [Parameter(HelpMessage = 'Automatically removes all Provisioning Application Packages.')]
-    [Alias('All')]
-    [switch]$AllApps,
-    [Parameter(HelpMessage = 'Outputs System Applications that can be removed, thus preventing them from being provisioned and installed during Windows Setup.')]
+    [ValidateSet('Select', 'All')]
+    [Alias('Appx')]
+    [string]$MetroApps = 'Select',
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
     [switch]$SystemApps,
-    [Parameter(HelpMessage = 'Sets optimized registry values into the offline registry hives.')]
-    [Alias('RegEdit')]
-    [switch]$SetRegistry,
-    [Parameter(HelpMessage = 'Increases device security and further restricts access to such things as system and app sensors.')]
-    [switch]$Harden,
-    [Parameter(Mandatory = $false,
-        HelpMessage = 'The path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+    [ValidateSet('Default', 'Harden')]
+    [string]$Registry = 'Default',
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all OnDemand and Language Packages for selective removal.')]
+    [switch]$Packages,
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Optional Features for selective disabling.')]
+    [switch]$Features,
+    [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
     [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
     [string]$Drivers,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all OnDemand and Language Packages for selected removal.')]
-    [Alias('OnDemand')]
-    [switch]$OnDemandPackages,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Optional Features for selected removal.')]
-    [Alias('Features')]
-    [switch]$OptionalFeatures
+    [Parameter(HelpMessage = 'The full path to the .NET Framework payload files to be applied and used to enable the NetFx3 Optional Feature.')]
+    [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
+    [string]$NetFx3
 )
 #region Script Variables
 $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
@@ -116,10 +110,6 @@ $ProgressPreference = 'SilentlyContinue'
 $Script = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
-$ProvisionedAppList = [System.Collections.ArrayList]@()
-$OnDemandPackageList = [System.Collections.ArrayList]@()
-$OptionalFeaturesList = [System.Collections.ArrayList]@()
-$SystemAppsList = [System.Collections.ArrayList]@()
 #endregion Script Variables
 
 #region Helper Functions
@@ -178,7 +168,7 @@ Function Invoke-ProcessPrivilege {
         [switch]$Disable
     )
 	
-    Begin {
+    Begin { ## Use a C# method for adjusting access tokens granting system-level access on a process privilege.
         Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -270,15 +260,14 @@ public class AccessTokens
         }
     }
 }
-'@ -Language CSharp
-		
-        $CurProcess = Get-Process -Id $Process
+'@
+        $CurProcess = Get-Process -Id $Process ## Set the current process to a variable.
     }
     Process {
-        [AccessTokens]::AdjustPrivilege($CurProcess.Handle, $Privilege, !$Disable)
+        [AccessTokens]::AdjustPrivilege($CurProcess.Handle, $Privilege, !$Disable) ## Adjust the access token.
     }
     End {
-        $CurProcess.Close()
+        $CurProcess.Close() ## Close the current process after the access token privilege has been adjusted.
     }
 }
 
@@ -293,17 +282,17 @@ Function Set-RegistryOwner {
         [string]$SubKey
     )
     Begin {
-        $TakeOwnership = "SeTakeOwnershipPrivilege"
+        $TakeOwnership = "SeTakeOwnershipPrivilege" ## Assign the TakeOwnershipPrivilege to a variable.
     }
     Process {
-        $TakeOwnership | Invoke-ProcessPrivilege
+        $TakeOwnership | Invoke-ProcessPrivilege ## Enable the TakeOwnershipPrivilege for this current process only.
         $Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::TakeOwnership)
         $ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None)
         $SID = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
         $Admin = $SID.Translate([System.Security.Principal.NTAccount])
         $ACL.SetOwner($Admin)
         $Key.SetAccessControl($ACL)
-        $TakeOwnership | Invoke-ProcessPrivilege -Disable
+        $TakeOwnership | Invoke-ProcessPrivilege -Disable ## Disable the TakeOwnershipPrivilege once ownership has been granted.
         $ACL = $Key.GetAccessControl()
         $ACL.SetAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule($Admin, "FullControl", "ContainerInherit", "None", "Allow")))
         $Key.SetAccessControl($ACL)
@@ -398,12 +387,10 @@ Function Exit-Script {
     Start-Sleep 3
     Write-Output ''
     Write-Verbose "Cleaning-up and terminating script." -Verbose
-    If (Test-OfflineHives) {
-        [void](Dismount-OfflineHives)
-    }
+    If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog)
-    [void](Clear-WindowsCorruptMountPoint -LogPath $DISMLog)
-    $SaveDir = [void](New-Item -Path $PSScriptRoot -Name Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]" -ItemType Directory -Force); $SaveDir
+    [void](Clear-WindowsCorruptMountPoint)
+    $SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $HOME\Desktop -ChildPath Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]")); [void]$SaveDir
     If ($Error.Count) {
         $ErrorLog = Join-Path -Path $Env:TEMP -ChildPath "ErrorLog.log"
         Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force
@@ -411,10 +398,9 @@ Function Exit-Script {
     }
     Move-Item -Path $LogFile -Destination $SaveDir -Force
     Move-Item -Path $DISMLog -Destination $SaveDir -Force
-    If ($SetRegistry -or $Harden) {
-        Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force
-    }
+    If ($Registry) { Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force }
     Remove-Item -Path $ScriptDirectory -Recurse -Force
+    Write-Output ''
 }
 
 Function New-Container {
@@ -431,8 +417,6 @@ Function New-Container {
 #endregion Helper Functions
 
 If (!(Test-Admin)) { Write-Warning "Administrative access is required. Please re-launch $Script with elevation."; Break }
-If ($SelectApps -and $AllApps) { Write-Warning "The SelectApps switch and AllApps switch cannot be enabled at the same time."; Break }
-If ($SetRegistry -and $Harden) { Write-Warning "The SetRegistry switch and Hardened switch cannot be enabled at the same time."; Break }
 
 Try {
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
@@ -487,6 +471,7 @@ If (Test-Path -Path "$Env:windir\Logs\DISM\dism.log") { Remove-Item -Path "$Env:
 If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force }
 If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force }
 
+## Ensure the image version is Windows 10.
 Try {
     If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index -ScratchDirectory $ScratchFolder -LogPath $DISMLog).Version -notlike "10.*") { Break }
 }
@@ -497,11 +482,16 @@ Catch {
     Break
 }
 
+## Ensure the image build is 15063 and above. Earlier builds are not fully supported.
 Try {
-    $GetBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -ScratchDirectory $ScratchFolder -LogPath $DISMLog).Build
+    $GetBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Build
     If ($GetBuild -lt '15063') {
         Write-Output ''
         Write-Error "The image build [$($GetBuild.ToString())] is not supported." -ErrorAction Stop
+    }
+    ElseIf ($GetBuild -gt '17134') {
+        Write-Output ''
+        Write-Error "The image build [$($GetBuild.ToString())] is not yet supported." -ErrorAction Stop
     }
     Else {
         Write-Output ''
@@ -534,91 +524,166 @@ Catch {
     Break
 }
 
+## Before beginning the optimizations, ensure the image health returns a value of 'Healthy'.
 If ($ImageIsMounted -eq $true) {
     Try {
         Write-Output ''
         Write-Log -Output "Verifying image health." -Level Info
-        $StartHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop
-        If ($StartHealthCheck.ImageHealthState -eq "Healthy") {
+        $StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
+        If ($StartHealthCheck -eq "Healthy") {
             Write-Output ''
             Write-Output "The image is healthy."
             Start-Sleep 3
             Clear-Host
         }
-        Else {
-            Write-Output ''
-            Write-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
-            Break
-        }
+        Else { Break }
     }
     Catch {
         Write-Output ''
-        Write-Log -Output "Failed to verify the image health." -Level Error
+        Write-Log -Output "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
         Exit-Script
         Break
     }
 }
 
-If ($SelectApps) {
+If ($MetroApps) {
+    $RemovedProvisionedApps = [System.Collections.ArrayList]@()
     Try {
-        $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog
-        $Int = 1
-        ForEach ($Appx In $GetAppx) {
-            $GetAppx = New-Object -TypeName PSObject
-            $GetAppx | Add-Member -MemberType NoteProperty -Name Num -Value $Int
-            $GetAppx | Add-Member -MemberType NoteProperty -Name DisplayName -Value $Appx.DisplayName
-            $GetAppx | Add-Member -MemberType NoteProperty -Name PackageName -Value $Appx.PackageName
-            $Int++
-            [void]$ProvisionedAppList.Add($GetAppx)
+        If ($MetroApps -eq "Select") {
+            $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder
+            $Int = 1
+            ForEach ($Appx In $GetAppx) {
+                $GetAppx = New-Object -TypeName PSObject
+                $GetAppx | Add-Member -MemberType NoteProperty -Name Num -Value $Int
+                $GetAppx | Add-Member -MemberType NoteProperty -Name DisplayName -Value $Appx.DisplayName
+                $GetAppx | Add-Member -MemberType NoteProperty -Name PackageName -Value $Appx.PackageName
+                $Int++
+                [void]$RemovedProvisionedApps.Add($GetAppx)
+            }
+            $RemoveAppx = $RemovedProvisionedApps | Out-GridView -Title "Remove Provisioned App Packages." -PassThru
+            $PackageName = $RemoveAppx.PackageName
+            If ($RemoveAppx) {
+                $PackageName | ForEach {
+                    Write-Log -Output "Removing Provisioned App Package: $($_.Split('_')[0])" -Level Info
+                    $RemoveSelectAppx = @{
+                        Path             = $MountFolder
+                        PackageName      = $($_)
+                        ScratchDirectory = $ScratchFolder
+                        LogPath          = $DISMLog
+                        ErrorAction      = "Stop"
+                    }
+                    [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
+                }
+            }
         }
-        $RemoveAppx = $ProvisionedAppList | Out-GridView -Title "Remove Provisioned App Packages." -PassThru
-        $PackageName = $RemoveAppx.PackageName
-        If ($RemoveAppx) {
-            $PackageName | ForEach {
-                Write-Log -Output "Removing Provisioned App Package: $($_.Split('_')[0])" -Level Info
-                $RemoveSelectAppx = @{
+        ElseIf ($MetroApps -eq "All") {
+            Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
+                Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -Level Info
+                $RemoveAllAppx = @{
                     Path             = $MountFolder
-                    PackageName      = $($_)
+                    PackageName      = $($_.PackageName)
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
                 }
-                [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
+                [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
             }
         }
-        $Int = ''
+        $MetroAppsComplete = $true
+        Clear-Host
     }
     Catch {
         Write-Output ''
-        Write-Log -Output "Failed to remove all selected Provisioned App Packages." -Level Error
+        Write-Log -Output "Failed to remove Provisioned App Packages." -Level Error
         Exit-Script
         Break
     }
 }
 
-If ($AllApps) {
+If ($MetroAppsComplete -eq $true) {
     Try {
-        Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach {
-            Write-Log -Output "Removing Provisioned App Package: $($_.DisplayName)" -Level Info
-            $RemoveAllAppx = @{
-                Path             = $MountFolder
-                PackageName      = $($_.PackageName)
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
+        ## Check if the Microsoft Wallet or Windows Maps Provisioned App Packages were removed, and if so, disable their associated services.
+        If ((Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match "Microsoft.Wallet").Count.Equals(0) -or (Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match "Microsoft.WindowsMaps").Count.Equals(0)) {
+            Write-Log -Output "Disabling any Provisioned App Package services." -Level Info
+            Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"") -WindowStyle Hidden -Wait
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") {
+                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
             }
-            [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") {
+                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
+            }
+            Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait
         }
     }
     Catch {
         Write-Output ''
-        Write-Log -Output "Failed to remove all Provisioned App Packages." -Level Error
+        Write-Log -Output "An error occurred removing Provisoned App Package services." -Level Error
+        Exit-Script
+        Break
+    }
+    Try {
+        Write-Output ''
+        Write-Log -Output "Applying a custom Start Menu and Taskbar Layout." -Level Info
+        Start-Sleep 3
+        @'
+<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+  <LayoutOptions StartTileGroupCellWidth="6" />
+  <DefaultLayoutOverride>
+    <StartLayoutCollection>
+      <defaultlayout:StartLayout GroupCellWidth="6">
+        <start:Group Name="">
+          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
+          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
+          <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />
+        </start:Group>
+      </defaultlayout:StartLayout>
+    </StartLayoutCollection>
+  </DefaultLayoutOverride>
+    <CustomTaskbarLayoutCollection>
+      <defaultlayout:TaskbarLayout>
+        <taskbar:TaskbarPinList>
+          <taskbar:UWA AppUserModelID="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
+        </taskbar:TaskbarPinList>
+      </defaultlayout:TaskbarLayout>
+    </CustomTaskbarLayoutCollection>
+</LayoutModificationTemplate>
+'@ | Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -ErrorAction Stop
+        Write-Output ''
+        Write-Log -Output "Creating Shortcut Links." -Level Info
+        Start-Sleep 3
+        $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+        $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
+        $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
+        $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
+        $UWPShortcut.IconLocation = "imageres.dll,-1023"
+        $UWPShortcut.WorkingDirectory = "%SystemRoot%"
+        $UWPShortcut.Description = "The UWP File Explorer Application."
+        $UWPShortcut.Save() ## Create a new link for the hidden UWP File Explorer.
+        $UEFIShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+        $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+        $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
+        $UEFIShortcut.Arguments = "/R /FW"
+        $UEFIShortcut.IconLocation = "bootux.dll,-1016"
+        $UEFIShortcut.WorkingDirectory = "%SystemRoot%\System32"
+        $UEFIShortcut.Description = "Reboot directly into the system's UEFI firmware."
+        $UEFIShortcut.Save() ## Create a new link for the Reboot to UEFI Firmware.
+        $Bytes = [System.IO.File]::ReadAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+        $Bytes[0x15] = $Bytes[0x15] -bor 0x20
+        [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes) ## Enable 'Run As Administrator' for the Reboot to UEFI Firmware.
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to apply a custom Start Menu and Taskbar Layout." -Level Error
         Exit-Script
         Break
     }
 }
 
 If ($SystemApps) {
+    $RemovedSystemApps = [System.Collections.ArrayList]@()
     Try {
         Clear-Host
         Write-Warning "Do NOT remove any System Application if you are unsure of its impact on a live installation."
@@ -626,10 +691,10 @@ If ($SystemApps) {
         Start-Process -FilePath CMD -ArgumentList ("/C REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
         $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-        $SelectSystemApps = $InboxApps | Select-Object -Property `
-                                                                    @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-                                                                    @{ Label = 'PackageName'; Expression = { ($_) } } |
-        Out-GridView -Title "Remove System Applications." -PassThru
+		$SelectSystemApps = $InboxApps | Select-Object -Property `
+													   @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
+													   @{ Label = 'PackageName'; Expression = { ($_) } } |
+		Out-GridView -Title "Remove System Applications." -PassThru
         $AppPackage = $SelectSystemApps.PackageName
         If ($SelectSystemApps) {
             Clear-Host
@@ -638,11 +703,13 @@ If ($SystemApps) {
                 $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
                 Write-Log -Output "Removing System Application: $($_.Split('_')[0])" -Level Info
                 [void](Invoke-Expression -Command ('REG DELETE $AppKey /F') -ErrorAction Stop)
-                [void]$SystemAppsList.Add($($_.Split('_')[0]))
+                [void]$RemovedSystemApps.Add($($_.Split('_')[0]))
                 Start-Sleep 2
             }
         }
+        Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
         $SystemAppsComplete = $true
+        Clear-Host
     }
     Catch {
         Write-Output ''
@@ -650,17 +717,105 @@ If ($SystemApps) {
         Exit-Script
         Break
     }
-    Finally {
-        Start-Process -FilePath CMD -ArgumentList ("/C REG UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
+}
+
+## Check if Windows Defender was among the System Apps removed, and if so, further disable its services and drivers.
+If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI") {
+    Try {
+        Write-Log -Output "Disabling Windows Defender services and drivers." -Level Info
+        [void](Mount-OfflineHives)
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 1 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 1 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 1 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord -ErrorAction Stop
+        If ((Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run") -match "SecurityHealth") {
+            Remove-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -ErrorAction Stop
+        }
+        @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach {
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_") {
+                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
+            }
+        }
+        [void](Dismount-OfflineHives)
+        Start-Sleep 3
+        ## Check if the Windows Defender Optional Feature is present and enabled, and if so, disable it.
+        If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions").State -eq "Enabled") {
+            Write-Output ''
+            Write-Log -Output "Disabling Optional Feature: Windows-Defender-Default-Defintions" -Level Info
+            $DisableDefenderFeature = @{
+                Path             = $MountFolder
+                FeatureName      = "Windows-Defender-Default-Definitions"
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
+        }
+        $DisableDefenderComplete = $true
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to disable remaining Windows Defender services and drivers." -Level Error
+        Exit-Script
+        Break
     }
 }
 
-If ($SetRegistry -or $Harden) {
-    #region Default Registry Optimizations
-    If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
-    Clear-Host
-    Write-Log -Output "Enhancing system security, usability and performance with registry optimizations." -Level Info
+## Check if the Xbox Provisioned App Package, or its CallableUI System App, was removed, and if so, further disable its services and drivers.
+If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Xbox*").Count -lt 5)) {
     Try {
+        Write-Output ''
+        Write-Log -Output "Disabling Xbox services and drivers." -Level Info
+        [void](Mount-OfflineHives)
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord -ErrorAction Stop
+        @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach {
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_") {
+                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
+            }
+        }
+        [void](Dismount-OfflineHives)
+        Start-Sleep 3
+        $DisableXboxComplete = $true
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to disable Xbox services and drivers." -Level Error
+        Exit-Script
+        Break
+    }
+}
+
+#region Registry Optimizations
+If ($Registry) {
+    Try {
+        If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
+        Clear-Host
+        Write-Log -Output "Enhancing system security, usability and performance with registry optimizations." -Level Info
         [void](Mount-OfflineHives)
         #****************************************************************
         Write-Output "Disabling Cortana and Search Bar Web Connectivity." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1032,20 +1187,35 @@ If ($SetRegistry -or $Harden) {
         #****************************************************************
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowDriveLettersFirst" -Value 4 -Type DWord
         #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Enabling Dark Theme for Settings and Modern Apps." >> "$WorkFolder\Registry-Optimizations.log"
+        If ($Build -lt '17686') {
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Enabling Dark Theme for Settings and Modern Apps." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Type DWord
+        }
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Type DWord
+        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Enabling Dark Inactive Window Borders." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\DWM" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\DWM" -Name "AccentColor" -Value 4282927692 -Type DWord
         #****************************************************************
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Increasing Taskbar and Theme Transparency." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "UseOLEDTaskbarTransparency" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Value 1 -Type DWord
+        #****************************************************************
+        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Disabling Wallpaper .JPEG Quality Reduction." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "JPEGImportQuality" -Value 100 -Type DWord
         #****************************************************************
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Disabling 'Shortcut' text for Shortcuts." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1171,12 +1341,6 @@ If ($SetRegistry -or $Harden) {
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Value 255 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoAutorun" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling Wallpaper .JPEG Quality Reduction." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\Desktop" -Name "JPEGImportQuality" -Value 100 -Type DWord
         #****************************************************************
         If ($Build -ge '16273') {
             #****************************************************************
@@ -1330,7 +1494,7 @@ If ($SetRegistry -or $Harden) {
             Write-Output "Cleaning-up Immersive Control Panel Settings Links." >> "$WorkFolder\Registry-Optimizations.log"
             #****************************************************************
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
-            If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI") {
+            If ($SystemAppsComplete -eq $true -and $RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI") {
                 $ImmersiveLinks = @{
                     Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
                     Name  = "SettingsPageVisibility"
@@ -1355,7 +1519,7 @@ If ($SetRegistry -or $Harden) {
             Write-Output "Cleaning-up Immersive Control Panel Settings Links." >> "$WorkFolder\Registry-Optimizations.log"
             #****************************************************************
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
-            If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI") {
+            If ($SystemAppsComplete -eq $true -and $RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI") {
                 $ImmersiveLinks = @{
                     Path  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
                     Name  = "SettingsPageVisibility"
@@ -1397,8 +1561,10 @@ If ($SetRegistry -or $Harden) {
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Enabling the Fraunhofer IIS MPEG Layer-3 (MP3) Codec." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction Stop
-        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction Stop
+        If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc") {
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction Stop
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction Stop
+        }
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Drivers32" -ErrorAction Stop
@@ -1451,6 +1617,7 @@ If ($SetRegistry -or $Harden) {
         Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
         Write-Output "Adding 'Open with Notepad' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
+        ## Using REG ADD here because the PowerShell cmdlet hangs adding this key.
         [void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" /v "Icon" /t REG_SZ /d "Notepad.exe,-2" /f)
         [void](REG ADD "HKLM\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" /ve /t REG_SZ /d "Notepad.exe %1" /f)
         #****************************************************************
@@ -1552,9 +1719,7 @@ If ($SetRegistry -or $Harden) {
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "Restart-Explorer.cmd" -Type String
         #****************************************************************
-        [void](Dismount-OfflineHives)
-		
-        $null = @'
+        @'
 Function SystemOS    
     Set objWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & ".\root\cimv2")
     Set colOS = objWMI.ExecQuery("Select * from Win32_OperatingSystem")
@@ -1594,8 +1759,7 @@ Sub CreateSRP
 	End If
 End Sub
 '@ | Out-File -FilePath "$MountFolder\Windows\Create-Restore-Point.vbs" -ErrorAction Stop
-		
-        $null = @'
+        @'
 If WScript.Arguments.length =0 Then
   Set CleanupObj = CreateObject("Shell.Application")
   CleanupObj.ShellExecute "Wscript.exe", Chr(34) & WScript.ScriptFullName & Chr(34) & " Run", , "runas", 1
@@ -1604,8 +1768,7 @@ Else
    Cleanup.run ("CMD.EXE /C CLEANMGR /SAGESET:65535 & CLEANMGR /SAGERUN:65535"), 0
 End If
 '@ | Out-File -FilePath "$MountFolder\Windows\Extended-Disk-Cleanup.vbs" -ErrorAction Stop
-		
-        $null = @'
+        @'
 @ECHO OFF
 ECHO:
 ECHO Killing Explorer
@@ -1621,8 +1784,126 @@ ECHO Explorer has started successfully.
 TIMEOUT /T 3 /NOBREAK >NUL
 EXIT
 '@ | Out-File -FilePath "$MountFolder\Windows\Restart-Explorer.cmd" -Encoding ASCII -ErrorAction Stop
-		
         $SetRegistryComplete = $true
+        If ($Registry -eq "Harden") {
+            Write-Output ''
+            Write-Log -Output "Adding Hardened Registry Values." -Level Info
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Disabling System and Settings Syncronization." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            @("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") |
+                ForEach {
+                New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -ErrorAction Stop
+                Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
+            }
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSyncOnPaidNetwork" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSyncUserOverride" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSync" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSyncUserOverride" -Value 1 -Type DWord
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -Name "Value" -Value "Deny" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -Name "Value" -Value "Deny" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -Name "Value" -Value "Deny" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
+            #****************************************************************
+            Write-Output '' >> $WorkFolder\Registry-Optimizations.log
+            Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Disabling Shared Experiences." >> "$WorkFolder\Registry-Optimizations.log"
+            #***************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableMmx" -Value 0 -Type DWord
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Disabling SmartScreen." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "UxOption" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Value 2 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Value 3 -Type DWord
+            #****************************************************************
+            Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
+            Write-Output "Link-Local Multicast Name Resolution (LLMNR) protocol." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Value 0 -Type DWord
+            #****************************************************************
+            $HardenRegistryComplete = $true
+        }
+        [void](Dismount-OfflineHives)
     }
     Catch {
         Write-Output ''
@@ -1630,359 +1911,54 @@ EXIT
         Exit-Script
         Break
     }
-    #endregion Default Registry Optimizations
 }
+#endregion Registry Optimizations
 
-If ($Harden) {
-    #region Hardened Registry Optimizations
+If ($Packages) {
+    $RemovedWindowsPackages = [System.Collections.ArrayList]@()
     Try {
-        Write-Output ''
-        Write-Log -Output "Adding Hardened Registry Values." -Level Info
-        [void](Mount-OfflineHives)
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling System and Settings Syncronization." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        @("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") |
-            ForEach {
-            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -ErrorAction Stop
-            Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
-        }
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync" -Name "SyncPolicy" -Value 5 -Type DWord
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableCredentialsSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableDesktopThemeSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisablePersonalizationSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableSyncOnPaidNetwork" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWindowsSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableStartLayoutSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableApplicationSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableAppSyncSettingSyncUserOverride" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSync" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\SettingSync" -Name "DisableWebBrowserSettingSyncUserOverride" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling Location Sensors, App Syncronization and Non-Explicit App Access." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" /v "Value" /t REG_SZ /d "Deny" /f)
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" /v "Value" /t REG_SZ /d "Deny" /f)
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" /v "Value" /t REG_SZ /d "Deny" /f)
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Type" /t REG_SZ /d "LooselyCoupled" /f)
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "Value" /t REG_SZ /d "Deny" /f)
-        [void](REG ADD "HKLM\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" /v "InitialAppValue" /t REG_SZ /d "Unspecified" /f)
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsSyncWithDevices" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessPhone" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessMessaging" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessCallHistory" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
-        #****************************************************************
-        Write-Output '' >> $WorkFolder\Registry-Optimizations.log
-        Write-Output "Disabling System Tracking and Location Sensors." >> $WorkFolder\Registry-Optimizations.log
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling Shared Experiences." >> "$WorkFolder\Registry-Optimizations.log"
-        #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableMmx" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling SmartScreen." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "UxOption" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Value 3 -Type DWord
-        #****************************************************************
-        Write-Output '' >> "$WorkFolder\Registry-Optimizations.log"
-        Write-Output "Link-Local Multicast Name Resolution (LLMNR) protocol." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Value 0 -Type DWord
-        #****************************************************************
-        [void](Dismount-OfflineHives)
-        $HardenRegistryComplete = $true
-        Start-Sleep 3
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to apply Hardened Registry Settings." -Level Error
-        Exit-Script
-        Break
-    }
-}
-#endregion Default Hardened Registry Optimizations
-
-Try {
-    Write-Output ''
-    Write-Log -Output "Applying a custom Start Menu and Taskbar Layout." -Level Info
-    Start-Sleep 3
-    $null = @'
-<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-  <LayoutOptions StartTileGroupCellWidth="6" />
-  <DefaultLayoutOverride>
-    <StartLayoutCollection>
-      <defaultlayout:StartLayout GroupCellWidth="6">
-        <start:Group Name="">
-          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
-          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
-          <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />
-        </start:Group>
-      </defaultlayout:StartLayout>
-    </StartLayoutCollection>
-  </DefaultLayoutOverride>
-    <CustomTaskbarLayoutCollection>
-      <defaultlayout:TaskbarLayout>
-        <taskbar:TaskbarPinList>
-          <taskbar:UWA AppUserModelID="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
-        </taskbar:TaskbarPinList>
-      </defaultlayout:TaskbarLayout>
-    </CustomTaskbarLayoutCollection>
-</LayoutModificationTemplate>
-'@ | Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -ErrorAction Stop
-    Write-Output ''
-    Write-Log -Output "Creating Shortcut Links." -Level Info
-    Start-Sleep 3
-    $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-    $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
-    $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
-    $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
-    $UWPShortcut.IconLocation = "imageres.dll,-1023"
-    $UWPShortcut.WorkingDirectory = "%SystemRoot%"
-    $UWPShortcut.Description = "The UWP File Explorer Application."
-    $UWPShortcut.Save()
-    $UEFIShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-    $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
-    $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
-    $UEFIShortcut.Arguments = "/R /FW"
-    $UEFIShortcut.IconLocation = "bootux.dll,-1016"
-    $UEFIShortcut.WorkingDirectory = "%SystemRoot%\System32"
-    $UEFIShortcut.Description = "Reboot directly into the system's UEFI firmware."
-    $UEFIShortcut.Save()
-    $Bytes = [System.IO.File]::ReadAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
-    $Bytes[0x15] = $Bytes[0x15] -bor 0x20
-    [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes)
-}
-Catch {
-    Write-Output ''
-    Write-Log -Output "Failed to create required shortcuts." -Level Error
-    Exit-Script
-    Break
-}
-
-If ($SelectApps -or $AllApps) {
-    Try {
-        Write-Output ''
-        Write-Log -Output "Disabling removed Provisoned App Package services." -Level Info
-        If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Where { $_.DisplayName -Match "Microsoft.Wallet" }).Count.Equals(0)) {
-            [void](Mount-OfflineHives)
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") {
-                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
-            }
-            [void](Dismount-OfflineHives)
-        }
-        If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Where { $_.DisplayName -Match "Microsoft.WindowsMaps" }).Count.Equals(0)) {
-            [void](Mount-OfflineHives)
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") {
-                Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
-            }
-            [void](Dismount-OfflineHives)
-        }
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "An error occurred removing Provisoned App Package services." -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-If ($SystemAppsComplete -eq $true -and $SystemAppsList -contains "Microsoft.Windows.SecHealthUI" -or $HardenRegistryComplete -eq $true) {
-    Try {
-        Write-Output ''
-        Write-Log -Output "Disabling remaining Windows Defender services and drivers." -Level Info
-        [void](Mount-OfflineHives)
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord
-        If ((Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue) -match "SecurityHealth") {
-            Remove-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -ErrorAction Stop
-        }
-        @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") |
-            ForEach { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
-        [void](Dismount-OfflineHives)
-        $DisableDefenderComplete = $true
-        Start-Sleep 3
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to disable remaining Windows Defender services and drivers." -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions" -ScratchDirectory $ScratchFolder -LogPath $DISMLog).State -eq "Enabled") {
-    Try {
-        Write-Output ''
-        Write-Log -Output "Disabling Windows-Defender-Default-Defintions." -Level Info
-        $DisableDefenderFeature = @{
-            Path             = $MountFolder
-            FeatureName      = "Windows-Defender-Default-Definitions"
-            ScratchDirectory = $ScratchFolder
-            LogPath          = $DISMLog
-            ErrorAction      = "Stop"
-        }
-        [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to disable Windows-Defender-Default-Definitions." -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-If ($AllApps -or $SystemAppsList -contains "Microsoft.XboxGameCallableUI" -or $HardenRegistryComplete -eq $true -or ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Where { $_.PackageName -like "*Xbox*" }).Count -lt 5)) {
-    Try {
-        Write-Output ''
-        Write-Log -Output "Disabling remaining Xbox services and drivers." -Level Info
-        [void](Mount-OfflineHives)
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
-        @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") |
-            ForEach { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
-        [void](Dismount-OfflineHives)
-        Start-Sleep 3
-        $DisableXboxComplete = $true
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to disable remaining Xbox services and drivers." -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-If ($OnDemandPackages) {
-    Clear-Host
-    Try {
-        $GetOnDemand = Get-WindowsPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+        Clear-Host
+        $GetPackages = Get-WindowsPackage -Path $MountFolder
         $Int = 1
-        ForEach ($Package In $GetOnDemand) {
-            $GetOnDemand = New-Object -TypeName PSObject
-            $GetOnDemand | Add-Member -MemberType NoteProperty -Name Num -Value $Int
-            $GetOnDemand | Add-Member -MemberType NoteProperty -Name PackageName -Value $Package.PackageName
-            $GetOnDemand | Add-Member -MemberType NoteProperty -Name PackageState -Value $Package.PackageState
+        ForEach ($Package In $GetPackages) {
+            $GetPackages = New-Object -TypeName PSObject
+            $GetPackages | Add-Member -MemberType NoteProperty -Name Num -Value $Int
+            $GetPackages | Add-Member -MemberType NoteProperty -Name PackageName -Value $Package.PackageName
+            $GetPackages | Add-Member -MemberType NoteProperty -Name PackageState -Value $Package.PackageState
             $Int++
-            [void]$OnDemandPackageList.Add($GetOnDemand)
+            [void]$RemovedWindowsPackages.Add($GetPackages)
         }
-        $RemoveOnDemand = $OnDemandPackageList | Out-GridView -Title "Select any OnDemand Packages to remove." -PassThru
-        $PackageName = $RemoveOnDemand.PackageName
-        If ($RemoveOnDemand) {
+        $RemovePackages = $RemovedWindowsPackages | Out-GridView -Title "Remove Windows Packages." -PassThru
+        $PackageName = $RemovePackages.PackageName
+        If ($RemovePackages) {
             $PackageName | ForEach {
                 $Append = $_.Replace("Package", "").Split('~')[0]
                 Write-Log -Output "Removing Windows Package: $($Append.TrimEnd('-'))" -Level Info
-                $RemoveOnDemandPackage = @{
+                $RemovePackage = @{
                     Path             = $MountFolder
-                    PackageName      = $($_)
+                    PackageName      = $_
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
                 }
-                [void](Remove-WindowsPackage @RemoveOnDemandPackage)
+                [void](Remove-WindowsPackage @RemovePackage)
             }
         }
         $Int = ''
     }
     Catch {
         Write-Output ''
-        Write-Log -Output "Failed to Remove all OnDemand Packages." -Level Error
+        Write-Log -Output "Failed to remove Windows Packages." -Level Error
         Exit-Script
         Break
     }
 }
 
-If ($OptionalFeatures) {
-    Clear-Host
+If ($Features) {
+    $DisabledOptionalFeatures = [System.Collections.ArrayList]@()
     Try {
-        $GetFeatures = (Get-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog) | Where { $_.State -eq "Enabled" }
+        Clear-Host
+        $GetFeatures = (Get-WindowsOptionalFeature -Path $MountFolder | Where State -EQ "Enabled")
         $Int = 1
         ForEach ($Feature In $GetFeatures) {
             $GetFeatures = New-Object -TypeName PSObject
@@ -1990,78 +1966,35 @@ If ($OptionalFeatures) {
             $GetFeatures | Add-Member -MemberType NoteProperty -Name FeatureName -Value $Feature.FeatureName
             $GetFeatures | Add-Member -MemberType NoteProperty -Name State -Value $Feature.State
             $Int++
-            [void]$OptionalFeaturesList.Add($GetFeatures)
+            [void]$DisabledOptionalFeatures.Add($GetFeatures)
         }
-        $RemoveFeatures = $OptionalFeaturesList | Out-GridView -Title "Disable Optional Features." -PassThru
-        $FeatureName = $RemoveFeatures.FeatureName
-        If ($RemoveFeatures) {
+        $DisableFeatures = $DisabledOptionalFeatures | Out-GridView -Title "Disable Optional Features." -PassThru
+        $FeatureName = $DisableFeatures.FeatureName
+        If ($DisableFeatures) {
             $FeatureName | ForEach {
                 Write-Log -Output "Disabling Optional Feature: $($_)" -Level Info
-                $DisableWindowsOptionalFeature = @{
+                $DisableFeature = @{
                     Path             = $MountFolder
-                    FeatureName      = $($_)
+                    FeatureName      = $_
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
                     ErrorAction      = "Stop"
                 }
-                [void](Disable-WindowsOptionalFeature @DisableWindowsOptionalFeature)
+                [void](Disable-WindowsOptionalFeature @DisableFeature)
             }
         }
         $Int = ''
     }
     Catch {
         Write-Output ''
-        Write-Log -Output "Failed to Disable all Optional Features." -Level Error
+        Write-Log -Output "Failed to disable all Optional Features." -Level Error
         Exit-Script
         Break
     }
 }
 
-If ($Drivers) {
-    Try {
-        If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
-            Write-Output ''
-            Write-Log -Output "Injecting driver packages into the image." -Level Info
-            $InjectDriverPackages = @{
-                Path             = $MountFolder
-                Driver           = $Drivers
-                Recurse          = $true
-                ForceUnsigned    = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
-            }
-            [void](Add-WindowsDriver @InjectDriverPackages)
-            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-        }
-        ElseIf (Test-Path -Path $Drivers -PathType Leaf -Filter "*.inf") {
-            Write-Output ''
-            Write-Log -Output "Injecting driver package into the image." -Level Info
-            $InjectDriverPackage = @{
-                Path             = $MountFolder
-                Driver           = $Drivers
-                ForceUnsigned    = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
-            }
-            [void](Add-WindowsDriver @InjectDriverPackage)
-            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-        }
-        Else {
-            Write-Output ''
-            Write-Log -Output "$Drivers is not a valid driver package path." -Level Warning
-        }
-    }
-    Catch {
-        Write-Output ''
-        Write-Log -Output "Failed to inject driver packages into the image." -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Where { $_.PackageName -like "*Calculator*" }).Count.Equals(0)) {
+## Check if the Calculator Provisioned App Package was removed, and if so, apply the Windows Server 2016 and Enterprise LTSB Win32 Calculator.
+If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0)) {
     $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\Win32Calc' -Resolve
     If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe" -PathType Leaf) -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui" -PathType Leaf)) {
         Try {
@@ -2073,9 +2006,9 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFol
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe,0" -Type String
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe,0" -Type String -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
             [void](Dismount-OfflineHives)
             $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
             $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
@@ -2106,10 +2039,81 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder -ScratchDirectory $ScratchFol
     }
 }
 
+If ($Drivers) {
+    Try {
+        If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
+            Write-Output ''
+            Write-Log -Output "Injecting driver packages into the image." -Level Info
+            $InjectDriverPackages = @{
+                Path             = $MountFolder
+                Driver           = $Drivers
+                Recurse          = $true
+                ForceUnsigned    = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsDriver @InjectDriverPackages)
+            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+        }
+        ElseIf (Test-Path -Path $Drivers -PathType Leaf -Filter "*.inf") {
+            Write-Output ''
+            Write-Log -Output "Injecting driver package." -Level Info
+            $InjectDriverPackage = @{
+                Path             = $MountFolder
+                Driver           = $Drivers
+                ForceUnsigned    = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsDriver @InjectDriverPackage)
+            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+        }
+        Else {
+            Write-Output ''
+            Write-Log -Output "$Drivers is not a valid driver package path." -Level Warning
+            Start-Sleep 3
+        }
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to inject driver packages." -Level Error
+        Exit-Script
+        Break
+    }
+}
+
+If ($NetFx3) {
+    Try {
+        If ((Get-ChildItem -Path $NetFx3 -Recurse -Filter "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved") {
+            Write-Output ''
+            Write-Log -Output "Applying Payload and Enabling Optional Feature: NetFx3" -Level Info
+            $EnableNetFx3 = @{
+                Path             = $MountFolder
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                FeatureName      = "NetFx3"
+                Source           = $NetFx3
+                All              = $true
+                ErrorAction      = "Stop"
+            }
+            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
+        }
+    }
+    Catch {
+        Write-Output ''
+        Write-Log -Output "Failed to apply payload and enable Optional Feature: NetFx3." -Level Error
+        Exit-Script
+        Break
+    }
+}
+
+## Create the SetupComplete.cmd script and add it to the %WINDIR%\Setup\Scripts directory so it runs during the OOBE process pass during Windows Setup.
 If ($SetRegistryComplete -eq $true) {
     New-Container -Path "$MountFolder\Windows\Setup\Scripts"
     $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-    $null = @'
+    @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2186,6 +2190,7 @@ DEL "%~f0"
     Else { Out-File -FilePath $SetupScript -InputObject $SetupEnd -Append -Encoding ASCII }
 }
 
+## Check for an active internet connection, and if detected, download and apply the latest Steven Black GitHub host file.
 If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true) {
     Write-Output ''
     Write-Log -Output "Updating the default Hosts File." -Level Info
@@ -2197,29 +2202,26 @@ If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true) {
     (Get-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts") | Set-Content -Path "$MountFolder\Windows\System32\drivers\etc\hosts" -Encoding UTF8 -Force
 }
 
+## Before finalizing the optimizations, ensure the image health returns a value of 'Healthy'.
 Try {
-    Clear-Host
+    Write-Output ''
     Write-Log -Output "Verifying the image health before finalizing." -Level Info
-    $EndHealthCheck = Repair-WindowsImage -Path $MountFolder -CheckHealth -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop
-    If ($EndHealthCheck.ImageHealthState -eq "Healthy") {
+    $EndHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
+    If ($EndHealthCheck -eq "Healthy") {
         Write-Output ''
         Write-Output "The image is healthy."
         Start-Sleep 3
     }
-    Else {
-        Write-Output ''
-        Write-Warning "The image has been flagged for corruption. Further servicing is required."
-        Start-Sleep 3
-        Break
-    }
+    Else { Break }
 }
 Catch {
     Write-Output ''
-    Write-Log -Output "Failed to verify the image health." -Level Error
+    Write-Log -Output "The image has been flagged for corruption. Further servicing is required." -Level Error
     Exit-Script
     Break
 }
 
+## Clean-up any recycled items, then save and dismount the image.
 Try {
     Write-Output ''
     Write-Log -Output "Saving and Dismounting the image." -Level Info
@@ -2278,6 +2280,7 @@ Try {
     Move-Item -Path "$WorkFolder\*.txt" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\*.log" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
+    If (Test-Path -Path "$ImageFolder\boot.wim") { Move-Item -Path "$ImageFolder\boot.wim" -Destination $SaveFolder -Force }
     Move-Item -Path $DISMLog -Destination $SaveFolder -Force
     Start-Sleep 3
 }
@@ -2291,7 +2294,7 @@ If ($Error.Count.Equals(0)) {
     Write-Output ''
     Write-Output "Newly optimized image has been saved to $SaveFolder."
     Write-Output ''
-    Write-Log -Output "$Script completed with [0] errors." -Level Info
+    Write-Log -Output "$Script completed with [$($Error.Count)] errors." -Level Info
     Move-Item -Path $LogFile -Destination $SaveFolder -Force
     Write-Output ''
     Start-Sleep 3
