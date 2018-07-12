@@ -396,10 +396,10 @@ Function Exit-Script {
         Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force
         Move-Item -Path $ErrorLog -Destination $SaveDir -Force
     }
-    Move-Item -Path $LogFile -Destination $SaveDir -Force
-    Move-Item -Path $DISMLog -Destination $SaveDir -Force
+    Move-Item -Path "$Env:TEMP\Optimize-Offline.log" -Destination $($SaveDir.FullName) -Force
+    Move-Item -Path "$Env:TEMP\DISM.log" -Destination $($SaveDir.FullName) -Force
     If ($Registry) { Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force }
-    Remove-Item -Path $ScriptDirectory -Recurse -Force
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Output ''
 }
 
@@ -2043,7 +2043,7 @@ If ($Drivers) {
     Try {
         If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Filter "*.inf")) {
             Write-Output ''
-            Write-Log -Output "Injecting driver packages into the image." -Level Info
+            Write-Log -Output "Injecting driver packages." -Level Info
             $InjectDriverPackages = @{
                 Path             = $MountFolder
                 Driver           = $Drivers
@@ -2229,10 +2229,10 @@ Try {
     If (Test-Path -Path $RecycleBin) { Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\PerfLogs") { Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin") { Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*") { Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$MountFolder\Windows\inf\*.log") { Remove-Item -Path "$MountFolder\Windows\inf\*.log" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-    If (Test-Path -Path "$MountFolder\Windows\CbsTemp\") { Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*") { Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
     $DismountWindowsImage = @{
         Path             = $MountFolder
         Save             = $true
