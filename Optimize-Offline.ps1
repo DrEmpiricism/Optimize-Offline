@@ -58,7 +58,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.2.0.0
-		Last updated:	08/13/2018
+		Last updated:	08/14/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -888,7 +888,8 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 	}
 }
 
-If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Xbox*").Count -lt 5))
+If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder `
+			| Where PackageName -Like "*Xbox*").Count -lt 5))
 {
 	Try
 	{
@@ -2177,7 +2178,8 @@ If ($Drivers -and (Get-ChildItem -Path $DriverPath -Recurse -Filter "*.inf"))
 	}
 }
 
-If ((Get-ChildItem -Path $NetFx3Path -Recurse -Filter "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
+If ((Get-ChildItem -Path $NetFx3Path -Recurse -Filter "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder `
+		| Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
 {
 	Try
 	{
