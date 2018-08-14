@@ -26,7 +26,17 @@
 
 - Some code has been optimized as well as console output.
 
-- RS5 is not supported.
+- RS5 is now supported.
+
+- Logging has been cleaned up a bit.
+
+- The registry values adding the "Restart Explorer" context menu item were updated. Now that feature uses PowerShell to restart explorer and not command.
+
+- The script now exports and compresses all WIM files it opens to ensure they retain as small of size as possible.
+
+- The Harden registry optimization level has been changed to Hardened
+
+- The SetupComplete.cmd script that is generated based on what processes were ran has been updated.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
