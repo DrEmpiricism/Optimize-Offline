@@ -1,3 +1,35 @@
+## 3.1.0.8 (08-16-2008)
+
+- Using the -Packages switch now outputs the Capability Packages that are installed in the image for selective removal.
+
+- The removal of the Capability Package also removes the Windows Package.
+
+- The -Features function has been removed, as these can be easily disabled even with an unattend.xml answer file.
+
+- The -Drivers is now a switch, and if enabled, will look for driver packages or files placed into the script's Resources directory.
+
+- To install drivers, simply put them into the Resources directory and use the -Drivers switch.
+
+- There is a new -DaRT switch that will apply Microsoft DaRT 10 to the required images.
+
+- It applies the DaRT WIM files in the Resources directory to the appropriate images.
+
+- These are WIM files made by me, and are compressed using recovery compression.
+
+- In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
+
+- A full Windows 10 ISO, along with the use of the -DaRT switch, will enable the script to extract the boot.wim along with the install.wim during the start of the script.
+
+- If only a WIM file is used with the -DaRT switch, DaRT 10 will only be applied to the default Recovery Image (winre.wim).
+
+- Many registry entries have been changed and updated.  A few were also removed.
+
+- Some code has been optimized as well as console output.
+
+- RS5 is not supported.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.7 ## (07-10-2018)
 
 - Changed the parameters for the removal of Provisioned Application Packages, and the applying of registry optimizations, and combined both old switch parameters into string values.
