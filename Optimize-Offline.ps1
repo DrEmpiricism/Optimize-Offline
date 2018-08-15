@@ -39,6 +39,9 @@
 	.PARAMETER Drivers
 		Injects driver packages placed in the Resources directory into the image.
 	
+	.PARAMETER NetFx3
+		Applies the .NET Framework 3 payload packages to the image and then enables the NetFx3 Windows Optional Feature.
+	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -MetroApps "Select" -SystemApps -Registry "Default" -Packages -DaRT -Drivers "E:\Driver Folder"
 	
@@ -95,7 +98,9 @@ Param
 	[Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) to Windows Setup and Windows Recovery.')]
 	[switch]$DaRT,
 	[Parameter(HelpMessage = 'Injects any driver packages within the Resources directory into the image.')]
-	[switch]$Drivers
+	[switch]$Drivers,
+	[Parameter(HelpMessage = 'Applies the .NET Framework 3 payload packages to the image and then enables the NetFx3 Windows Optional Feature.')]
+	[switch]$NetFx3
 )
 
 #region Script Variables
@@ -106,13 +111,6 @@ $OScript = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
 #endregion Script Variables
-
-#region Script Declarations
-$Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\Win32Calc' -Resolve
-$DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\DaRT' -Resolve
-$DriverPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\Drivers' -Resolve
-$NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath '.\Resources\NetFx3' -Resolve
-#endregion Script Declarations
 
 #region Helper Functions
 Function Test-Admin
@@ -452,6 +450,7 @@ Finally
 {
 	$CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
 	If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $PSScriptRoot\$CreateScriptDir }
+	Get-Location | Set-Location
 	$Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
 }
 
@@ -1902,6 +1901,7 @@ If ($Registry)
 
 If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0))
 {
+	$Win32CalcPath = Join-Path -Path '.' -ChildPath '.\Resources\Win32Calc' -Resolve
 	If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe" -PathType Leaf) -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui" -PathType Leaf))
 	{
 		Try
@@ -1951,6 +1951,7 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*C
 
 If ($DaRT)
 {
+	$DaRTPath = Join-Path -Path '.' -ChildPath '.\Resources\DaRT' -Resolve
 	If ((Test-Path -LiteralPath $DaRTPath -Filter "MSDaRT10.wim") -and (Get-ChildItem -LiteralPath $DaRTPath -Filter "DebuggingTools_*.wim"))
 	{
 		$CheckBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Build
@@ -2149,59 +2150,68 @@ If ($DaRT)
 	}
 }
 
-If ($Drivers -and (Get-ChildItem -Path $DriverPath -Recurse -Filter "*.inf"))
+If ($Drivers)
 {
-	Try
+	$DriverPath = Join-Path -Path '.' -ChildPath '.\Resources\Drivers' -Resolve
+	If (Get-ChildItem -Path $DriverPath -Recurse -Include "*.inf")
 	{
-		If ($DaRTApplied.Equals($true)) { Clear-Host }
-		Else { Write-Output '' }
-		$Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
-		Out-Log -Content "Injecting Driver Packages" -Level Info
-		$InjectDriverPackages = @{
-			Path				 = $MountFolder
-			Driver			     = $DriverPath
-			Recurse			     = $true
-			ForceUnsigned	     = $true
-			ScratchDirectory	 = $ScratchFolder
-			LogPath			     = $DISMLog
-			ErrorAction		     = "Stop"
+		Try
+		{
+			If ($DaRTApplied.Equals($true)) { Clear-Host }
+			Else { Write-Output '' }
+			$Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
+			Out-Log -Content "Injecting Driver Packages" -Level Info
+			$InjectDriverPackages = @{
+				Path			    = $MountFolder
+				Driver			    = $DriverPath
+				Recurse			    = $true
+				ForceUnsigned	    = $true
+				ScratchDirectory    = $ScratchFolder
+				LogPath			    = $DISMLog
+				ErrorAction		    = "Stop"
+			}
+			[void](Add-WindowsDriver @InjectDriverPackages)
+			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
 		}
-		[void](Add-WindowsDriver @InjectDriverPackages)
-		Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-	}
-	Catch
-	{
-		Write-Output ''
-		Out-Log -Content "Failed to inject driver packages into the image." -Level Error
-		Exit-Script
-		Break
+		Catch
+		{
+			Write-Output ''
+			Out-Log -Content "Failed to inject driver packages into the image." -Level Error
+			Exit-Script
+			Break
+		}
 	}
 }
 
-If ((Get-ChildItem -Path $NetFx3Path -Recurse -Filter "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder `
-		| Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
+If ($NetFx3)
 {
-	Try
+	$NetFx3Path = Join-Path -Path '.' -ChildPath '.\Resources\NetFx3' -Resolve
+	If ((Get-ChildItem -Path $NetFx3Path -Recurse -Force -Include "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder `
+			| Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
 	{
-		Write-Output ''
-		Out-Log -Content "Applying Payload and Enabling NetFx3" -Level Info
-		$EnableNetFx3 = @{
-			Path			   = $MountFolder
-			ScratchDirectory   = $ScratchFolder
-			LogPath		       = $DISMLog
-			FeatureName	       = "NetFx3"
-			Source			   = $NetFx3Path
-			All			       = $true
-			ErrorAction	       = "Stop"
+		Try
+		{
+			$Host.UI.RawUI.WindowTitle = "Applying Payload and Enabling NetFx3."
+			Write-Output ''
+			Out-Log -Content "Applying Payload and Enabling NetFx3" -Level Info
+			$EnableNetFx3 = @{
+				Path			    = $MountFolder
+				ScratchDirectory    = $ScratchFolder
+				LogPath			    = $DISMLog
+				FeatureName		    = "NetFx3"
+				Source			    = $NetFx3Path
+				All				    = $true
+				ErrorAction		    = "Stop"
+			}
+			[void](Enable-WindowsOptionalFeature @EnableNetFx3)
 		}
-		[void](Enable-WindowsOptionalFeature @EnableNetFx3)
-	}
-	Catch
-	{
-		Write-Output ''
-		Out-Log -Content "Failed to apply payload and enable NetFx3." -Level Error
-		Exit-Script
-		Break
+		Catch
+		{
+			Write-Output ''
+			Out-Log -Content "Failed to apply payload and enable NetFx3." -Level Error
+			Exit-Script
+			Break
+		}
 	}
 }
 
