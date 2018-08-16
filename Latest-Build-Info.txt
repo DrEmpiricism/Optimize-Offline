@@ -1,4 +1,14 @@
-## 3.1.0.8 (08-16-2008)
+## 3.1.0.9 (08-16-2018)
+
+- Reverted the way drivers and NetFx3 are integrated in that a full path to their locations is required.
+
+- An optional -Unattend parameter was added which will add an end-user's custom unattend.xml into the image for a fully automated installation.
+
+- Updated the auto-run batch script so all a user has to do is edit the variables within and run it as administrator and it will call Optimize-Offline.ps1 and pass all parameters to it.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+## 3.1.0.8 (08-14-2018)
 
 - Using the -Packages switch now outputs the Capability Packages that are installed in the image for selective removal.
 

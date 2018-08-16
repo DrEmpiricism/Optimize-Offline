@@ -37,10 +37,13 @@
 		Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) to Windows Setup and/or Windows Recovery.
 	
 	.PARAMETER Drivers
-		Injects driver packages placed in the Resources directory into the image.
+		The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.
 	
 	.PARAMETER NetFx3
-		Applies the .NET Framework 3 payload packages to the image and then enables the NetFx3 Windows Optional Feature.
+		The full path to the .NET Framework 3 payload packages to be applied to the image.
+	
+	.PARAMETER Unattend
+		The full path to an unattend.xml answer file to be added to the image.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\install.wim" -Build 16299 -MetroApps "Select" -SystemApps -Registry "Default" -Packages -DaRT -Drivers "E:\Driver Folder"
@@ -60,8 +63,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.0.0
-		Last updated:	08/14/2018
+		Version:        3.1.0.9
+		Last updated:	08/16/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -97,10 +100,16 @@ Param
 	[switch]$Features,
 	[Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) to Windows Setup and Windows Recovery.')]
 	[switch]$DaRT,
-	[Parameter(HelpMessage = 'Injects any driver packages within the Resources directory into the image.')]
-	[switch]$Drivers,
-	[Parameter(HelpMessage = 'Applies the .NET Framework 3 payload packages to the image and then enables the NetFx3 Windows Optional Feature.')]
-	[switch]$NetFx3
+	[Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+	[ValidateScript({ Test-Path $(Resolve-Path -Path $_) })]
+	[string]$Drivers,
+	[Parameter(HelpMessage = 'The full path to the .NET Framework 3 payload packages to be applied to the image.')]
+	[ValidateScript({ Test-Path $(Resolve-Path -Path $_) })]
+	[string]$NetFx3,
+	[Parameter(HelpMessage = 'The full path to an unattend.xml answer file to be added to the image.')]
+	[ValidatePattern('\.xml$')]
+	[ValidateScript({ Test-Path $(Resolve-Path -Path $_) })]
+	[string]$Unattend
 )
 
 #region Script Variables
@@ -360,8 +369,8 @@ Function New-MountDirectory
 
 Function New-SaveDirectory
 {
-	$SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
-	$SaveDir = Get-Item -LiteralPath $PSScriptRoot\$SaveDir
+	$SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
+	$SaveDir = Get-Item -LiteralPath $ScriptRoot\$SaveDir
 	$SaveDir
 }
 
@@ -397,7 +406,7 @@ Function Exit-Script
 	If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
 	[void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog)
 	[void](Clear-WindowsCorruptMountPoint)
-	$SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]")); [void]$SaveDir
+	$SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath Optimize-Offline"-[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]")); [void]$SaveDir
 	If ($Error.Count)
 	{
 		$ErrorLog = Join-Path -Path $Env:TEMP -ChildPath "ErrorLog.log"
@@ -411,7 +420,7 @@ Function Exit-Script
 	Move-Item -Path $LogFile -Destination $SaveDir -Force
 	Remove-Item -Path "$Env:TEMP\DISM.log" -Force
 	Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force -ErrorAction SilentlyContinue
-	Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+	Get-ChildItem -Path $ScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 	Write-Output ''
 }
 
@@ -444,13 +453,13 @@ Catch
 
 Try
 {
-	Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+	Get-ChildItem -Path '.' -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 Finally
 {
-	$CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
-	If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $PSScriptRoot\$CreateScriptDir }
-	Get-Location | Set-Location
+	$ScriptRoot = (Get-Item -Path '.' -Force).FullName
+	$CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
+	If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $ScriptRoot\$CreateScriptDir }
 	$Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
 }
 
@@ -2152,67 +2161,97 @@ If ($DaRT)
 
 If ($Drivers)
 {
-	$DriverPath = Join-Path -Path '.' -ChildPath '.\Resources\Drivers' -Resolve
-	If (Get-ChildItem -Path $DriverPath -Recurse -Include "*.inf")
+	Try
 	{
-		Try
+		If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Include "*.inf"))
 		{
 			If ($DaRTApplied.Equals($true)) { Clear-Host }
 			Else { Write-Output '' }
 			$Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
-			Out-Log -Content "Injecting Driver Packages" -Level Info
+			Out-Log -Content "Injecting Driver Packages." -Level Info
 			$InjectDriverPackages = @{
-				Path			    = $MountFolder
-				Driver			    = $DriverPath
-				Recurse			    = $true
-				ForceUnsigned	    = $true
-				ScratchDirectory    = $ScratchFolder
-				LogPath			    = $DISMLog
-				ErrorAction		    = "Stop"
+				Path				 = $MountFolder
+				Driver			     = $Drivers
+				Recurse			     = $true
+				ForceUnsigned	     = $true
+				ScratchDirectory	 = $ScratchFolder
+				LogPath			     = $DISMLog
+				ErrorAction		     = "Stop"
 			}
 			[void](Add-WindowsDriver @InjectDriverPackages)
 			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
 		}
-		Catch
+		ElseIf (Test-Path -Path $Drivers -PathType Leaf -Include "*.inf")
+		{
+			$Host.UI.RawUI.WindowTitle = "Injecting Driver Package."
+			Write-Output ''
+			Out-Log -Content "Injecting Driver Package." -Level Info
+			$InjectDriverPackage = @{
+				Path				 = $MountFolder
+				Driver			     = $Drivers
+				ForceUnsigned	     = $true
+				ScratchDirectory	 = $ScratchFolder
+				LogPath			     = $DISMLog
+				ErrorAction		     = "Stop"
+			}
+			[void](Add-WindowsDriver @InjectDriverPackage)
+			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+		}
+		Else
 		{
 			Write-Output ''
-			Out-Log -Content "Failed to inject driver packages into the image." -Level Error
-			Exit-Script
-			Break
+			Out-Log -Content "$($Drivers) is not a valid driver package path." -Level Error
+			Start-Sleep 3
 		}
+	}
+	Catch
+	{
+		Write-Output ''
+		Out-Log -Content "Failed to inject driver packages into the image." -Level Error
+		Exit-Script
+		Break
 	}
 }
 
 If ($NetFx3)
 {
-	$NetFx3Path = Join-Path -Path '.' -ChildPath '.\Resources\NetFx3' -Resolve
-	If ((Get-ChildItem -Path $NetFx3Path -Recurse -Force -Include "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder `
-			| Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
+	Try
 	{
-		Try
+		If ((Get-ChildItem -Path $NetFx3 -Recurse -Include "*NetFx3*.cab") -and (Get-WindowsOptionalFeature -Path $MountFolder `
+				| Where FeatureName -EQ NetFx3).State -eq "DisabledWithPayloadRemoved")
 		{
 			$Host.UI.RawUI.WindowTitle = "Applying Payload and Enabling NetFx3."
 			Write-Output ''
-			Out-Log -Content "Applying Payload and Enabling NetFx3" -Level Info
+			Out-Log -Content "Applying the .NET Framework 3 Payload." -Level Info
 			$EnableNetFx3 = @{
-				Path			    = $MountFolder
-				ScratchDirectory    = $ScratchFolder
-				LogPath			    = $DISMLog
-				FeatureName		    = "NetFx3"
-				Source			    = $NetFx3Path
-				All				    = $true
-				ErrorAction		    = "Stop"
+				Path			   = $MountFolder
+				ScratchDirectory   = $ScratchFolder
+				LogPath		       = $DISMLog
+				FeatureName	       = "NetFx3"
+				Source			   = $NetFx3
+				All			       = $true
+				ErrorAction	       = "Stop"
 			}
 			[void](Enable-WindowsOptionalFeature @EnableNetFx3)
 		}
-		Catch
-		{
-			Write-Output ''
-			Out-Log -Content "Failed to apply payload and enable NetFx3." -Level Error
-			Exit-Script
-			Break
-		}
 	}
+	Catch
+	{
+		Write-Output ''
+		Out-Log -Content "Failed to apply payload and enable NetFx3." -Level Error
+		Exit-Script
+		Break
+	}
+}
+
+If (($Unattend -and ([IO.FileInfo]$Unattend).Extension -eq ".XML"))
+{
+	$Host.UI.RawUI.WindowTitle = "Adding an unattend.xml answer file."
+	Write-Output ''
+	Out-Log -Content "Adding an unattend.xml answer file." -Level Info
+	Start-Sleep 3
+	[void](New-Item -Path "$MountFolder\Windows" -Name "Panther" -ItemType Directory -ErrorAction SilentlyContinue)
+	Copy-Item -Path $Unattend -Destination "$MountFolder\Windows\Panther\unattend.xml" -Force -ErrorAction SilentlyContinue
 }
 
 If ($SetRegistryComplete.Equals($true))
@@ -2302,6 +2341,7 @@ If ((Test-Connection -ComputerName $Env:COMPUTERNAME -Quiet).Equals($true))
 }
 
 Clear-Host
+
 $EndHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
 If ($EndHealthCheck -eq "Healthy")
 {
