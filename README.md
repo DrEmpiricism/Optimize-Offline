@@ -1,5 +1,5 @@
 # Optimize-Offline
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2, RS3 and RS4 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2 to RS5 64-bit architectures.
 
 # What is Optimize-Offline about?
 - Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
@@ -38,6 +38,3 @@ ShellExperienceHost should never be removed.
 
 # Should any Provisioned Application Packages (Metro Apps) not be removed?
 The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Store Apps Troubleshooter from working properly and likewise affect the Windows Store. It is not recommended to remove these if the Windows Store is required in the image.
-
-# Will Microsot DaRT 10 be implemented again?
-Yes, Microsoft DaRT 10, as well as the Microsoft Debugging Tools, will be re-implemented into both the script and the GUI version.
