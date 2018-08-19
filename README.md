@@ -1,5 +1,5 @@
 # Optimize-Offline
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 Creator's Update builds RS2 to RS5 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 builds RS2 to RS5 64-bit architectures.
 
 # What is Optimize-Offline about?
 - Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
@@ -13,13 +13,16 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 # Is this script safe for me?
 It is the responsibility of the end-user to be aware of what each parameter and switch does.
 
-# What does the -SetRegistry and -Harden switches do specifically?
-The -SetRegistry switch applies an array of registry entries and values designed to further enhance both the security of the default image as well as its usability and aesthetics. For example, it completely disables Cortana without removing the default search feature, disables a significant amount of telemetry and background feedback submission, removes bloatware link creation and disables a plethora of annoying default features.
+# What does the -Registry parameter do?
+The -Registry parameter applies an array of registry entries and values designed to further enhance both the security of the default image as well as its usability and aesthetics. For example, it completely disables Cortana without removing the default search feature, disables a significant amount of telemetry and background feedback submission, removes bloatware link creation and disables a plethora of annoying default features.
 
-The -Harden switch introduces a few additional registry entries and values that disable Provisioned Application and System Application access to various device sensors that are not specifically granted.
+The Hardened setting introduces a few additional registry entries and values that disable Provisioned Application and System Application access to various device sensors that are not specifically granted.
 
 # What does the SetupComplete.cmd script do?
 The SetupComplete.cmd is a setup script that automatically runs after the OOBE component pass completes during the setup of a new Windows 10 installation. It includes the further automatic disabling of tasks for services or applications that were removed. It also includes an automatic detection and removal of the "DefaultUser0" ghost account that can often times be created. A reboot is recommended after the first bootup of the optimized image in order to complete the "DefaultUser0" ghost account removal.
+
+# What does unattend.xml do?
+The unattend.xml is a small answer file that is generated to bypass some screens that appear during the OOBE stage of the Windows Setup process in order to speed-up the installation process.
 
 # Are any of these settings dangerous?
 No, none of the automatic processes are dangerous; however one must be careful when selecting what System Applications are removed.

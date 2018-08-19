@@ -1,10 +1,12 @@
-## 3.1.0.9 (08-16-2018)
+## 3.1.0.9 (08-19-2018)
 
-- Reverted the way drivers and NetFx3 are integrated in that a full path to their locations is required.
+- Reverted the way drivers and NetFx3 are integrated in that a full path to their locations are required when using their parameters. This prevents the chances of any packages accidently being applied to an image.
 
-- An optional -Unattend parameter was added which will add an end-user's custom unattend.xml into the image for a fully automated installation.
+- An unattend.xml is now generated and applied to the image to bypass various OOBE screens and speed-up the installation process.
 
 - Updated the auto-run batch script so all a user has to do is edit the variables within and run it as administrator and it will call Optimize-Offline.ps1 and pass all parameters to it.
+
+- The script now also verifies the installation type of the image to prevent any Windows Server builds from being processed.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -14,17 +16,13 @@
 
 - The removal of the Capability Package also removes the Windows Package.
 
-- The -Features function has been removed, as these can be easily disabled even with an unattend.xml answer file.
-
-- The -Drivers is now a switch, and if enabled, will look for driver packages or files placed into the script's Resources directory.
-
-- To install drivers, simply put them into the Resources directory and use the -Drivers switch.
+- The -Features function has been removed.
 
 - There is a new -DaRT switch that will apply Microsoft DaRT 10 to the required images.
 
 - It applies the DaRT WIM files in the Resources directory to the appropriate images.
 
-- These are WIM files made by me, and are compressed using recovery compression.
+- These are WIM files compressed using recovery compression.
 
 - In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
 
