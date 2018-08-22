@@ -58,7 +58,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.1.1.0
-		Last updated:	08/20/2018
+		Last updated:	08/22/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -549,11 +549,11 @@ If ($CheckVersion -like "10.*")
 		$Error.Clear()
 		Out-Log -Content "Mounting Image." -Level Info
 		$MountWindowsImage = @{
-			ImagePath		     = $InstallWim
-			Index			     = $Index
-			Path				 = $MountFolder
-			ScratchDirectory	 = $ScratchFolder
-			LogPath			     = $DISMLog
+			ImagePath		   = $InstallWim
+			Index			   = $Index
+			Path			   = $MountFolder
+			ScratchDirectory   = $ScratchFolder
+			LogPath		       = $DISMLog
 		}
 		[void](Mount-WindowsImage @MountWindowsImage)
 		$StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
@@ -608,11 +608,11 @@ If ($MetroApps)
 				$PackageName | ForEach {
 					Out-Log -Content "Removing Provisioned App Package: $($_.Split('_')[0])" -Level Info
 					$RemoveSelectAppx = @{
-						Path			   = $MountFolder
-						PackageName	       = $($_)
-						ScratchDirectory   = $ScratchFolder
-						LogPath		       = $DISMLog
-						ErrorAction	       = "Stop"
+						Path			    = $MountFolder
+						PackageName		    = $($_)
+						ScratchDirectory    = $ScratchFolder
+						LogPath			    = $DISMLog
+						ErrorAction		    = "Stop"
 					}
 					[void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
 				}
@@ -623,11 +623,11 @@ If ($MetroApps)
 			Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
 				Out-Log -Content "Removing Provisioned App Package: $($_.DisplayName)" -Level Info
 				$RemoveAllAppx = @{
-					Path			   = $MountFolder
-					PackageName	       = $($_.PackageName)
-					ScratchDirectory   = $ScratchFolder
-					LogPath		       = $DISMLog
-					ErrorAction	       = "Stop"
+					Path			    = $MountFolder
+					PackageName		    = $($_.PackageName)
+					ScratchDirectory    = $ScratchFolder
+					LogPath			    = $DISMLog
+					ErrorAction		    = "Stop"
 				}
 				[void](Remove-AppxProvisionedPackage @RemoveAllAppx)
 			}
@@ -714,10 +714,10 @@ If ($Packages)
 			$PackageName | ForEach {
 				Out-Log -Content "Removing Windows Capability Package: $($_.Split('~')[0])" -Level Info
 				$CapabilityPackage = @{
-					Path    = $MountFolder
-					Name    = $($_)
+					Path	  = $MountFolder
+					Name	  = $($_)
 					ScratchDirectory = $ScratchFolder
-					LogPath = $DISMLog
+					LogPath   = $DISMLog
 					ErrorAction = "Stop"
 				}
 				[void](Remove-WindowsCapability @CapabilityPackage)
@@ -872,11 +872,11 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 			Write-Output ''
 			Out-Log -Content "Disabling Windows Optional Feature: Windows-Defender-Default-Defintions" -Level Info
 			$DisableDefenderFeature = @{
-				Path			   = $MountFolder
-				FeatureName	       = "Windows-Defender-Default-Definitions"
-				ScratchDirectory   = $ScratchFolder
-				LogPath		       = $DISMLog
-				ErrorAction	       = "Stop"
+				Path			    = $MountFolder
+				FeatureName		    = "Windows-Defender-Default-Definitions"
+				ScratchDirectory    = $ScratchFolder
+				LogPath			    = $DISMLog
+				ErrorAction		    = "Stop"
 			}
 			[void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
 		}
@@ -1933,39 +1933,39 @@ If ($DaRT)
 				$NewBootMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "BootMount_$(Get-Random)"))
 				If ($NewBootMount) { $BootMount = Get-Item -LiteralPath "$ScriptDirectory\$NewBootMount" }
 				$MountBootImage = @{
-					Path			   = $BootMount
-					ImagePath		   = $BootWim
-					Index			   = 2
-					ScratchDirectory   = $ScratchFolder
-					LogPath		       = $DISMLog
-					ErrorAction	       = "Stop"
+					Path			    = $BootMount
+					ImagePath		    = $BootWim
+					Index			    = 2
+					ScratchDirectory    = $ScratchFolder
+					LogPath			    = $DISMLog
+					ErrorAction		    = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Mounting the Boot Image." -Level Info
 				[void](Mount-WindowsImage @MountBootImage)
 				$MSDaRT10Boot = @{
-					ImagePath	  = "$DaRTPath\MSDaRT10.wim"
-					Index		  = 1
-					ApplyPath	  = $BootMount
+					ImagePath    = "$DaRTPath\MSDaRT10.wim"
+					Index	     = 1
+					ApplyPath    = $BootMount
 					CheckIntegrity = $true
-					Verify	      = $true
+					Verify	     = $true
 					ScratchDirectory = $ScratchFolder
-					LogPath	      = $DISMLog
-					ErrorAction   = "Stop"
+					LogPath	     = $DISMLog
+					ErrorAction  = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Boot Image." -Level Info
 				[void](Expand-WindowsImage @MSDaRT10Boot)
 				Start-Sleep 3
 				$DeguggingToolsBoot = @{
-					ImagePath	  = "$DaRTPath\DebuggingTools_$($CodeName).wim"
-					Index		  = 1
-					ApplyPath	  = $BootMount
+					ImagePath    = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+					Index	     = 1
+					ApplyPath    = $BootMount
 					CheckIntegrity = $true
-					Verify	      = $true
+					Verify	     = $true
 					ScratchDirectory = $ScratchFolder
-					LogPath	      = $DISMLog
-					ErrorAction   = "Stop"
+					LogPath	     = $DISMLog
+					ErrorAction  = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Boot Image." -Level Info
@@ -2007,32 +2007,18 @@ If ($DaRT)
 				$NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "RecoveryMount_$(Get-Random)" -ErrorAction Stop))
 				If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath "$ScriptDirectory\$NewRecoveryMount" }
 				$MountRecoveryImage = @{
-					Path			   = $RecoveryMount
-					ImagePath		   = $RecoveryWim
-					Index			   = 1
-					ScratchDirectory   = $ScratchFolder
-					LogPath		       = $DISMLog
-					ErrorAction	       = "Stop"
+					Path			    = $RecoveryMount
+					ImagePath		    = $RecoveryWim
+					Index			    = 1
+					ScratchDirectory    = $ScratchFolder
+					LogPath			    = $DISMLog
+					ErrorAction		    = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Mounting the Recovery Image." -Level Info
 				[void](Mount-WindowsImage @MountRecoveryImage)
 				$MSDaRT10Recovery = @{
-					ImagePath	  = "$DaRTPath\MSDaRT10.wim"
-					Index		  = 1
-					ApplyPath	  = $RecoveryMount
-					CheckIntegrity = $true
-					Verify	      = $true
-					ScratchDirectory = $ScratchFolder
-					LogPath	      = $DISMLog
-					ErrorAction   = "Stop"
-				}
-				Write-Output ''
-				Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Recovery Image." -Level Info
-				[void](Expand-WindowsImage @MSDaRT10Recovery)
-				Start-Sleep 3
-				$DeguggingToolsRecovery = @{
-					ImagePath    = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+					ImagePath    = "$DaRTPath\MSDaRT10.wim"
 					Index	     = 1
 					ApplyPath    = $RecoveryMount
 					CheckIntegrity = $true
@@ -2040,6 +2026,20 @@ If ($DaRT)
 					ScratchDirectory = $ScratchFolder
 					LogPath	     = $DISMLog
 					ErrorAction  = "Stop"
+				}
+				Write-Output ''
+				Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Recovery Image." -Level Info
+				[void](Expand-WindowsImage @MSDaRT10Recovery)
+				Start-Sleep 3
+				$DeguggingToolsRecovery = @{
+					ImagePath	  = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+					Index		  = 1
+					ApplyPath	  = $RecoveryMount
+					CheckIntegrity = $true
+					Verify	      = $true
+					ScratchDirectory = $ScratchFolder
+					LogPath	      = $DISMLog
+					ErrorAction   = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Recovery Image." -Level Info
@@ -2113,13 +2113,13 @@ If ($Drivers)
 			$Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
 			Out-Log -Content "Injecting Driver Packages." -Level Info
 			$InjectDriverPackages = @{
-				Path			    = $MountFolder
-				Driver			    = $Drivers
-				Recurse			    = $true
-				ForceUnsigned	    = $true
-				ScratchDirectory    = $ScratchFolder
-				LogPath			    = $DISMLog
-				ErrorAction		    = "Stop"
+				Path				 = $MountFolder
+				Driver			     = $Drivers
+				Recurse			     = $true
+				ForceUnsigned	     = $true
+				ScratchDirectory	 = $ScratchFolder
+				LogPath			     = $DISMLog
+				ErrorAction		     = "Stop"
 			}
 			[void](Add-WindowsDriver @InjectDriverPackages)
 			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
@@ -2151,15 +2151,15 @@ If ($NetFx3)
 			$Host.UI.RawUI.WindowTitle = "Applying Payload and Enabling NetFx3."
 			Out-Log -Content "Applying the .NET Framework 3 payload and enabling NetFx3." -Level Info
 			$EnableNetFx3 = @{
-				FeatureName		    = "NetFx3"
-				Path			    = $MountFolder
-				All				    = $true
-				LimitAccess		    = $true
-				LogPath			    = $DISMLog
-				NoRestart		    = $true
-				ScratchDirectory    = $ScratchFolder
-				Source			    = $NetFx3
-				ErrorAction		    = "Stop"
+				FeatureName		     = "NetFx3"
+				Path				 = $MountFolder
+				All				     = $true
+				LimitAccess		     = $true
+				LogPath			     = $DISMLog
+				NoRestart		     = $true
+				ScratchDirectory	 = $ScratchFolder
+				Source			     = $NetFx3
+				ErrorAction		     = "Stop"
 			}
 			[void](Enable-WindowsOptionalFeature @EnableNetFx3)
 		}

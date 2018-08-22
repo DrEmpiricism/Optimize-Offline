@@ -1,10 +1,12 @@
-## 3.1.1.0 (08-21-2018)
+## 3.1.1.0 (08-22-2018)
 
-- The OOBE unattend.xml was updated to further increase speed of the Windows Setup proccess as it now applies the input language of the Windows Image and inputs it into the answer file.
+- The OOBE unattend.xml was updated to further increase speed of the Windows Setup process, as it now applies the input language of the Windows Image into the answer file.
 
 - Increased the scope of image finalization clean-up process. 
 
-- Updated some of the custom registry entries and context menu features.  Restart Explorer, for example, now uses PowerShell instead of CMD and likewise requires no accompanying files.
+- Updated a few custom registry entries and context menu features.  Restart Explorer, for example, now uses PowerShell instead of CMD and likewise requires no accompanying files.
+
+- The ransomware expoitable SMBv1 Protocol and Client Windows Optional Features are now automatically disabled in Windows 10 editions that have them enabled by default.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
