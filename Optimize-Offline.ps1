@@ -57,8 +57,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.0.9
-		Last updated:	08/19/2018
+		Version:        3.1.1.0
+		Last updated:	08/20/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -67,9 +67,9 @@ Param
 	[Parameter(Mandatory = $true,
 			   HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
 	[ValidateScript({
-			If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
-			ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
-			Else { Throw "$_ is not a valid image path." }
+			If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ([IO.FileInfo]$_).Extension -eq ".ISO") { $_ }
+			ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ([IO.FileInfo]$_).Extension -eq ".WIM") { $_ }
+			Else { Throw "Invalid image path: $_" }
 		})]
 	[Alias('ISO', 'WIM', 'Image', 'Source')]
 	[string]$ImagePath,
@@ -80,6 +80,7 @@ Param
 			   HelpMessage = 'The build number of the Windows image being optimized.')]
 	[ValidateRange(15063, 18204)]
 	[int]$Build,
+	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal or performs a complete removal of all packages.')]
 	[ValidateSet('Select', 'All')]
 	[Alias('Appx')]
 	[string]$MetroApps = 'Select',
@@ -548,11 +549,11 @@ If ($CheckVersion -like "10.*")
 		$Error.Clear()
 		Out-Log -Content "Mounting Image." -Level Info
 		$MountWindowsImage = @{
-			ImagePath		    = $InstallWim
-			Index			    = $Index
-			Path			    = $MountFolder
-			ScratchDirectory    = $ScratchFolder
-			LogPath			    = $DISMLog
+			ImagePath		     = $InstallWim
+			Index			     = $Index
+			Path				 = $MountFolder
+			ScratchDirectory	 = $ScratchFolder
+			LogPath			     = $DISMLog
 		}
 		[void](Mount-WindowsImage @MountWindowsImage)
 		$StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
@@ -607,11 +608,11 @@ If ($MetroApps)
 				$PackageName | ForEach {
 					Out-Log -Content "Removing Provisioned App Package: $($_.Split('_')[0])" -Level Info
 					$RemoveSelectAppx = @{
-						Path			  = $MountFolder
-						PackageName	      = $($_)
-						ScratchDirectory  = $ScratchFolder
-						LogPath		      = $DISMLog
-						ErrorAction	      = "Stop"
+						Path			   = $MountFolder
+						PackageName	       = $($_)
+						ScratchDirectory   = $ScratchFolder
+						LogPath		       = $DISMLog
+						ErrorAction	       = "Stop"
 					}
 					[void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
 				}
@@ -622,11 +623,11 @@ If ($MetroApps)
 			Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
 				Out-Log -Content "Removing Provisioned App Package: $($_.DisplayName)" -Level Info
 				$RemoveAllAppx = @{
-					Path			  = $MountFolder
-					PackageName	      = $($_.PackageName)
-					ScratchDirectory  = $ScratchFolder
-					LogPath		      = $DISMLog
-					ErrorAction	      = "Stop"
+					Path			   = $MountFolder
+					PackageName	       = $($_.PackageName)
+					ScratchDirectory   = $ScratchFolder
+					LogPath		       = $DISMLog
+					ErrorAction	       = "Stop"
 				}
 				[void](Remove-AppxProvisionedPackage @RemoveAllAppx)
 			}
@@ -713,10 +714,10 @@ If ($Packages)
 			$PackageName | ForEach {
 				Out-Log -Content "Removing Windows Capability Package: $($_.Split('~')[0])" -Level Info
 				$CapabilityPackage = @{
-					Path	 = $MountFolder
-					Name	 = $($_)
+					Path    = $MountFolder
+					Name    = $($_)
 					ScratchDirectory = $ScratchFolder
-					LogPath  = $DISMLog
+					LogPath = $DISMLog
 					ErrorAction = "Stop"
 				}
 				[void](Remove-WindowsCapability @CapabilityPackage)
@@ -761,7 +762,6 @@ If ($MetroAppsComplete.Equals($true))
 	}
 	Catch
 	{
-		Write-Output ''
 		Out-Log -Content "An error occurred removing Provisoned App Package services." -Level Error
 		Exit-Script
 		Break
@@ -872,11 +872,11 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 			Write-Output ''
 			Out-Log -Content "Disabling Windows Optional Feature: Windows-Defender-Default-Defintions" -Level Info
 			$DisableDefenderFeature = @{
-				Path				 = $MountFolder
-				FeatureName		     = "Windows-Defender-Default-Definitions"
-				ScratchDirectory	 = $ScratchFolder
-				LogPath			     = $DISMLog
-				ErrorAction		     = "Stop"
+				Path			   = $MountFolder
+				FeatureName	       = "Windows-Defender-Default-Definitions"
+				ScratchDirectory   = $ScratchFolder
+				LogPath		       = $DISMLog
+				ErrorAction	       = "Stop"
 			}
 			[void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
 		}
@@ -969,48 +969,34 @@ If ($Registry)
 		Write-Output "Disabling Cortana Outgoing Network Traffic." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
 		New-Container -Path "HKLM:\SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" -ErrorAction Stop
-		$CortanaUriServer = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana ActionUriServer.exe"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\ActionUriServer.exe|Name=Block Cortana ActionUriServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaUriServer
-		$CortanaPlacesServer = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana PlacesServer.exe"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\PlacesServer.exe|Name=Block Cortana PlacesServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaPlacesServer
-		$CortanaReminderServer = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana RemindersServer.exe"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersServer.exe|Name=Block Cortana RemindersServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaReminderServer
-		$CortanaReminderApp = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana RemindersShareTargetApp.exe"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersShareTargetApp.exe|Name=Block Cortana RemindersShareTargetApp.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaReminderApp
-		$CortanaSearchUI = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana SearchUI.exe"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe|Name=Block Cortana SearchUI.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaSearchUI
-		$CortanaPackage = @{
-			Path	  = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-			Name	  = "Block Cortana Package"
-			Value	  = "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|Name=Block Cortana Package|Desc=Block Cortana Outbound UDP/TCP Traffic|AppPkgId=S-1-15-2-1861897761-1695161497-2927542615-642690995-327840285-2659745135-2630312742|Platform=2:6:2|Platform2=GTEQ|"
-			Type	  = "String"
-		}
-		Set-ItemProperty @CortanaPackage
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana ActionUriServer.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\ActionUriServer.exe|Name=Block Cortana ActionUriServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana PlacesServer.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\PlacesServer.exe|Name=Block Cortana PlacesServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana RemindersServer.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersServer.exe|Name=Block Cortana RemindersServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana RemindersServer.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersServer.exe|Name=Block Cortana RemindersServer.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana RemindersShareTargetApp.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\RemindersShareTargetApp.exe|Name=Block Cortana RemindersShareTargetApp.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana SearchUI.exe" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|App=C:\Windows\SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe|Name=Block Cortana SearchUI.exe|Desc=Block Cortana Outbound UDP/TCP Traffic|" `
+						 -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+						 -Name "Block Cortana Package" `
+						 -Value "v2.26|Action=Block|Active=TRUE|Dir=Out|RA42=IntErnet|RA62=IntErnet|Name=Block Cortana Package|Desc=Block Cortana Outbound UDP/TCP Traffic|AppPkgId=S-1-15-2-1861897761-1695161497-2927542615-642690995-327840285-2659745135-2630312742|Platform=2:6:2|Platform2=GTEQ|" `
+						 -Type String
 		#****************************************************************
 		Write-Output "Disabling System Telemetry and Data Collecting." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
@@ -1114,11 +1100,6 @@ If ($Registry)
 		#***************************************************************
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction Stop
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord
-		#***************************************************************
-		Write-Output "Enabling the MeltDown (CVE-2017-5754) Compatibility Flag." >> "$WorkFolder\Registry-Optimizations.log"
-		#****************************************************************
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -ErrorAction Stop
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "CADCA5FE-87D3-4B96-B7FB-A231484277CC" -Value 0 -Type DWord
 		#****************************************************************
 		Write-Output "Disabling Explorer Tips, Sync Notifications and Document Tracking." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
@@ -1338,21 +1319,9 @@ If ($Registry)
 		Write-Output "Adding This PC Icon to Desktop." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -ErrorAction Stop
-		$NewStartPanel = @{
-			Path	  = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"
-			Name	  = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
-			Value	  = 0
-			Type	  = "DWord"
-		}
-		Set-ItemProperty @NewStartPanel
 		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -ErrorAction Stop
-		$ClassicStartMenu = @{
-			Path	  = "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"
-			Name	  = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
-			Value	  = 0
-			Type	  = "DWord"
-		}
-		Set-ItemProperty @ClassicStartMenu
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
+		Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
 		#****************************************************************
 		Write-Output "Adding 'Reboot to Recovery' to My PC." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
@@ -1528,25 +1497,19 @@ If ($Registry)
 			Write-Output "Cleaning-up Immersive Control Panel Settings Links." >> "$WorkFolder\Registry-Optimizations.log"
 			#****************************************************************
 			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
-			If ($SystemAppsComplete -eq $true -and $RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
+			If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 			{
-				$ImmersiveLinks = @{
-					Path	  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-					Name	  = "SettingsPageVisibility"
-					Value	  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider;windowsdefender"
-					Type	  = "String"
-				}
-				Set-ItemProperty @ImmersiveLinks
+				Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+								 -Name "SettingsPageVisibility" `
+								 -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider;windowsdefender" `
+								 -Type String
 			}
 			Else
 			{
-				$ImmersiveLinks = @{
-					Path	  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-					Name	  = "SettingsPageVisibility"
-					Value	  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider"
-					Type	  = "String"
-				}
-				Set-ItemProperty @ImmersiveLinks
+				Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+								 -Name "SettingsPageVisibility" `
+								 -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;phone;privacy-phonecall;privacy-callhistory;phone-defaultapps;windowsinsider" `
+								 -Type String
 			}
 		}
 		ElseIf ($Build -lt '16273')
@@ -1555,25 +1518,19 @@ If ($Registry)
 			Write-Output "Cleaning-up Immersive Control Panel Settings Links." >> "$WorkFolder\Registry-Optimizations.log"
 			#****************************************************************
 			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
-			If ($SystemAppsComplete -eq $true -and $RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
+			If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 			{
-				$ImmersiveLinks = @{
-					Path	  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-					Name	  = "SettingsPageVisibility"
-					Value	  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider;windowsdefender"
-					Type	  = "String"
-				}
-				Set-ItemProperty @ImmersiveLinks
+				Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+								 -Name "SettingsPageVisibility" `
+								 -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider;windowsdefender" `
+								 -Type String
 			}
 			Else
 			{
-				$ImmersiveLinks = @{
-					Path	  = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-					Name	  = "SettingsPageVisibility"
-					Value	  = "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider"
-					Type	  = "String"
-				}
-				Set-ItemProperty @ImmersiveLinks
+				Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+								 -Name "SettingsPageVisibility" `
+								 -Value "hide:cortana-language;cortana-moredetails;cortana-notifications;datausage;maps;network-dialup;network-mobilehotspot;easeofaccess-narrator;easeofaccess-magnifier;easeofaccess-highcontrast;easeofaccess-closedcaptioning;easeofaccess-keyboard;easeofaccess-mouse;easeofaccess-otheroptions;holographic-audio;tabletmode;typing;sync;pen;speech;findmydevice;regionlanguage;printers;gaming-gamebar;gaming-gamemode;gaming-gamedvr;gaming-broadcasting;gaming-trueplay;gaming-xboxnetworking;windowsinsider" `
+								 -Type String
 			}
 		}
 		#****************************************************************
@@ -1691,21 +1648,13 @@ If ($Registry)
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell" -Name "Position" -Value "Bottom" -Type String
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\Background\shell\ElevatedPowerShell\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Start-Process CMD -ArgumentList '/S,/K,PUSHD,%V && START PowerShell && EXIT' -Verb RunAs`"" -Type ExpandString
 		#****************************************************************
-		Write-Output "Adding 'Install CAB' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
-		#****************************************************************
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -ErrorAction Stop
-		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -ErrorAction Stop
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "(default)" -Value "Install" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs" -Name "HasLUAShield" -Value "" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CABFolder\Shell\RunAs\Command" -Name "(default)" -Value "CMD /K DISM /ONLINE /ADD-PACKAGE /PACKAGEPATH:`"%1`"" -Type ExpandString
-		#****************************************************************
 		Write-Output "Adding 'Restart Explorer' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
 		#****************************************************************
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -ErrorAction Stop
 		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -ErrorAction Stop
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Icon" -Value "Explorer.exe" -Type String
 		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String
-		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Get-Process -Name explorer | Stop-Process`"" -Type String
+		Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"(Get-Process -Name explorer).Kill()`"" -Type String
 		#****************************************************************
 		$SetRegistryComplete = $true
 		If ($Registry -eq "Hardened")
@@ -1713,8 +1662,7 @@ If ($Registry)
 			#****************************************************************
 			Write-Output "Disabling System and Settings Syncronization." >> "$WorkFolder\Registry-Optimizations.log"
 			#****************************************************************
-			@("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") |
-			ForEach {
+			@("Accessibility", "AppSync", "BrowserSettings", "Credentials", "DesktopTheme", "Language", "PackageState", "Personalization", "StartLayout", "Windows") | ForEach {
 				New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -ErrorAction Stop
 				Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SettingSync\Groups\$_" -Name "Enabled" -Value 0 -Type DWord
 			}
@@ -1985,12 +1933,12 @@ If ($DaRT)
 				$NewBootMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "BootMount_$(Get-Random)"))
 				If ($NewBootMount) { $BootMount = Get-Item -LiteralPath "$ScriptDirectory\$NewBootMount" }
 				$MountBootImage = @{
-					Path				 = $BootMount
-					ImagePath		     = $BootWim
-					Index			     = 2
-					ScratchDirectory	 = $ScratchFolder
-					LogPath			     = $DISMLog
-					ErrorAction		     = "Stop"
+					Path			   = $BootMount
+					ImagePath		   = $BootWim
+					Index			   = 2
+					ScratchDirectory   = $ScratchFolder
+					LogPath		       = $DISMLog
+					ErrorAction	       = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Mounting the Boot Image." -Level Info
@@ -2059,12 +2007,12 @@ If ($DaRT)
 				$NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "RecoveryMount_$(Get-Random)" -ErrorAction Stop))
 				If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath "$ScriptDirectory\$NewRecoveryMount" }
 				$MountRecoveryImage = @{
-					Path				 = $RecoveryMount
-					ImagePath		     = $RecoveryWim
-					Index			     = 1
-					ScratchDirectory	 = $ScratchFolder
-					LogPath			     = $DISMLog
-					ErrorAction		     = "Stop"
+					Path			   = $RecoveryMount
+					ImagePath		   = $RecoveryWim
+					Index			   = 1
+					ScratchDirectory   = $ScratchFolder
+					LogPath		       = $DISMLog
+					ErrorAction	       = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Mounting the Recovery Image." -Level Info
@@ -2084,14 +2032,14 @@ If ($DaRT)
 				[void](Expand-WindowsImage @MSDaRT10Recovery)
 				Start-Sleep 3
 				$DeguggingToolsRecovery = @{
-					ImagePath	  = "$DaRTPath\DebuggingTools_$($CodeName).wim"
-					Index		  = 1
-					ApplyPath	  = $RecoveryMount
+					ImagePath    = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+					Index	     = 1
+					ApplyPath    = $RecoveryMount
 					CheckIntegrity = $true
-					Verify	      = $true
+					Verify	     = $true
 					ScratchDirectory = $ScratchFolder
-					LogPath	      = $DISMLog
-					ErrorAction   = "Stop"
+					LogPath	     = $DISMLog
+					ErrorAction  = "Stop"
 				}
 				Write-Output ''
 				Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Recovery Image." -Level Info
@@ -2133,7 +2081,7 @@ If ($DaRT)
 		Catch
 		{
 			Write-Output ''
-			Out-Log -Content "Failed to apply Microsoft DaRT 10 to the Recovery Image." -Level Error
+			Out-Log -Content "Failed to apply Microsoft DaRT 10." -Level Error
 			If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
 			{
 				Write-Output ''
@@ -2158,7 +2106,7 @@ If ($Drivers)
 {
 	Try
 	{
-		If ((Test-Path -Path $Drivers -PathType Container) -and (Get-ChildItem -Path $Drivers -Recurse -Include "*.inf"))
+		If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf)
 		{
 			If ($DaRTApplied.Equals($true)) { Clear-Host }
 			Else { Write-Output '' }
@@ -2176,26 +2124,10 @@ If ($Drivers)
 			[void](Add-WindowsDriver @InjectDriverPackages)
 			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
 		}
-		ElseIf (Test-Path -Path $Drivers -PathType Leaf -Include "*.inf")
-		{
-			$Host.UI.RawUI.WindowTitle = "Injecting Driver Package."
-			Write-Output ''
-			Out-Log -Content "Injecting Driver Package." -Level Info
-			$InjectDriverPackage = @{
-				Path			    = $MountFolder
-				Driver			    = $Drivers
-				ForceUnsigned	    = $true
-				ScratchDirectory    = $ScratchFolder
-				LogPath			    = $DISMLog
-				ErrorAction		    = "Stop"
-			}
-			[void](Add-WindowsDriver @InjectDriverPackage)
-			Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-		}
 		Else
 		{
 			Write-Output ''
-			Out-Log -Content "$($Drivers) is not a valid driver package path." -Level Error
+			Out-Log -Content "No valid driver packages found in $($Drivers)." -Level Error
 			Start-Sleep 3
 		}
 	}
@@ -2219,12 +2151,14 @@ If ($NetFx3)
 			$Host.UI.RawUI.WindowTitle = "Applying Payload and Enabling NetFx3."
 			Out-Log -Content "Applying the .NET Framework 3 payload and enabling NetFx3." -Level Info
 			$EnableNetFx3 = @{
-				Path			    = $MountFolder
-				ScratchDirectory    = $ScratchFolder
-				LogPath			    = $DISMLog
 				FeatureName		    = "NetFx3"
-				Source			    = $NetFx3
+				Path			    = $MountFolder
 				All				    = $true
+				LimitAccess		    = $true
+				LogPath			    = $DISMLog
+				NoRestart		    = $true
+				ScratchDirectory    = $ScratchFolder
+				Source			    = $NetFx3
 				ErrorAction		    = "Stop"
 			}
 			[void](Enable-WindowsOptionalFeature @EnableNetFx3)
@@ -2239,13 +2173,15 @@ If ($NetFx3)
 	}
 }
 
-Try
+If ($SetRegistryComplete.Equals($true))
 {
-	If ($SetRegistryComplete.Equals($true))
-	{
-		New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-		$SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-		@'
+	If ($NetFx3) { Write-Output '' }
+	$Host.UI.RawUI.WindowTitle = "Generating post-installation and OOBE setup files."
+	Out-Log -Content "Generating post-installation and OOBE setup files." -Level Info
+	Start-Sleep 3
+	New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+	$SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+	@'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2276,6 +2212,7 @@ SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL && SCHTASKS /C
 SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BackupTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackupTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "BthSQM" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\BthSQM" /DISABLE >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Cellular" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Management\Provisioning\Cellular" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "CreateObjectTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\CloudExperienceHost\" /Disable >NUL
@@ -2292,15 +2229,16 @@ SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\M
 SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "StartupAppTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "UpdateLibrary" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Media Sharing\UpdateLibrary" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 '@ | Out-File -FilePath $SetupScript -Encoding ASCII
-		$XboxTasks = @'
+	$XboxTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 '@
-		$DefenderTasks = @'
+	$DefenderTasks = @'
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
@@ -2308,22 +2246,46 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS
 TASKKILL /F /IM MSASCuiL.exe >NUL
 REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
 '@
-		$SetupEnd = @'
+	$SetupEnd = @'
 POWERCFG -H OFF >NUL
+NBTSTAT -R >NUL
+IPCONFIG /FLUSHDNS >NUL
+NET STOP DNSCACHE >NUL
+NET START DNSCACHE >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 DEL "%~f0"
 '@
-		If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $SetupEnd -Append -Encoding ASCII }
-		ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $SetupEnd -Append -Encoding ASCII }
-		ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $SetupEnd -Append -Encoding ASCII }
-		Else { Out-File -FilePath $SetupScript -InputObject $SetupEnd -Append -Encoding ASCII }
-	}
+	If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $SetupEnd -Append -Encoding ASCII }
+	ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $SetupEnd -Append -Encoding ASCII }
+	ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $SetupEnd -Append -Encoding ASCII }
+	Else { Out-File -FilePath $SetupScript -InputObject $SetupEnd -Append -Encoding ASCII }
+}
+
+Try
+{
 	$Language = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Languages
+	@'
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="offlineServicing">
+        <component name="Microsoft-Windows-Embedded-EmbeddedLogon" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="NonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <UIVerbosityLevel>1</UIVerbosityLevel>
+            <HideAutoLogonUI>1</HideAutoLogonUI>
+            <BrandingNeutral>13</BrandingNeutral>
+            <AnimationDisabled>1</AnimationDisabled>
+        </component>
+    </settings>
+</unattend>
+'@ | Out-File -FilePath "$WorkFolder\OfflineServicing.xml" -Encoding UTF8
+	[void](Use-WindowsUnattend -Path $MountFolder -UnattendPath "$WorkFolder\OfflineServicing.xml" -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
 	If ($Language)
 	{
+		$TimeZone = (Get-TimeZone).Id
+		$DST = (Get-TimeZone).SupportsDaylightSavingTime
+		If ($DST -eq "True") { $DST = "false" }
+		Else { $DST = "true" }
 		New-Container -Path "$MountFolder\Windows\Panther"
-		$Unattend = "$MountFolder\Windows\Panther\unattend.xml"
 		@"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
@@ -2337,15 +2299,17 @@ DEL "%~f0"
         <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <OOBE>
                 <HideEULAPage>true</HideEULAPage>
+                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
                 <UnattendEnableRetailDemo>false</UnattendEnableRetailDemo>
                 <ProtectYourPC>1</ProtectYourPC>
-                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
             </OOBE>
+            <DisableAutoDaylightTimeSet>$DST</DisableAutoDaylightTimeSet>
+            <TimeZone>$TimeZone</TimeZone>
         </component>
     </settings>
 </unattend>
-"@ | Out-File -FilePath $Unattend -Encoding UTF8
+"@ | Out-File -FilePath "$MountFolder\Windows\Panther\unattend.xml" -Encoding UTF8
 	}
 	If ((Test-Connection -ComputerName $Env:COMPUTERNAME -Quiet).Equals($true))
 	{
@@ -2356,17 +2320,66 @@ DEL "%~f0"
 }
 Finally
 {
-	$EndHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
 	Clear-Host
+}
+
+Try
+{
+	$Host.UI.RawUI.WindowTitle = "Cleaning-up Image."
+	Out-Log -Content "Cleaning-up Image."
+	If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin")
+	{
+		[void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
+		Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*")
+	{
+		[void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
+		Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*")
+	{
+		[void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
+		Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\Windows\inf\*.log")
+	{
+		[void](Set-FileOwnership -Path "$MountFolder\Windows\inf\*.log" -ErrorAction SilentlyContinue)
+		Remove-Item -Path "$MountFolder\Windows\inf\*.log" -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*")
+	{
+		[void](Set-FileOwnership -Path "$MountFolder\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
+		Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\Windows\WinSxS\Backup\*.*")
+	{
+		Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	$RecycleBin = "$MountFolder\" + '$Recycle.Bin'
+	If (Test-Path -Path $RecycleBin)
+	{
+		Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+	If (Test-Path -Path "$MountFolder\PerfLogs")
+	{
+		Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+	}
+}
+Finally
+{
+	$EndHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
 }
 
 If ($EndHealthCheck -eq "Healthy")
 {
+	Write-Output ''
 	Out-Log -Content "The image health state has returned as [Healthy]" -Level Info
 	Start-Sleep 3
 }
 Else
 {
+	Write-Output ''
 	Out-Log -Content "The image has been flagged for corruption. Discarding optimizations." -Level Error
 	Exit-Script
 	Break
@@ -2374,12 +2387,9 @@ Else
 
 Try
 {
-	$Host.UI.RawUI.WindowTitle = "Saving and Dismounting."
+	$Host.UI.RawUI.WindowTitle = "Saving and Dismounting Image."
 	Write-Output ''
 	Out-Log -Content "Saving and Dismounting." -Level Info
-	$RecycleBin = "$MountFolder\" + '$Recycle.Bin'
-	If (Test-Path -Path $RecycleBin) { Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
-	If (Test-Path -Path "$MountFolder\PerfLogs") { Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue }
 	$DismountWindowsImage = @{
 		Path				 = $MountFolder
 		Save				 = $true

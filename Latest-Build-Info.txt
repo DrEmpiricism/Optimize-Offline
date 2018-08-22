@@ -1,3 +1,13 @@
+## 3.1.1.0 (08-21-2018)
+
+- The OOBE unattend.xml was updated to further increase speed of the Windows Setup proccess as it now applies the input language of the Windows Image and inputs it into the answer file.
+
+- Increased the scope of image finalization clean-up process. 
+
+- Updated some of the custom registry entries and context menu features.  Restart Explorer, for example, now uses PowerShell instead of CMD and likewise requires no accompanying files.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.0.9 (08-19-2018)
 
 - Reverted the way drivers and NetFx3 are integrated in that a full path to their locations are required when using their parameters. This prevents the chances of any packages accidently being applied to an image.
