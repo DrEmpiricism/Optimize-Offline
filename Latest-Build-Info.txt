@@ -1,3 +1,13 @@
+## 3.1.1.1 (08-23-2018)
+
+- Updated the SetupComplete.cmd script that gets generated and incorporated some additional task strings.
+
+- The script now cleans-up the WindowsApps directory as part of the Provisioned App Package removal proccess.
+
+- Optimized some process functions and removed some unneccessary code.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.1.0 (08-22-2018)
 
 - The OOBE unattend.xml was updated to further increase speed of the Windows Setup process, as it now applies the input language of the Windows Image into the answer file.
