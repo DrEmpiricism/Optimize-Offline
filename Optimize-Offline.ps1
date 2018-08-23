@@ -26,6 +26,9 @@
 	.PARAMETER Packages
 		Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
 	
+	.PARAMETER OneDrive
+		Performs a complete removal of Microsoft OneDrive, its associated directories and registry keys.
+	
 	.PARAMETER Registry
 		Default = Applies optimized registry values into the registry hives of the image.
 		Hardened = Applies the default optimized registry values as well as additional values to further increase device security and restrict non-explicit access.
@@ -88,6 +91,8 @@ Param
     [switch]$SystemApps,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
     [switch]$Packages,
+    [Parameter(HelpMessage = 'Performs a complete removal of Microsoft OneDrive, its associated directories and registry keys.')]
+    [switch]$OneDrive,
     [Parameter(HelpMessage = 'Sets optimized registry values into the offline registry hives.')]
     [ValidateSet('Default', 'Hardened')]
     [string]$Registry = 'Default',
@@ -578,9 +583,9 @@ If ($MetroApps) {
                     ErrorAction      = "Stop"
                 }
                 [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
-			}
-		}
-		$MetroAppsComplete = $true
+            }
+        }
+        $MetroAppsComplete = $true
         Clear-Host
     }
     Catch {
@@ -594,25 +599,22 @@ If ($MetroApps) {
     }
 }
 
-If ($MetroApps -eq "All" -and $MetroAppsComplete.Equals($true))
-{
-	Try
-	{
-		$Host.UI.RawUI.WindowTitle = "Performing Provisioned App Package directory clean-up."
-		Out-Log -Content "Performing Provisioned App Package directory clean-up." -Level Info
-		[void](Invoke-Expression -Command ("TAKEOWN /F `"$MountFolder\Program Files\WindowsApps`" /R") -ErrorAction Stop)
-		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -ErrorAction Stop)
-		Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps\*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
-		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /SETOWNER `"NT Service\TrustedInstaller`"") -ErrorAction Stop)
-		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:R /REMOVE `"$($Env:USERNAME)`"") -ErrorAction Stop)
-	}
-	Catch
-	{
-		Write-Output ''
-		Out-Log -Content "Provisioned App Package directory clean-up failed." -Level Error
-		Exit-Script
-		Break
-	}
+If ($MetroApps -eq "All" -and $MetroAppsComplete.Equals($true)) {
+    Try {
+        $Host.UI.RawUI.WindowTitle = "Performing Provisioned App Package directory clean-up."
+        Out-Log -Content "Performing Provisioned App Package directory clean-up." -Level Info
+        [void](Invoke-Expression -Command ("TAKEOWN /F `"$MountFolder\Program Files\WindowsApps`" /R") -ErrorAction Stop)
+        [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -ErrorAction Stop)
+        Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps\*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+        [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /SETOWNER `"NT Service\TrustedInstaller`"") -ErrorAction Stop)
+        [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:R /REMOVE `"$($Env:USERNAME)`"") -ErrorAction Stop)
+    }
+    Catch {
+        Write-Output ''
+        Out-Log -Content "Provisioned App Package directory clean-up failed." -Level Error
+        Exit-Script
+        Break
+    }
 }
 
 If ($SystemApps) {
@@ -624,18 +626,17 @@ If ($SystemApps) {
         Start-Sleep 5
         Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-        $InboxApps = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
-        $SelectSystemApps = $InboxApps | Select -Property `
+        $InboxAppsPackage = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
+        $GetSystemApps = $InboxAppsPackage | Select -Property `
         @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
         @{ Label = 'PackageName'; Expression = { ($_) } } |
             Out-GridView -Title "Remove System Applications." -PassThru
-        $AppPackage = $SelectSystemApps.PackageName
-        If ($SelectSystemApps) {
+        $SystemAppPackage = $GetSystemApps.PackageName
+        If ($GetSystemApps) {
             Clear-Host
-            $AppPackage | ForEach {
+            $SystemAppPackage | ForEach {
                 $FullKeyPath = $InboxAppsKey + '\' + $($_)
                 $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
-                Out-Log -Content "Removing System Application: $($_.Split('_')[0])" -Level Info
                 [void](Invoke-Expression -Command ('REG DELETE $AppKey /F') -ErrorAction Stop)
                 [void]$RemovedSystemApps.Add($($_.Split('_')[0]))
                 Start-Sleep 2
@@ -695,12 +696,59 @@ If ($Packages) {
     }
 }
 
+If ($OneDrive) {
+    Try {
+        $Host.UI.RawUI.WindowTitle = "Removing Microsoft OneDrive."
+        Out-Log -Content "Removing Microsoft OneDrive" -Level Info
+        Start-Sleep 3
+        [void](New-Item -Path $WorkFolder -ItemType Directory -Name "OneDriveWinSxS" -Force)
+        $OneDriveFolder = Get-Item -Path "$($WorkFolder)\OneDriveWinSxS" -Force
+        [void](Mount-OfflineHives)
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\OneDrive" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\OneDrive" -ErrorAction Stop
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSync" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableMeteredNetworkFileSync" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableLibrariesDefaultSaveToOneDrive" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\OneDrive" -Name "DisablePersonalSync" -Value 1 -Type DWord
+        If ((Get-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run") -match "OneDriveSetup") {
+            Remove-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction Stop
+        }
+        If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") {
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Force -Recurse -ErrorAction Stop
+        }
+        If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") {
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Force -Recurse -ErrorAction Stop
+        }
+        [void](Dismount-OfflineHives)
+        If (Test-Path -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk") {
+            Remove-Item -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" -Force -ErrorAction Stop
+        }
+        Get-ChildItem -Path "$MountFolder\Windows\WinSxS\*onedrive*" | Copy-Item -Destination $OneDriveFolder.FullName -Recurse -Force
+        [void](Compress-Archive -Path "$($OneDriveFolder)\*" -DestinationPath "$WorkFolder\OneDriveBackup.Zip" -CompressionLevel Optimal)
+        Remove-Item -Path $OneDriveFolder -Recurse -Force -ErrorAction SilentlyContinue
+        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\*onedrive*") {
+            [void](Set-FolderOwnership -Path $($Item.FullName))
+            Remove-Item -Path $($Item.FullName) -Recurse -Force -ErrorAction Stop
+        }
+    }
+    Catch {
+        Write-Output ''
+        Out-Log -Content "Failed to remove Microsoft OneDrive." -Level Error
+        Exit-Script
+        Break
+    }
+}
+
 If ($MetroAppsComplete.Equals($true)) {
     Try {
         If ((Get-AppxProvisionedPackage -Path $MountFolder |
                     Where DisplayName -Match "Microsoft.Wallet").Count.Equals(0) -or (Get-AppxProvisionedPackage -Path $MountFolder |
                     Where DisplayName -Match "Microsoft.WindowsMaps").Count.Equals(0)) {
             $Host.UI.RawUI.WindowTitle = "Disabling Provisioned App Package Services."
+            If ($OneDrive) { Write-Output '' }
             Out-Log -Content "Disabling Provisioned App Package services." -Level Info
             Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"") -WindowStyle Hidden -Wait
             If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") {
@@ -870,19 +918,18 @@ If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCal
     }
 }
 
-Try
-{
+Try {
     If ((Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -Like "*SMB1Protocol*").State -eq "Enabled") {
-		$Host.UI.RawUI.WindowTitle = "Disabling the heavily exploitable SMBv1 Protocol feature."
-		Write-Output ''
-		Out-Log -Content "Disabling the heavily exploitable SMBv1 Protocol feature." -Level Info
-		[void](Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -Like "*SMB1Protocol*" |
-			Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
+        $Host.UI.RawUI.WindowTitle = "Disabling the heavily exploitable SMBv1 Protocol feature."
+        Write-Output ''
+        Out-Log -Content "Disabling the heavily exploitable SMBv1 Protocol feature." -Level Info
+        [void](Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -Like "*SMB1Protocol*" |
+                Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
     }
 }
 Catch {
     Write-Output ''
-	Out-Log -Content "Failed to disable the SMBv1 Protocol feature." -Level Error
+    Out-Log -Content "Failed to disable the SMBv1 Protocol feature." -Level Error
     Exit-Script
     Break
 }
@@ -1382,28 +1429,43 @@ If ($Registry) {
         Write-Output "Removing all User Folders from This PC." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         If ($Build -ge '16273') {
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -ErrorAction Stop
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -ErrorAction Stop
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{31C0DD25-9439-4F12-BF41-7FF4EDA38722}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
+            # 3D Objects
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}" -Force -ErrorAction Stop
+            Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}" -Force -ErrorAction Stop
         }
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{a0c69a99-21c8-4671-8703-7934162fcf1d}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{7d83ee9b-2244-4e70-b1f5-5393042af1e4}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String
+        # Desktop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Force -ErrorAction Stop
+        # Documents
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}" -Force -ErrorAction Stop
+        # Downloads
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}" -Force -ErrorAction Stop
+        # Music
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Force -ErrorAction Stop
+        # Pictures
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Force -ErrorAction Stop
+        # Videos
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}" -Force -ErrorAction Stop
         #****************************************************************
         Write-Output "Removing Drives from the Navigation Pane." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        Remove-Item "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -ErrorAction Stop
-        Remove-Item "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction Stop
+        Remove-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction Stop
         #****************************************************************
         Write-Output "Cleaning-up Windows Control Panel Links." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2082,13 +2144,13 @@ If ($NetFx3) {
 }
 
 If ($SetRegistryComplete.Equals($true)) {
-    If ($NetFx3) { Write-Output '' }
+    If ($DaRT -or $Drivers -or $NetFx3) { Write-Output '' }
     $Host.UI.RawUI.WindowTitle = "Generating post-installation and OOBE setup files."
     Out-Log -Content "Generating post-installation and OOBE setup files." -Level Info
     Start-Sleep 3
     New-Container -Path "$MountFolder\Windows\Setup\Scripts"
     $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-	@'
+    @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2319,6 +2381,7 @@ Try {
     Move-Item -Path "$WorkFolder\*.log" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
     If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination $SaveFolder -Force }
+    If (Test-Path -Path "$WorkFolder\OneDriveBackup.Zip") { Move-Item -Path "$WorkFolder\OneDriveBackup.Zip" -Destination $SaveFolder -Force }
     Start-Sleep 3
     If ($Error.Count.Equals(0)) {
         Write-Output ''

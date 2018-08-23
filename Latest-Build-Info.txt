@@ -4,7 +4,11 @@
 
 - The script now cleans-up the WindowsApps directory as part of the Provisioned App Package removal proccess.
 
-- Optimized some process functions and removed some unneccessary code.
+- Added a -OneDrive switch which will remove Microsoft OneDrive, in its entirity, from the image.
+
+- The script backs up the WinSxS OneDrive directories before removing them, and then compresses them to a .ZIP archive and adds it to the save folder during the finalization process.
+
+- This will allow for re-installation of Microsoft OneDrive if it is ever necessary with the original WinSxS directory structure and folders.
 
 --------------------------------------------------------------------------------------------------------------------------------
 
