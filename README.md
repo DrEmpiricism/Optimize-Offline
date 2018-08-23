@@ -41,3 +41,12 @@ ShellExperienceHost should never be removed.
 
 # Should any Provisioned Application Packages (Metro Apps) not be removed?
 The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Store Apps Troubleshooter from working properly and likewise affect the Windows Store. It is not recommended to remove these if the Windows Store is required in the image.
+
+# What is the "defaultuser0" ghost account?
+Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
+"defaultuser0" is not a real account, however, and is a bug that has been present in Windows through countless flavors and variations. It is not added to any user groups nor does it even have a profile.
+Conversely, failing to remove the "defaultuser0" account immediately after Windows Installation completes can lead to future headaches.  As an example, if you reset Windows with the "defaultuser0" ghost account still present, upon the restart of the device, Windows will force you to log into the "defaultuser0" account to continue.
+
+Optimize-Offline remidies this issue by first setting the proper key property in the offline registry hives that enables non-elevated removal of the "defaultuser0" ghost account, and second by adding a function in the SetupComplete.cmd script that queries the registry for the SID of the "defaultuser0" ghost account, and then proceeding to remove the account, registry keys and profile directories automatically if that SID is found.
+
+This ensures the "defaultuser0" ghost account, if present, is always entirely removed immediately after the installation of Windows.
