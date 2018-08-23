@@ -57,8 +57,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.0
-		Last updated:	08/22/2018
+		Version:        3.1.1.1
+		Last updated:	08/23/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -578,9 +578,9 @@ If ($MetroApps) {
                     ErrorAction      = "Stop"
                 }
                 [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
-            }
-        }
-        $MetroAppsComplete = $true
+			}
+		}
+		$MetroAppsComplete = $true
         Clear-Host
     }
     Catch {
@@ -592,6 +592,27 @@ If ($MetroApps) {
     Finally {
         $Int = $null
     }
+}
+
+If ($MetroApps -eq "All" -and $MetroAppsComplete.Equals($true))
+{
+	Try
+	{
+		$Host.UI.RawUI.WindowTitle = "Performing Provisioned App Package directory clean-up."
+		Out-Log -Content "Performing Provisioned App Package directory clean-up." -Level Info
+		[void](Invoke-Expression -Command ("TAKEOWN /F `"$MountFolder\Program Files\WindowsApps`" /R") -ErrorAction Stop)
+		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -ErrorAction Stop)
+		Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps\*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /SETOWNER `"NT Service\TrustedInstaller`"") -ErrorAction Stop)
+		[void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:R /REMOVE `"$($Env:USERNAME)`"") -ErrorAction Stop)
+	}
+	Catch
+	{
+		Write-Output ''
+		Out-Log -Content "Provisioned App Package directory clean-up failed." -Level Error
+		Exit-Script
+		Break
+	}
 }
 
 If ($SystemApps) {
@@ -849,37 +870,19 @@ If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCal
     }
 }
 
-Try {
-    If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName SMB1Protocol).State -eq "Enabled") {
-        $Host.UI.RawUI.WindowTitle = "Disabling the SMB 1.0 Protocol feature."
-        Write-Output ''
-        Out-Log -Content "Disabling the SMB 1.0 Protocol feature." -Level Info
-        $DisableSMB1Protocol = @{
-            Path             = $MountFolder
-            FeatureName      = "SMB1Protocol"
-            ScratchDirectory = $ScratchFolder
-            LogPath          = $DISMLog
-            ErrorAction      = "Stop"
-        }
-        [void](Disable-WindowsOptionalFeature @DisableSMB1Protocol)
-        If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName SMB1Protocol-Client).State -eq "Enabled") {
-            $Host.UI.RawUI.WindowTitle = "Disabling the SMB 1.0 Client feature."
-            Write-Output ''
-            Out-Log -Content "Disabling the SMB 1.0 Client feature." -Level Info
-            $DisableSMB1Client = @{
-                Path             = $MountFolder
-                FeatureName      = "SMB1Protocol-Client"
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
-            }
-            [void](Disable-WindowsOptionalFeature @DisableSMB1Client)
-        }
+Try
+{
+    If ((Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -Like "*SMB1Protocol*").State -eq "Enabled") {
+		$Host.UI.RawUI.WindowTitle = "Disabling the heavily exploitable SMBv1 Protocol feature."
+		Write-Output ''
+		Out-Log -Content "Disabling the heavily exploitable SMBv1 Protocol feature." -Level Info
+		[void](Get-WindowsOptionalFeature -Path $MountFolder | Where FeatureName -Like "*SMB1Protocol*" |
+			Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
     }
 }
 Catch {
     Write-Output ''
-    Out-Log -Content "Failed to disable the SMB 1.0 feature." -Level Error
+	Out-Log -Content "Failed to disable the SMBv1 Protocol feature." -Level Error
     Exit-Script
     Break
 }
@@ -2085,7 +2088,7 @@ If ($SetRegistryComplete.Equals($true)) {
     Start-Sleep 3
     New-Container -Path "$MountFolder\Windows\Setup\Scripts"
     $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-    @'
+	@'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2120,17 +2123,18 @@ SCHTASKS /QUERY | FINDSTR /B /I "Cellular" >NUL && SCHTASKS /Change /TN "\Micros
 SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "CreateObjectTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\CloudExperienceHost\" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL   
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefreshTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefreshTask" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyRefresh" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyRefresh" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "KernelCeipTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Logon Synchronization" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Logon Synchronization" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsToastTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsToastTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "MapsUpdateTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Maps\MapsUpdateTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Microsoft Compatibility Appraiser" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "MNO Metadata Parser" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Mobile Broadband Accounts\MNO Metadata Parser" /Disable >NUL
+SCHTASKS /QUERY | FINDSTR /B /I "MobilityManager" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Ras\MobilityManager" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL
-SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL
@@ -2147,8 +2151,6 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCH
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >NUL
-TASKKILL /F /IM MSASCuiL.exe >NUL
-REGSVR32 /S /U "%PROGRAMFILES%\Windows Defender\shellext.dll" >NUL
 '@
     $SetupEnd = @'
 POWERCFG -H OFF >NUL
