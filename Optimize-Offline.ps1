@@ -60,8 +60,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.2
-		Last updated:	09/05/2018
+		Version:        3.1.1.3
+		Last updated:	09/15/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -377,8 +377,9 @@ Function Dismount-OfflineHives
 
 Function Test-OfflineHives
 {
-    @("HKLM:\WIM_HKLM_SOFTWARE", "HKLM:\WIM_HKLM_SYSTEM", "HKLM:\WIM_HKCU", "HKLM:\WIM_HKU_DEFAULT") | ForEach { 
-        If (Test-Path -Path $_) { $HivesLoaded = $true } }
+    @("HKLM:\WIM_HKLM_SOFTWARE", "HKLM:\WIM_HKLM_SYSTEM", "HKLM:\WIM_HKCU", "HKLM:\WIM_HKU_DEFAULT") | ForEach {
+        If (Test-Path -Path $_) { $HivesLoaded = $true }
+    }
     Return $HivesLoaded
 }
 
@@ -459,7 +460,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
     $ISODrive = Get-Item -Path $DriveLetter -Force
     $SourceName = $($Source.Split('\')[-1]).TrimEnd('.iso')
     $ISOMedia = "$($ScriptDirectory)\$($SourceName)"
-    [void](New-Item -Path $ISOMedia -ItemType Directory)
+    [void](New-Item -Path $ISOMedia -ItemType Directory -Force)
     $InstallWim = "$($DriveLetter)\sources\install.wim"
     If (!(Test-Path -Path $InstallWim))
     {
@@ -502,7 +503,7 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
     If (Test-Path -Path $ImagePath -Filter "install.wim")
     {
         $ImagePath = (Resolve-Path -Path $ImagePath).ProviderPath
-        Write-Host "Copying WIM from $(Split-Path -Path $ImagePath -Parent)" -ForegroundColor Cyan
+        Write-Host ('Copying WIM from "{0}"' -f $(Split-Path -Path $ImagePath -Parent)) -ForegroundColor Cyan
         [void]($MountFolder = New-MountDirectory)
         [void]($ImageFolder = New-ImageDirectory)
         [void]($WorkFolder = New-WorkDirectory)
@@ -759,10 +760,8 @@ If ($OneDrive)
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Removing Microsoft OneDrive."
-        Out-Log -Content "Removing Microsoft OneDrive" -Level Info
+        Out-Log -Content "Removing Microsoft OneDrive." -Level Info
         Start-Sleep 3
-        [void](New-Item -Path $WorkFolder -ItemType Directory -Name "OneDriveWinSxS" -Force)
-        $OneDriveFolder = Get-Item -Path "$($WorkFolder)\OneDriveWinSxS" -Force
         [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\OneDrive" -ErrorAction Stop
@@ -790,13 +789,14 @@ If ($OneDrive)
         {
             Remove-Item -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" -Force -ErrorAction Stop
         }
-        Get-ChildItem -Path "$MountFolder\Windows\WinSxS\*onedrive*" | Copy-Item -Destination $OneDriveFolder.FullName -Recurse -Force
-        [void](Compress-Archive -Path "$($OneDriveFolder)\*" -DestinationPath "$WorkFolder\OneDriveBackup.Zip" -CompressionLevel Optimal)
-        Remove-Item -Path $OneDriveFolder -Recurse -Force -ErrorAction SilentlyContinue
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\*onedrive*")
+        If (Test-Path -Path "$MountFolder\Windows\WinSxS\*onedrive*")
         {
-            [void](Set-FolderOwnership -Path $($Item.FullName))
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -ErrorAction Stop
+            [void](New-Item -Path $WorkFolder -ItemType Directory -Name OneDriveWinSxS -Force -ErrorAction Stop)
+            Copy-Item -Path "$MountFolder\Windows\WinSxS\*onedrive*" -Destination "$WorkFolder\OneDriveWinSxS" -Recurse -ErrorAction Stop
+            [void](Compress-Archive -Path "$WorkFolder\OneDriveWinSxS\*" -DestinationPath "$WorkFolder\OneDriveBackup.Zip" -CompressionLevel Optimal -ErrorAction Stop)
+            [void](Set-FolderOwnership -Path "$MountFolder\Windows\WinSxS\*onedrive*" -ErrorAction SilentlyContinue)
+            Get-ChildItem -Path "$MountFolder\Windows\WinSxS\*onedrive*" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path "$WorkFolder\OneDriveWinSxS" -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
     Catch
@@ -808,7 +808,7 @@ If ($OneDrive)
     }
 }
 
-If ($MetroAppsComplete.Equals($true))
+If ($MetroAppsComplete -eq $true)
 {
     Try
     {
@@ -839,9 +839,9 @@ If ($MetroAppsComplete.Equals($true))
     }
     Try
     {
-        $Host.UI.RawUI.WindowTitle = "Applying a Custom Start Menu and Taskbar Layout."
+        $Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu and Taskbar Layout."
         Write-Output ''
-        Out-Log -Content "Applying a Custom Start Menu and Taskbar Layout." -Level Info
+        Out-Log -Content "Cleaning-up the Start Menu and Taskbar Layout." -Level Info
         Start-Sleep 3
         @'
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
@@ -869,8 +869,6 @@ If ($MetroAppsComplete.Equals($true))
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 '@ | Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -ErrorAction Stop
-        Write-Output ''
-        Out-Log -Content "Creating Shortcut Links." -Level Info
         Start-Sleep 3
         $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
         $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
@@ -895,7 +893,7 @@ If ($MetroAppsComplete.Equals($true))
     Catch
     {
         Write-Output ''
-        Out-Log -Content "Failed to apply a Custom Start Menu and Taskbar Layout." -Level Error
+        Out-Log -Content "Failed to clean-up the Start Menu and Taskbar Layout." -Level Error
         Exit-Script
         Break
     }
@@ -2017,6 +2015,7 @@ If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*C
                 Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
             }
             Start-Process -FilePath ATTRIB -ArgumentList ("+S +H `"$IniFile`"") -NoNewWindow -Wait
+            Write-Output ''
         }
         Catch
         {
@@ -2054,7 +2053,7 @@ If ($DaRT)
         }
         Try
         {
-            If ($BootIsPresent.Equals($true))
+            If ($BootIsPresent -eq $true)
             {
                 $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force
                 $NewBootMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "BootMount_$(Get-Random)"))
@@ -2243,7 +2242,7 @@ If ($Drivers)
     {
         If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf)
         {
-            If ($DaRTApplied.Equals($true)) { Clear-Host }
+            If ($DaRTApplied -eq $true) { Clear-Host }
             Else { Write-Output '' }
             $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
             Out-Log -Content "Injecting Driver Packages." -Level Info
@@ -2279,9 +2278,9 @@ If ($Drivers)
 
 If ($NetFx3)
 {
+    If ($Drivers) { Write-Output '' }
     If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq "DisabledWithPayloadRemoved")
     {
-        If ($Drivers) { Write-Output '' }
         Try
         {
             If (($ISOIsExported -eq $true) -and (Get-ChildItem -Path "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab))
@@ -2298,8 +2297,8 @@ If ($NetFx3)
                     Source           = "$ISOMedia\sources\sxs"
                     ErrorAction      = "Stop"
                 }
-                $Host.UI.RawUI.WindowTitle = "Applying the .NET Payload."
-                Out-Log -Content "Applying the .NET Payload." -Level Info
+                $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
+                Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
                 [void](Enable-WindowsOptionalFeature @EnableNetFx3)
             }
             ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -Path $NetFx3 -Recurse -Include *netfx3*.cab))
@@ -2316,30 +2315,32 @@ If ($NetFx3)
                     Source           = $NetFx3
                     ErrorAction      = "Stop"
                 }
-                $Host.UI.RawUI.WindowTitle = "Applying the .NET Payload."
-                Out-Log -Content "Applying the .NET Payload." -Level Info
+                $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
+                Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
                 [void](Enable-WindowsOptionalFeature @EnableNetFx3)
             }
         }
         Catch
         {
             Write-Output ''
-            Out-Log -Content "Failed to apply payload and enable NetFx3." -Level Error
+            Out-Log -Content "Failed to apply the .NET Framework Payload Package." -Level Error
             Exit-Script
             Break
         }
     }
 }
 
-If ($SetRegistryComplete.Equals($true))
+If ($SetRegistryComplete -eq $true)
 {
     If ($DaRT -or $Drivers -or $NetFx3) { Write-Output '' }
-    $Host.UI.RawUI.WindowTitle = "Generating Setup and Post-Installation Files."
-    Out-Log -Content "Generating Setup and Post-Installation Files." -Level Info
-    Start-Sleep 3
-    New-Container -Path "$MountFolder\Windows\Setup\Scripts"
-    $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
-    @'
+    Try
+    {
+        $Host.UI.RawUI.WindowTitle = "Generating a Setup and Post-Installation Script."
+        Out-Log -Content "Generating a Setup and Post-Installation Script." -Level Info
+        Start-Sleep 3
+        New-Container -Path "$MountFolder\Windows\Setup\Scripts"
+        $SetupScript = "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd"
+        @'
 SET DEFAULTUSER0="defaultuser0"
 
 FOR /F "TOKENS=*" %%A IN ('REG QUERY "HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList"^|FIND /I "S-1-5-21"') DO CALL :QUERY_REGISTRY "%%A"
@@ -2402,19 +2403,19 @@ SCHTASKS /QUERY | FINDSTR /B /I "UpdateLibrary" >NUL && SCHTASKS /Change /TN "\M
 SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL
 '@ | Out-File -FilePath $SetupScript -Encoding ASCII
-    $XboxTasks = @'
+        $XboxTasks = @'
 
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTask" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTask" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "XblGameSaveTaskLogon" >NUL && SCHTASKS /Change /TN "\Microsoft\XblGameSave\XblGameSaveTaskLogon" /Disable >NUL
 '@
-    $DefenderTasks = @'
+        $DefenderTasks = @'
 
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cache Maintenance" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Cleanup" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Scheduled Scan" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >NUL
 SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >NUL
 '@
-    $FirewallRules = @'
+        $FirewallRules = @'
 
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="DisAllow ContentDelivery to connect in from the Internet." enable=yes >NUL
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="DisAllow ContentDelivery to connect out to the Internet." enable=yes >NUL
@@ -2443,23 +2444,17 @@ NET START DNSCACHE >NUL
 	DEL "%WINDIR%\System32\CompatTelRunner.exe" /S /F /Q >NUL
  )
 '@
-    $SetupEnd = @'
+        $SetupEnd = @'
 
-POWERCFG -H OFF >NUL
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 DEL "%~f0"
 '@
-    If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
-    ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
-    ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
-    Else { Out-File -FilePath $SetupScript -InputObject $FirewallRules, $SetupEnd -Append -Encoding ASCII }
-}
-
-Try
-{
-    $Language = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Languages
-    @'
+        If ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $XboxTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
+        ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
+        ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII }
+        Else { Out-File -FilePath $SetupScript -InputObject $FirewallRules, $SetupEnd -Append -Encoding ASCII }
+        @'
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="offlineServicing">
@@ -2472,111 +2467,65 @@ Try
     </settings>
 </unattend>
 '@ | Out-File -FilePath "$WorkFolder\OfflineServicing.xml" -Encoding UTF8
-    [void](Use-WindowsUnattend -Path $MountFolder -UnattendPath "$WorkFolder\OfflineServicing.xml" -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction SilentlyContinue)
-    If ($Language)
-    {
-        $TimeZone = (Get-TimeZone).Id
-        $DST = (Get-TimeZone).SupportsDaylightSavingTime
-        If ($DST -eq $true) { $DST = "false" }
-        Else { $DST = "true" }
-        If (!$TimeZone) { $TimeZone = '*' }
-        New-Container -Path "$MountFolder\Windows\Panther"
-        @"
-<?xml version="1.0" encoding="utf-8"?>
-<unattend xmlns="urn:schemas-microsoft-com:unattend">
-    <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <InputLocale>$Language</InputLocale>
-            <SystemLocale>$Language</SystemLocale>
-            <UILanguage>$Language</UILanguage>
-            <UserLocale>$Language</UserLocale>
-        </component>
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <OOBE>
-                <HideEULAPage>true</HideEULAPage>
-                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
-                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-                <UnattendEnableRetailDemo>false</UnattendEnableRetailDemo>
-                <ProtectYourPC>1</ProtectYourPC>
-            </OOBE>
-            <DisableAutoDaylightTimeSet>$DST</DisableAutoDaylightTimeSet>
-            <TimeZone>$TimeZone</TimeZone>
-        </component>
-    </settings>
-</unattend>
-"@ | Out-File -FilePath "$MountFolder\Windows\Panther\unattend.xml" -Encoding UTF8
+        [void](Use-WindowsUnattend -Path $MountFolder -UnattendPath "$WorkFolder\OfflineServicing.xml" -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction SilentlyContinue)
     }
-}
-Finally
-{
-    Clear-Host
+    Finally
+    {
+        Clear-Host
+    }
 }
 
 Try
 {
     $Host.UI.RawUI.WindowTitle = "Cleaning-up the Image."
     Out-Log -Content "Cleaning-up the Image."
-    If ($MetroApps -eq "All" -and $MetroAppsComplete.Equals($true))
+    If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true)
     {
         [void](Invoke-Expression -Command ("TAKEOWN /F `"$MountFolder\Program Files\WindowsApps`" /R") -ErrorAction SilentlyContinue)
         [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -ErrorAction SilentlyContinue)
-        Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps\*" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+        Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps\*" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
         [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /SETOWNER `"NT Service\TrustedInstaller`"") -ErrorAction SilentlyContinue)
         [void](Invoke-Expression -Command ("ICACLS `"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:R /REMOVE `"$($Env:USERNAME)`"") -ErrorAction SilentlyContinue)
     }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin")
-    {
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\ManifestCache" -Include *.bin -Recurse -Force -ErrorAction SilentlyContinue)
-        {
-            [void](Set-FileOwnership -Path $($Item.FullName) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
-        }
-    }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*")
     {
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -ErrorAction SilentlyContinue)
-        {
-            [void](Set-FileOwnership -Path $($Item.FullName) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
-        }
+        [void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
+        Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*")
     {
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue)
-        {
-            [void](Set-FileOwnership -Path $($Item.FullName) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+        [void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
+        Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin")
+    {
+        [void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
+        Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
+    }
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Backup\*.*")
+    {
+        Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue | ForEach {
+            [void](Set-FileOwnership -Path $($_) -ErrorAction SilentlyContinue)
+            Remove-Item -Path $($_) -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
-    If (Test-Path -Path "$MountFolder\Windows\inf\*.log")
+    If (Test-Path -Path "$MountFolder\Windows\INF\*.log")
     {
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\inf" -Include *.log -Recurse -Force -ErrorAction SilentlyContinue)
-        {
-            [void](Set-FileOwnership -Path $($Item.FullName) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
-        }
+        [void](Set-FileOwnership -Path "$MountFolder\Windows\INF\*.log" -ErrorAction SilentlyContinue)
+        Remove-Item -Path "$MountFolder\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*")
     {
         [void](Set-FileOwnership -Path "$MountFolder\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
-        Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Force -Confirm:$false -ErrorAction SilentlyContinue
-    }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Backup\*")
-    {
-        ForEach ($Item In Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue)
-        {
-            [void](Set-FileOwnership -Path $($Item.FullName) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($Item.FullName) -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
-        }
+        Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\PerfLogs")
     {
-        Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+        Remove-Item -Path "$MountFolder\PerfLogs" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    $RecycleBin = "$MountFolder\" + '$Recycle.Bin'
-    If (Test-Path -Path $RecycleBin)
+    If (Test-Path -Path ("$MountFolder\" + '$Recycle.Bin'))
     {
-        Remove-Item -Path $RecycleBin -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
+        Remove-Item -Path ("$MountFolder\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 Finally
@@ -2637,7 +2586,7 @@ Catch
     Exit-Script
     Break
 }
-Finally 
+Finally
 {
     [void](Clear-WindowsCorruptMountPoint)
 }
@@ -2648,7 +2597,7 @@ Try
     Write-Output ''
     Out-Log -Content "Finalizing Image Optimizations." -Level Info
     [void]($SaveFolder = New-SaveDirectory)
-    If ($ISOIsExported.Equals($true))
+    If ($ISOIsExported -eq $true)
     {
         Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force
         If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force }
@@ -2662,6 +2611,7 @@ Try
     If (Test-Path -Path "$WorkFolder\OneDriveBackup.Zip") { Move-Item -Path "$WorkFolder\OneDriveBackup.Zip" -Destination $SaveFolder -Force }
     Move-Item -Path "$WorkFolder\*.txt" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\*.log" -Destination $SaveFolder -Force
+    Start-Sleep 3
     $Timer.Stop()
     If ($Error.Count.Equals(0))
     {
