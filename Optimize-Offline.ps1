@@ -396,15 +396,15 @@ Function Exit-Script
     If ($Error.Count)
     {
         $ErrorLog = Join-Path -Path $Env:TEMP -ChildPath "ErrorLog.log"
-        Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force
-        Move-Item -Path $ErrorLog -Destination $SaveDir -Force
+        Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force -ErrorAction SilentlyContinue
+        Move-Item -Path $ErrorLog -Destination $SaveDir -Force -ErrorAction SilentlyContinue
     }
     Add-Content -Path $LogFile -Value ''
     Add-Content -Path $LogFile -Value "***************************************************************************************************"
     Add-Content -Path $LogFile -Value "`t`t$($OScript) stopped at [$($TimeStamp)]"
     Add-Content -Path $LogFile -Value "***************************************************************************************************"
-    Move-Item -Path $LogFile -Destination $SaveDir -Force
-    Remove-Item -Path "$Env:TEMP\DISM.log" -Force
+    Move-Item -Path $LogFile -Destination $SaveDir -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$Env:TEMP\DISM.log" -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path $ScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Output ''
@@ -440,15 +440,17 @@ Catch
 Try
 {
     Get-ChildItem -Path '.' -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-}
-Finally
-{
-    $ScriptRoot = (Get-Item -Path '.' -Force).FullName
+    $ScriptRoot = (Get-Item -Path '.' -Force -ErrorAction Stop).FullName
     $CreateScriptDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
-    If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $ScriptRoot\$CreateScriptDir }
+    If ($CreateScriptDir) { $ScriptDirectory = Get-Item -LiteralPath $ScriptRoot\$CreateScriptDir -ErrorAction Stop }
     $Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
     $Timer = New-Object System.Diagnostics.Stopwatch
     $Timer.Start()
+}
+Catch 
+{
+    Write-Warning "Failed to create the script directory. Ensure the script path is writable."
+    Break
 }
 
 Try
@@ -456,8 +458,8 @@ Try
     If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
     {
         $Source = ([System.IO.Path]::ChangeExtension($ImagePath, ([System.IO.Path]::GetExtension($ImagePath)).ToString().ToLower()))
-        $Source = (Resolve-Path -Path $Source).ProviderPath
-        $SourceMount = Mount-DiskImage -ImagePath $Source -StorageType ISO -PassThru
+        $Source = (Resolve-Path -Path $Source -ErrorAction Stop).ProviderPath
+        $SourceMount = Mount-DiskImage -ImagePath $Source -StorageType ISO -PassThru -ErrorAction Stop
         $DriveLetter = ($SourceMount | Get-Volume).DriveLetter + ':'
         $ISODrive = Get-Item -Path $DriveLetter -Force -ErrorAction Stop
         $SourceName = $($Source.Split('\')[-1]).TrimEnd('.iso')
@@ -489,12 +491,12 @@ Try
             [void]($ScratchFolder = New-ScratchDirectory)
             Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -Force -ErrorAction Stop
             $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop
-            Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false
+            Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false -ErrorAction Stop
             If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT.IsPresent))
             {
                 Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -Force -ErrorAction Stop
                 $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force -ErrorAction Stop
-                Set-ItemProperty -LiteralPath $BootWim -Name IsReadOnly -Value $false
+                Set-ItemProperty -LiteralPath $BootWim -Name IsReadOnly -Value $false -ErrorAction Stop
                 $BootIsPresent = $true
             }
 			
@@ -504,7 +506,7 @@ Try
     {
         If (Test-Path -Path $ImagePath -Filter "install.wim")
         {
-            $ImagePath = (Resolve-Path -Path $ImagePath).ProviderPath
+            $ImagePath = (Resolve-Path -Path $ImagePath -ErrorAction Stop).ProviderPath
             Write-Host ('Copying WIM from "{0}"' -f $(Split-Path -Path $ImagePath -Parent)) -ForegroundColor Cyan
             [void]($MountFolder = New-MountDirectory)
             [void]($ImageFolder = New-ImageDirectory)
@@ -512,7 +514,7 @@ Try
             [void]($ScratchFolder = New-ScratchDirectory)
             Copy-Item -Path $ImagePath -Destination $ImageFolder -Force -ErrorAction Stop
             $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop
-            If ($InstallWim.IsReadOnly) { Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false }
+            If ($InstallWim.IsReadOnly) { Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false -ErrorAction Stop }
         }
         Else
         {
@@ -543,8 +545,6 @@ If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index).InstallationType -eq
 }
 Else
 {
-    $CheckVersion = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Version
-    $CheckBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index).Build
     [void](New-Item -Path $LogFile -ItemType File -Force)
     @"
 ***************************************************************************************************
@@ -554,53 +554,76 @@ Else
 "@ | Out-File -FilePath $LogFile -Append -Encoding ASCII
 }
 
-If ($CheckVersion -like "10.*")
+Try
 {
-    If ($CheckBuild -lt '15063')
+    $CheckVersion = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -ErrorAction Stop).Version
+    $CheckBuild = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -ErrorAction Stop).Build
+    If ($CheckVersion -like "10.*")
     {
-        Write-Output ''
-        Write-Warning "The image build is not supported [$($CheckBuild.ToString())]"
-        Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
-        Break
+        If ($CheckBuild -lt '15063')
+        {
+            Write-Output ''
+            Write-Warning "The image build is not supported [$($CheckBuild.ToString())]"
+            Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            Break
+        }
+        Else
+        {
+            Write-Output ''
+            Out-Log -Content "The image build is supported [$($CheckBuild.ToString())]" -Level Info
+            Start-Sleep 3
+            $Error.Clear()
+        }
     }
     Else
     {
         Write-Output ''
-        Out-Log -Content "The image build is supported [$($CheckBuild.ToString())]" -Level Info
-        Start-Sleep 3
-        Write-Output ''
-        $Error.Clear()
-        Out-Log -Content "Mounting Image." -Level Info
-        $MountWindowsImage = @{
-            ImagePath        = $InstallWim
-            Index            = $Index
-            Path             = $MountFolder
-            ScratchDirectory = $ScratchFolder
-            LogPath          = $DISMLog
-            LogLevel         = 1
-        }
-        [void](Mount-WindowsImage @MountWindowsImage)
-        $StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState
+        Write-Warning "The image version is not supported [$($CheckVersion.ToString())]"
+        Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+        Break
     }
 }
-Else
+Catch
 {
     Write-Output ''
-    Write-Warning "The image version is not supported [$($CheckVersion.ToString())]"
+    Write-Warning "Failed to return the image version and build."
     Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     Break
 }
 
-If ($StartHealthCheck -eq "Healthy")
+Try
 {
     Write-Output ''
-    Out-Log -Content "The image health state has returned as [Healthy]" -Level Info
-    Start-Sleep 3
+    Out-Log -Content "Mounting Image." -Level Info
+    $MountWindowsImage = @{
+        ImagePath        = $InstallWim
+        Index            = $Index
+        Path             = $MountFolder
+        ScratchDirectory = $ScratchFolder
+        LogPath          = $DISMLog
+        LogLevel         = 1
+        ErrorAction      = "Stop"
+    }
+    [void](Mount-WindowsImage @MountWindowsImage)
+    $StartHealthCheck = (Repair-WindowsImage -Path $MountFolder -CheckHealth -ErrorAction Stop).ImageHealthState
+    If ($StartHealthCheck -eq "Healthy")
+    {
+        Write-Output ''
+        Out-Log -Content "The image health state has returned as [Healthy]" -Level Info
+        Start-Sleep 3
+    }
+    Else
+    {
+        Write-Output ''
+        Out-Log -Content "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
+        Exit-Script
+        Break
+    }
 }
-Else
+Catch
 {
     Write-Output ''
-    Out-Log -Content "The image has been flagged for corruption. Further servicing is required before the image can be optimized." -Level Error
+    Out-Log -Content "Failed to return the image health state." -Level Error
     Exit-Script
     Break
 }
@@ -2032,7 +2055,7 @@ If ($DaRT)
         ElseIf ($CheckBuild -eq '16299') { $CodeName = "RS3" }
         ElseIf ($CheckBuild -eq '17134') { $CodeName = "RS4" }
         ElseIf ($CheckBuild -ge '17730') { $CodeName = "RS5" }
-        If ($BootIsPresent.Equals($true))
+        If ($BootIsPresent -eq $true)
         {
             Clear-Host
             $Host.UI.RawUI.WindowTitle = "Applying Microsoft DaRT 10."
@@ -2327,7 +2350,7 @@ If ($NetFx3)
 
 If ($SetRegistryComplete -eq $true)
 {
-    If ($DaRT -or $Drivers -or $NetFx3) { Write-Output '' }
+    If ($Drivers -or $NetFx3) { Write-Output '' }
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Generating a Setup and Post-Installation Script."
