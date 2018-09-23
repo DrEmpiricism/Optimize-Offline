@@ -451,84 +451,94 @@ Finally
     $Timer.Start()
 }
 
-If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
+Try
 {
-    $Source = ([System.IO.Path]::ChangeExtension($ImagePath, ([System.IO.Path]::GetExtension($ImagePath)).ToString().ToLower()))
-    $Source = (Resolve-Path -Path $Source).ProviderPath
-    $SourceMount = Mount-DiskImage -ImagePath $Source -StorageType ISO -PassThru
-    $DriveLetter = ($SourceMount | Get-Volume).DriveLetter + ':'
-    $ISODrive = Get-Item -Path $DriveLetter -Force
-    $SourceName = $($Source.Split('\')[-1]).TrimEnd('.iso')
-    $ISOMedia = "$($ScriptDirectory)\$($SourceName)"
-    [void](New-Item -Path $ISOMedia -ItemType Directory -Force)
-    $InstallWim = "$($DriveLetter)\sources\install.wim"
-    If (!(Test-Path -Path $InstallWim))
+    If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
     {
-        Write-Warning "$(Split-Path -Path $ImagePath -Leaf) does not contain valid Windows Installation media."
-        Remove-Item -Path $ScriptDirectory -Recurse -Force
-        Break
-    }
-    Else
-    {
-        Write-Host ('Exporting media from "{0}"' -f $(Split-Path -Path $Source -Leaf)) -ForegroundColor Cyan
-        ForEach ($File In Get-ChildItem -Path $ISODrive.FullName -Recurse)
+        $Source = ([System.IO.Path]::ChangeExtension($ImagePath, ([System.IO.Path]::GetExtension($ImagePath)).ToString().ToLower()))
+        $Source = (Resolve-Path -Path $Source).ProviderPath
+        $SourceMount = Mount-DiskImage -ImagePath $Source -StorageType ISO -PassThru
+        $DriveLetter = ($SourceMount | Get-Volume).DriveLetter + ':'
+        $ISODrive = Get-Item -Path $DriveLetter -Force -ErrorAction Stop
+        $SourceName = $($Source.Split('\')[-1]).TrimEnd('.iso')
+        $ISOMedia = "$($ScriptDirectory)\$($SourceName)"
+        [void](New-Item -Path $ISOMedia -ItemType Directory -Force -ErrorAction Stop)
+        $InstallWim = "$($DriveLetter)\sources\install.wim"
+        If (!(Test-Path -Path $InstallWim))
         {
-            $NewPath = $ISOMedia + $File.FullName.Replace($ISODrive, '\')
-            Copy-Item -Path $File.FullName -Destination $NewPath -Force
+            Write-Warning "$(Split-Path -Path $ImagePath -Leaf) does not contain valid Windows Installation media."
+            Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            Break
         }
-        Dismount-DiskImage -ImagePath $Source -StorageType ISO
-        $ISOIsExported = $true
-    }
-    If (Test-Path -Path "$ISOMedia\sources\install.wim")
-    {
-        [void]($MountFolder = New-MountDirectory)
-        [void]($ImageFolder = New-ImageDirectory)
-        [void]($WorkFolder = New-WorkDirectory)
-        [void]($ScratchFolder = New-ScratchDirectory)
-        Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -Force
-        $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force
-        Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false
-        If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT.IsPresent))
+        Else
         {
-            Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -Force
-            $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force
-            Set-ItemProperty -LiteralPath $BootWim -Name IsReadOnly -Value $false
-            $BootIsPresent = $true
+            Write-Host ('Exporting media from "{0}"' -f $(Split-Path -Path $Source -Leaf)) -ForegroundColor Cyan
+            ForEach ($File In Get-ChildItem -Path $ISODrive.FullName -Recurse)
+            {
+                $NewPath = $ISOMedia + $File.FullName.Replace($ISODrive, '\')
+                Copy-Item -Path $File.FullName -Destination $NewPath -Force -ErrorAction Stop
+            }
+            Dismount-DiskImage -ImagePath $Source -StorageType ISO
+            $ISOIsExported = $true
         }
-		
+        If (Test-Path -Path "$ISOMedia\sources\install.wim")
+        {
+            [void]($MountFolder = New-MountDirectory)
+            [void]($ImageFolder = New-ImageDirectory)
+            [void]($WorkFolder = New-WorkDirectory)
+            [void]($ScratchFolder = New-ScratchDirectory)
+            Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -Force -ErrorAction Stop
+            $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop
+            Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false
+            If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT.IsPresent))
+            {
+                Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -Force -ErrorAction Stop
+                $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force -ErrorAction Stop
+                Set-ItemProperty -LiteralPath $BootWim -Name IsReadOnly -Value $false
+                $BootIsPresent = $true
+            }
+			
+        }
+    }
+    ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
+    {
+        If (Test-Path -Path $ImagePath -Filter "install.wim")
+        {
+            $ImagePath = (Resolve-Path -Path $ImagePath).ProviderPath
+            Write-Host ('Copying WIM from "{0}"' -f $(Split-Path -Path $ImagePath -Parent)) -ForegroundColor Cyan
+            [void]($MountFolder = New-MountDirectory)
+            [void]($ImageFolder = New-ImageDirectory)
+            [void]($WorkFolder = New-WorkDirectory)
+            [void]($ScratchFolder = New-ScratchDirectory)
+            Copy-Item -Path $ImagePath -Destination $ImageFolder -Force -ErrorAction Stop
+            $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop
+            If ($InstallWim.IsReadOnly) { Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false }
+        }
+        Else
+        {
+            Write-Warning "$ImagePath is not labeled as an install.wim"
+            Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            Break
+        }
     }
 }
-ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
+Catch
 {
-    If (Test-Path -Path $ImagePath -Filter "install.wim")
-    {
-        $ImagePath = (Resolve-Path -Path $ImagePath).ProviderPath
-        Write-Host ('Copying WIM from "{0}"' -f $(Split-Path -Path $ImagePath -Parent)) -ForegroundColor Cyan
-        [void]($MountFolder = New-MountDirectory)
-        [void]($ImageFolder = New-ImageDirectory)
-        [void]($WorkFolder = New-WorkDirectory)
-        [void]($ScratchFolder = New-ScratchDirectory)
-        Copy-Item -Path $ImagePath -Destination $ImageFolder -Force
-        $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force
-        If ($InstallWim.IsReadOnly) { Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false }
-    }
-    Else
-    {
-        Write-Warning "$ImagePath is not labeled as an install.wim"
-        Remove-Item -Path $ScriptDirectory -Recurse -Force
-        Break
-    }
+    Write-Output ''
+    Write-Host "Unable to attain required image data content." -ForegroundColor Red
+    Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    Break
 }
 
-If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force }
-If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force }
-If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force }
+If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
+If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue }
+If (Test-Path -Path $LogFile) { Remove-Item -Path $LogFile -Force -ErrorAction SilentlyContinue }
 
 If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index).InstallationType -eq "Server")
 {
     Write-Output ''
     Write-Warning "Server editions are not supported."
-    Remove-Item -Path $ScriptDirectory -Recurse -Force
+    Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     Break
 }
 Else
@@ -550,7 +560,7 @@ If ($CheckVersion -like "10.*")
     {
         Write-Output ''
         Write-Warning "The image build is not supported [$($CheckBuild.ToString())]"
-        Remove-Item -Path $ScriptDirectory -Recurse -Force
+        Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
         Break
     }
     Else
@@ -577,7 +587,7 @@ Else
 {
     Write-Output ''
     Write-Warning "The image version is not supported [$($CheckVersion.ToString())]"
-    Remove-Item -Path $ScriptDirectory -Recurse -Force
+    Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     Break
 }
 
@@ -2624,10 +2634,10 @@ Finally
 			$($OScript) completed at [$($TimeStamp)]
 ***************************************************************************************************
 "@ | Out-File -FilePath $LogFile -Append -Encoding ASCII
-    If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force }
-    Remove-Item -Path $DISMLog -Force
-    Move-Item -Path $LogFile -Destination $SaveFolder -Force
-    Remove-Item -Path $ScriptDirectory -Recurse -Force
+    If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
+    Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
+    Move-Item -Path $LogFile -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
 }
 # SIG # Begin signature block
