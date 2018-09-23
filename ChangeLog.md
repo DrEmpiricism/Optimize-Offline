@@ -1,6 +1,6 @@
 # ChangeLog #
 
-## Build 3.1.1.3 ##
+## Build 3.1.1.4 ##
 
-- Combined a few processes.
-- Improved the final image clean-up.
+- Removed redundant values for the hardened registry optimization parameter.
+- Added the disabling of Windows' Advertising ID to the hardened registry optimization parameter.
