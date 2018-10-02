@@ -59,7 +59,7 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.5
+		Version:        3.1.1.4
 		Last updated:	10/02/2018
 		===========================================================================
 #>
