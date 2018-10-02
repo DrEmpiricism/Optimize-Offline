@@ -20,7 +20,7 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry "Default" -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
     REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -MetroApps "All" -SystemApps -Packages -Registry "Hardened" -DaRT -NetFx3 $true
 )
 PAUSE
