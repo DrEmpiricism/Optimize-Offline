@@ -59,7 +59,7 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.4
+		Version:        3.1.1.5
 		Last updated:	10/02/2018
 		===========================================================================
 #>
@@ -107,6 +107,8 @@ Param
 $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
+$OfflineBackupDirectory = $WorkFolder + '\' + "OfflineRegistryBackup_" + $(Get-Date -Format "MM-dd-yyyy")
+$BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
 $OScript = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
@@ -392,14 +394,12 @@ Function Clear-CurrentMount
     }
     Process
     {
-        Write-Output ''
         Write-Host "Mount path detected. Performing clean-up..." -NoNewline -ForegroundColor Cyan
         $MountPath = $IsMounted.MountPath
         $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR "WIM"')
         If ($QueryHives) { [void]($QueryHives.ForEach{ REG UNLOAD $_ }) }
         Start-Process -FilePath DISM -ArgumentList ("/English /Unmount-Wim /MountDir:`"${MountPath}`" /Discard") -WindowStyle Hidden -Wait
         Get-ChildItem -Path '.' -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-        If (Test-Path -Path $ScriptRoot) { Remove-Item -Path $ScriptRoot -Force -Recurse -ErrorAction SilentlyContinue }
         If (!$IsMounted) { Write-Host "[Complete]" -ForegroundColor Cyan }
         [void](Clear-WindowsCorruptMountPoint)
     }
@@ -448,6 +448,7 @@ Function New-Container
 #endregion Helper Functions
 
 If (!(Test-Admin)) { Write-Warning "Administrative access is required. Please re-launch $OScript with elevation."; Break }
+If ((Get-CimInstance -ClassName Win32_OperatingSystem).OSArchitecture -ne "64-bit") { Write-Warning "$OScript only supports a 64-bit architecture."; Break }
 If (Get-WindowsImage -Mounted) { Clear-CurrentMount }
 
 Try
@@ -470,7 +471,7 @@ Try
     $Timer = New-Object System.Diagnostics.Stopwatch
     $Timer.Start()
 }
-Catch 
+Catch
 {
     Write-Warning "Failed to create the script directory. Ensure the script path is writable."
     Break
@@ -515,7 +516,7 @@ Try
             Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -Force -ErrorAction Stop
             $InstallWim = Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop
             Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false -ErrorAction Stop
-            If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT.IsPresent))
+            If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT))
             {
                 Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -Force -ErrorAction Stop
                 $BootWim = Get-Item -Path "$ImageFolder\boot.wim" -Force -ErrorAction Stop
@@ -648,6 +649,32 @@ Catch
     Out-Log -Content "Failed to return the image health state." -Level Error
     Exit-Script
     Break
+}
+
+Try
+{
+    $Host.UI.RawUI.WindowTitle = "Backing-up the Default Registry."
+    Out-Log -Content "Backing-up the Default Registry." -Level Info
+    [void](New-Item -Path $OfflineBackupDirectory -ItemType Directory -Force -ErrorAction Stop)
+    [void](Mount-OfflineHives)
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKCU_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKU_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -WindowStyle Hidden -Wait -ErrorAction Stop
+    [void](Dismount-OfflineHives)
+    [void](Compress-Archive -Path $OfflineBackupDirectory -DestinationPath "$WorkFolder\RegistryBackup.Zip" -CompressionLevel Optimal -ErrorAction Stop)
+    Remove-Item -Path $OfflineBackupDirectory -Recurse -Force -ErrorAction SilentlyContinue
+}
+Catch
+{
+    Write-Output ''
+    Out-Log -Content "Failed to back-up the Default Registry." -Level Error
+    Exit-Script
+    Break
+}
+Finally
+{
+    If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
 }
 
 If ($MetroApps)
@@ -1084,10 +1111,10 @@ If ($Registry)
 {
     Try
     {
-        If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
         Write-Output ''
         $Host.UI.RawUI.WindowTitle = "Applying Optimized Registry Values."
         Out-Log -Content "Applying Optimized Registry Values." -Level Info
+        If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
         [void](Mount-OfflineHives)
         #****************************************************************
         Write-Output "Disabling Cortana and Search Bar Web Connectivity." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1389,7 +1416,7 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Maps" -Name "AutoDownloadAndUpdateMapData" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\Maps" -Name "AutoDownloadAndUpdateMapData" -Value 0 -Type DWord
         #****************************************************************
-        Write-Output "Disabling AUtomatic Map Updates." >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Disabling Automatic Map Updates." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
@@ -1436,10 +1463,20 @@ If ($Registry)
         #****************************************************************
         Write-Output "Disabling Location Sensors." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "Value" -Value "Deny" -Type String
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "Value" -Value "Deny" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" -Name "Value" -Value "Deny" -Type String
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
+        #****************************************************************
+        Write-Output "Disabling App Access from Linked Devices." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
         #****************************************************************	
         Write-Output "Disabling Web Access to Language List." >> "$WorkFolder\Registry-Optimizations.log"
         #***************************************************************
@@ -1475,6 +1512,7 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\.NETFramework\v4.0.30319" -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
+        #****************************************************************
         Write-Output "Disabling Speech Model Updates." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Speech" -ErrorAction Stop
@@ -1601,6 +1639,11 @@ If ($Registry)
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
+        #****************************************************************
+        Write-Output "Disabling the Sets Feature." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "TurnOffSets" -Value 1 -Type DWord
         #****************************************************************
         Write-Output "Disabling Connected Drive Autoplay and Autorun." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -1943,7 +1986,8 @@ If ($Registry)
     }
     Catch
     {
-        Write-Error "Failed to Apply all Registry Optimizations."
+        Write-Output ''
+        Out-Log -Content "Failed to Apply all Registry Optimizations." -Level Error
         Exit-Script
         Break
     }
@@ -2259,7 +2303,7 @@ If ($DaRT)
                 Write-Output ''
                 Out-Log -Content "Saving and Dismounting the Recovery Image." -Level Info
                 [void](Dismount-WindowsImage @DismountRecoveryImage)
-                Write-Output ''				
+                Write-Output ''
                 Out-Log -Content "Rebuilding the Recovery Image." -Level Info
                 $ExportRecovery = "/English /Export-Image /SourceImageFile:`"${ImageFolder}\winre.wim`" /All /DestinationImageFile:`"${WorkFolder}\winre.wim`" /Compress:Max /CheckIntegrity /Quiet"
                 Start-Process -FilePath DISM -ArgumentList $ExportRecovery -WindowStyle Hidden -Wait
@@ -2725,6 +2769,7 @@ Try
         If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination $SaveFolder -Force }
     }
     If (Test-Path -Path "$WorkFolder\OneDriveBackup.Zip") { Move-Item -Path "$WorkFolder\OneDriveBackup.Zip" -Destination $SaveFolder -Force }
+    If (Test-Path -Path "$WorkFolder\RegistryBackup.Zip") { Move-Item -Path "$WorkFolder\RegistryBackup.Zip" -Destination $SaveFolder -Force }
     Move-Item -Path "$WorkFolder\*.txt" -Destination $SaveFolder -Force
     Move-Item -Path "$WorkFolder\*.log" -Destination $SaveFolder -Force
     Start-Sleep 3

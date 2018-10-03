@@ -6,6 +6,8 @@
 - A similar Registry parameter set will be introduced next update once it's determined all new values are fully compatible.
 - The -Registry parameter is now a switch again.
 - Additional registry values have been added increasing telemetry blocking and non-explicit location sensor access.
+- The script now backs up the offline registry hives before applying any optimized values, compresses it into a .zip file and adds it to the final save folder.
+- The OS architecture is checked before the script initializes to verify a 64-bit system.
 - A new helper function has been added that will automatically detect a current mounted WIM file, dismount it and clean up its directories.
 - This new helper function was added in case an issue arrises where the script is accidently canceled, wherein re-running the script will automatically call the function to clean-up the previous mounted image.
 - A few context menu items have been removed in order to reduce context menu clutter.
