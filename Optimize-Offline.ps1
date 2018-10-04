@@ -41,11 +41,14 @@
 	.PARAMETER NetFx3
 		Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.
 	
+	.PARAMETER NoSetup
+		Excludes the Setup and Post Installation Script(s) from being applied to the image.
+	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 16299 -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry "Default" -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17134 -MetroApps "All" -SystemApps -Packages -Registry "Hardened" -OneDrive -NetFx3 "C:\Windows 10\sources\sxs"
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17134 -MetroApps "All" -SystemApps -Packages -Registry "Hardened" -OneDrive -NetFx3 "C:\Windows 10\sources\sxs" -NoSetup
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -59,8 +62,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.5
-		Last updated:	10/02/2018
+		Version:        3.1.1.6
+		Last updated:	10/04/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -100,7 +103,9 @@ Param
     [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
     [string]$Drivers,
     [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
-    [string]$NetFx3
+    [string]$NetFx3,
+    [Parameter(HelpMessage = 'Excludes the Setup and Post Installation Script(s) from being applied to the image.')]
+    [switch]$NoSetup
 )
 
 #region Script Variables
@@ -273,8 +278,7 @@ Function Set-RegistryOwner
         $TakeOwnership | Invoke-ProcessPrivilege
         $Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::TakeOwnership)
         $ACL = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None)
-        $SID = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
-        $Admin = $SID.Translate([System.Security.Principal.NTAccount])
+        $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
         $ACL.SetOwner($Admin)
         $Key.SetAccessControl($ACL)
         $TakeOwnership | Invoke-ProcessPrivilege -Disable
@@ -293,12 +297,20 @@ Function Set-FileOwnership
         [Parameter(Mandatory = $true)]
         [string]$Path
     )
-    Invoke-Expression -Command ('TAKEOWN /F $Path /A')
-    $ACL = Get-Acl -Path $Path
-    $SID = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
-    $Admin = $SID.Translate([System.Security.Principal.NTAccount])
-    $ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, "FullControl", "None", "None", "Allow")))
-    $ACL | Set-Acl -Path $Path
+    Begin
+    {
+        $TakeOwnership = "SeTakeOwnershipPrivilege"
+    }
+    Process
+    {
+        $TakeOwnership | Invoke-ProcessPrivilege
+        $ACL = Get-Acl -Path $Path
+        $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
+        $ACL.SetOwner($Admin)
+        $ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, "FullControl", "None", "None", "Allow")))
+        $TakeOwnership | Invoke-ProcessPrivilege -Disable
+        $ACL | Set-Acl -Path $Path
+    }
 }
 
 Function Set-FolderOwnership
@@ -654,6 +666,7 @@ Catch
 Try
 {
     $Host.UI.RawUI.WindowTitle = "Backing-up the Default Registry."
+    Write-Output ''
     Out-Log -Content "Backing-up the Default Registry." -Level Info
     [void](New-Item -Path $OfflineBackupDirectory -ItemType Directory -Force -ErrorAction Stop)
     [void](Mount-OfflineHives)
@@ -677,7 +690,7 @@ Finally
     If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
 }
 
-If ($MetroApps)
+If (($MetroApps -and (Get-WindowsImage -ImagePath $InstallWim).ImageName -notlike "*LTSC"))
 {
     Try
     {
@@ -854,9 +867,12 @@ If ($OneDrive)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableLibrariesDefaultSaveToOneDrive" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\OneDrive" -Name "DisablePersonalSync" -Value 1 -Type DWord
-        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run") -match "OneDriveSetup")
+        If ((Get-WindowsImage -ImagePath $InstallWim).ImageName -notlike "*LTSC")
         {
-            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction Stop
+            If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue) -match "OneDriveSetup")
+            {
+                Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction Stop
+            }
         }
         If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}")
         {
@@ -919,58 +935,62 @@ If ($MetroAppsComplete -eq $true)
         Exit-Script
         Break
     }
-    Try
+}
+
+If ((Get-WindowsImage -ImagePath $InstallWim).ImageName -notlike "*LTSC")
+{
+    Try 
     {
-        $Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu and Taskbar Layout."
-        Write-Output ''
-        Out-Log -Content "Cleaning-up the Start Menu and Taskbar Layout." -Level Info
-        Start-Sleep 3
-        @'
+    $Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu and Taskbar Layout."
+    Write-Output ''
+    Out-Log -Content "Cleaning-up the Start Menu and Taskbar Layout." -Level Info
+    Start-Sleep 3
+    @'
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-  <LayoutOptions StartTileGroupCellWidth="6" />
-  <DefaultLayoutOverride>
-    <StartLayoutCollection>
-      <defaultlayout:StartLayout GroupCellWidth="6">
-        <start:Group Name="">
-          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
-          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
-          <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
-          <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />
-        </start:Group>
-      </defaultlayout:StartLayout>
-    </StartLayoutCollection>
-  </DefaultLayoutOverride>
-    <CustomTaskbarLayoutCollection>
-      <defaultlayout:TaskbarLayout>
-        <taskbar:TaskbarPinList>
-          <taskbar:UWA AppUserModelID="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
-        </taskbar:TaskbarPinList>
-      </defaultlayout:TaskbarLayout>
-    </CustomTaskbarLayoutCollection>
+<LayoutOptions StartTileGroupCellWidth="6" />
+<DefaultLayoutOverride>
+<StartLayoutCollection>
+  <defaultlayout:StartLayout GroupCellWidth="6">
+    <start:Group Name="">
+      <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
+      <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
+      <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
+      <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
+      <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+      <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />
+    </start:Group>
+  </defaultlayout:StartLayout>
+</StartLayoutCollection>
+</DefaultLayoutOverride>
+<CustomTaskbarLayoutCollection>
+  <defaultlayout:TaskbarLayout>
+    <taskbar:TaskbarPinList>
+      <taskbar:UWA AppUserModelID="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
+    </taskbar:TaskbarPinList>
+  </defaultlayout:TaskbarLayout>
+</CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 '@ | Out-File -FilePath "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -ErrorAction Stop
-        Start-Sleep 3
-        $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-        $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
-        $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
-        $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
-        $UWPShortcut.IconLocation = "imageres.dll,-1023"
-        $UWPShortcut.WorkingDirectory = "%SystemRoot%"
-        $UWPShortcut.Description = "The UWP File Explorer Application."
-        $UWPShortcut.Save()
-        $UEFIShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-        $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
-        $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
-        $UEFIShortcut.Arguments = "/R /FW"
-        $UEFIShortcut.IconLocation = "bootux.dll,-1016"
-        $UEFIShortcut.WorkingDirectory = "%SystemRoot%\System32"
-        $UEFIShortcut.Description = "Reboot directly into the system's UEFI firmware."
-        $UEFIShortcut.Save()
-        $Bytes = [System.IO.File]::ReadAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
-        $Bytes[0x15] = $Bytes[0x15] -bor 0x20
-        [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes)
+    Start-Sleep 3
+    $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+    $UWPShortcut = $UWPShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
+    $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
+    $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
+    $UWPShortcut.IconLocation = "imageres.dll,-1023"
+    $UWPShortcut.WorkingDirectory = "%SystemRoot%"
+    $UWPShortcut.Description = "The UWP File Explorer Application."
+    $UWPShortcut.Save()
+    $UEFIShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+    $UEFIShortcut = $UEFIShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+    $UEFIShortcut.TargetPath = "%SystemRoot%\System32\shutdown.exe"
+    $UEFIShortcut.Arguments = "/R /FW"
+    $UEFIShortcut.IconLocation = "bootux.dll,-1016"
+    $UEFIShortcut.WorkingDirectory = "%SystemRoot%\System32"
+    $UEFIShortcut.Description = "Reboot directly into the system's UEFI firmware."
+    $UEFIShortcut.Save()
+    $Bytes = [System.IO.File]::ReadAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk")
+    $Bytes[0x15] = $Bytes[0x15] -bor 0x20
+    [System.IO.File]::WriteAllBytes("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk", $Bytes)
     }
     Catch
     {
@@ -979,7 +999,6 @@ If ($MetroAppsComplete -eq $true)
         Exit-Script
         Break
     }
-}
 
 If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 {
@@ -1009,7 +1028,8 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\UX Configuration" -Name "Notification_Suppress" -Value 1 -Type DWord -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord -ErrorAction Stop
-        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run") -match "SecurityHealth")
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord -ErrorAction Stop
+        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue) -match "SecurityHealth")
         {
             Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -ErrorAction Stop
         }
@@ -1019,7 +1039,6 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
                 Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
             }
         }
-        Set-ItemProperty "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord
         [void](Dismount-OfflineHives)
         Start-Sleep 3
         If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions").State -eq "Enabled")
@@ -1994,53 +2013,56 @@ If ($Registry)
 }
 #endregion Registry Optimizations
 
-If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0))
+If ((Get-WindowsImage -ImagePath $InstallWim).ImageName -notlike "*LTSC")
 {
-    $Win32CalcPath = Join-Path -Path '.' -ChildPath '.\Resources\Win32Calc' -Resolve
-    If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe" -PathType Leaf) -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui" -PathType Leaf))
+    If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0))
     {
-        Try
+        $Win32CalcPath = Join-Path -Path '.' -ChildPath '.\Resources\Win32Calc' -Resolve
+        If ((Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe" -PathType Leaf) -and (Test-Path -LiteralPath "$Win32CalcPath\win32calc.exe.mui" -PathType Leaf))
         {
-            $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator."
-            Write-Output ''
-            Out-Log -Content "Applying the Win32 Calculator." -Level Info
-            Copy-Item -Path "$Win32CalcPath\win32calc.exe" -Destination "$MountFolder\Windows\System32\win32calc.exe" -Force -ErrorAction Stop
-            Copy-Item -Path "$Win32CalcPath\win32calc.exe.mui" -Destination "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -Force -ErrorAction Stop
-            [void](Mount-OfflineHives)
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe,0" -Type String -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
-            [void](Dismount-OfflineHives)
-            $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-            $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
-            $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
-            $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
-            $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
-            $CalcShortcut.Save()
-            $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-            $CalcLink = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-            Start-Process -FilePath ATTRIB -ArgumentList ("-S -H `"$IniFile`"") -NoNewWindow -Wait
-            If (!(Select-String -Path $IniFile -Pattern $CalcLink -SimpleMatch -Quiet))
+            Try
             {
-                Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
+                $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator."
+                Write-Output ''
+                Out-Log -Content "Applying the Win32 Calculator." -Level Info
+                Copy-Item -Path "$Win32CalcPath\win32calc.exe" -Destination "$MountFolder\Windows\System32\win32calc.exe" -Force -ErrorAction Stop
+                Copy-Item -Path "$Win32CalcPath\win32calc.exe.mui" -Destination "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -Force -ErrorAction Stop
+                [void](Mount-OfflineHives)
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe,0" -Type String -ErrorAction Stop
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "C:\Windows\System32\win32calc.exe" -Type String -ErrorAction Stop
+                [void](Dismount-OfflineHives)
+                $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+                $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
+                $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+                $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+                $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+                $CalcShortcut.Save()
+                $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+                $CalcLink = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
+                Start-Process -FilePath ATTRIB -ArgumentList ("-S -H `"$IniFile`"") -NoNewWindow -Wait
+                If (!(Select-String -Path $IniFile -Pattern $CalcLink -SimpleMatch -Quiet))
+                {
+                    Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
+                }
+                Else
+                {
+                    (Get-Content -Path $IniFile) | Where { $_ -ne $CalcLink } | Set-Content -Path $IniFile -ErrorAction Stop
+                    Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
+                }
+                Start-Process -FilePath ATTRIB -ArgumentList ("+S +H `"$IniFile`"") -NoNewWindow -Wait
+                Write-Output ''
             }
-            Else
+            Catch
             {
-                (Get-Content -Path $IniFile) | Where { $_ -ne $CalcLink } | Set-Content -Path $IniFile -ErrorAction Stop
-                Add-Content -Path $IniFile -Value $CalcLink -Encoding Unicode -ErrorAction Stop
+                Write-Output ''
+                Out-Log -Content "Failed to apply the Win32 Calculator." -Level Error
+                Exit-Script
+                Break
             }
-            Start-Process -FilePath ATTRIB -ArgumentList ("+S +H `"$IniFile`"") -NoNewWindow -Wait
-            Write-Output ''
-        }
-        Catch
-        {
-            Write-Output ''
-            Out-Log -Content "Failed to apply the Win32 Calculator." -Level Error
-            Exit-Script
-            Break
         }
     }
 }
@@ -2433,7 +2455,7 @@ If ($NetFx3)
     }
 }
 
-If ($SetRegistryComplete -eq $true)
+If (!$NoSetup)
 {
     If ($Drivers -or $NetFx3) { Write-Output '' }
     Try
@@ -2570,6 +2592,7 @@ DEL "%~f0"
 
 Try
 {
+    If ($NoSetup) { Clear-Host }
     $Host.UI.RawUI.WindowTitle = "Cleaning-up the Image."
     Out-Log -Content "Cleaning-up the Image."
     If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true)
@@ -2684,7 +2707,7 @@ Finally
     [void](Clear-WindowsCorruptMountPoint)
 }
 
-If ($OSIsExported -eq $true -and (Test-Path -Path $ISOMedia))
+If ($ISOIsExported -eq $true -and (Test-Path -Path $ISOMedia -PathType Container))
 {
     $Host.UI.RawUI.WindowTitle = "Optimizing the Windows Setup File Structure."
     Write-Output ''
