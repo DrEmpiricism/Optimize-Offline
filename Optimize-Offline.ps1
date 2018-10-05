@@ -999,6 +999,7 @@ If ((Get-WindowsImage -ImagePath $InstallWim).ImageName -notlike "*LTSC")
         Exit-Script
         Break
     }
+}
 
 If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 {
