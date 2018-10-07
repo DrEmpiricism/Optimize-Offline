@@ -1,10 +1,8 @@
 # ChangeLog #
 
-## Build 3.1.1.6 ##
+## Build 3.1.1.7 ##
 
-- Added support for the new Windows Enterprise LTSC.
-- Updated the Win32 Calculator to the latest RS5 LTSC build.
-- Corrected an unassigned variable.
-- Added a -NoSetup switch that will prevent the setup and post-installation script (SetupComplete.cmd) from being applied to the image.
-- Updated some SecHealthUI registry properties.
-- Fixed an inproperly formatted console message.
+- Added a -Features switch which will populate a Gridview list of all enabled Windows Optional Features for selective disabling.
+- Updated the code of a handful of helper functions.
+- The build of the image for any process that requires it is now taken directly from the WIM file instead of the -Build parameter.
+- Added additional registry values for telemetry, location sensors and background application access.
