@@ -24,9 +24,9 @@
 		Populates and outputs a Gridview list of all System Applications for selective removal.
 	
 	.PARAMETER Packages
-        Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
+        	Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
         
-    .PARAMETER Features
+    	.PARAMETER Features
 		Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.
 	
 	.PARAMETER OneDrive
