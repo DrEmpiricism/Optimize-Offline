@@ -1,8 +1,9 @@
 # ChangeLog #
 
-## Build 3.1.1.7 ##
+## Build 3.1.1.8 ##
 
-- Added a -Features switch which will populate a Gridview list of all enabled Windows Optional Features for selective disabling.
-- Updated the code of a handful of helper functions.
-- The build of the image for any process that requires it is now taken directly from the WIM file instead of the -Build parameter.
-- Added additional registry values for telemetry, location sensors and background application access.
+- Updated the Win32 Calculator.
+- Included the disabling of Security Health Services' SmartScreen integration if SecHealthUI is a removed System Application.
+- Added and updated multiple registry values.
+- Updated the SetupComplete.cmd script.
+- Included more support for Windows 10 Enterprise LTSC.
