@@ -120,7 +120,6 @@ $ScriptRoot = (Get-Item -Path '.' -Force).FullName
 $Win32CalcPath = $ScriptRoot + "\Resources\Win32Calc"
 $DaRTPath = $ScriptRoot + "\Resources\DaRT"
 $OfflineBackupDirectory = $WorkFolder + '\' + "OfflineRegistryBackup_" + $(Get-Date -Format "MM-dd-yyyy")
-$BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
 $OScript = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
@@ -671,6 +670,7 @@ Try
     Write-Output ''
     Out-Log -Content "Backing-up the Default Registry." -Level Info
     [void](New-Item -Path $OfflineBackupDirectory -ItemType Directory -Force -ErrorAction Stop)
+    $BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
     [void](Mount-OfflineHives)
     Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
     Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait -ErrorAction Stop
