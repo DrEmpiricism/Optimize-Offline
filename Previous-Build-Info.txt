@@ -1,3 +1,19 @@
+## 3.1.1.8 (10-11-2018)
+
+- Updated the Win32 Calculator.
+
+- Included the disabling of Security Health Services' SmartScreen integration if SecHealthUI is a removed System Application.
+
+- Added and updated multiple registry values.
+
+- Updated the SetupComplete.cmd script.
+
+- Included more support for Windows 10 Enterprise LTSC.
+
+- Fixed the logging timestamp so it now outputs the proper script completion time.
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 ## 3.1.1.7 (10-06-2018)
 
 - Added a -Features switch which will populate a Gridview list of all enabled Windows Optional Features for selective disabling.

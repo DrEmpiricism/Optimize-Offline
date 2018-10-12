@@ -65,8 +65,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.8
-		Last updated:	10/11/2018
+		Version:        3.1.1.9
+		Last updated:	10/12/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -120,6 +120,7 @@ $ScriptRoot = (Get-Item -Path '.' -Force).FullName
 $Win32CalcPath = $ScriptRoot + "\Resources\Win32Calc"
 $DaRTPath = $ScriptRoot + "\Resources\DaRT"
 $OfflineBackupDirectory = $WorkFolder + '\' + "OfflineRegistryBackup_" + $(Get-Date -Format "MM-dd-yyyy")
+$BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
 $OScript = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
@@ -670,7 +671,6 @@ Try
     Write-Output ''
     Out-Log -Content "Backing-up the Default Registry." -Level Info
     [void](New-Item -Path $OfflineBackupDirectory -ItemType Directory -Force -ErrorAction Stop)
-    $BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
     [void](Mount-OfflineHives)
     Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
     Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait -ErrorAction Stop
@@ -1046,7 +1046,7 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
         If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue) -match "SecurityHealth")
         {
-            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -ErrorAction Stop
+            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -Force -ErrorAction Stop
         }
         @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach {
             If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_")
@@ -1054,6 +1054,8 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
                 Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$_" -Name "Start" -Value 4 -Type DWord -ErrorAction Stop
             }
         }
+        Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger" -Recurse -Force -ErrorAction SilentlyContinue
         [void](Dismount-OfflineHives)
         Start-Sleep 3
         If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName "Windows-Defender-Default-Definitions").State -eq "Enabled")
@@ -1280,6 +1282,12 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\DiagTrack" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
+        @("AutoLogger-Diagtrack-Listener", "Circular Kernel Context Logger", "Diagtrack-Listener", "WFP-IPsec Trace", "WPR_initiated_DiagTrackMiniLogger_WPR System Collector") | ForEach {
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\$_")
+            {
+                Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\$_" -Recurse -Force -ErrorAction Stop
+            }
+        }
         #****************************************************************
         Write-Output "Disabling Office 2016 Telemetry and Logging." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2044,6 +2052,11 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OOBE" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OOBE" -Name "DisablePrivacyExperience" -Value 1 -Type DWord
         #****************************************************************
+        Write-Output "Disabling OOBE Cortana." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -Name "DisableVoice" -Value 1 -Type DWord
+        #****************************************************************
         Write-Output "Adding 'Open with Notepad' to the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         [void](New-Item -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" -Force -ErrorAction Stop)
@@ -2658,6 +2671,7 @@ SCHTASKS /QUERY | FINDSTR /B /I "Office 16 Subscription Heartbeat" >NUL 2>&1 && 
 SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2016" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetry\OfficeTelemetryAgentLogOn2016" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Office 17 Subscription Heartbeat" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\Office 17 Subscription Heartbeat" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2019" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetry\OfficeTelemetryAgentLogOn2019" /Disable >NUL 2>&1
+SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "SmartScreenSpecific" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\AppID\SmartScreenSpecific" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL 2>&1
@@ -2684,8 +2698,8 @@ NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block"
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="DisAllow ContentDelivery to connect out to the Internet." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Block Windows Telemetry [DiagTrack]" dir="Out" action="Block" program="%SystemDrive%\windows\system32\svchost.exe" service="DiagTrack" protocol="TCP" remoteport=80,443 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Block Windows Error Reporting Service [WerSvc]" dir="Out" action="Block" program="%SystemDrive%\windows\system32\svchost.exe" service="WerSvc" protocol="TCP" remoteport=80,443 >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="in" interface="any" program="%WinDir%\System32\smartscreen.exe" Description="DisAllow SmartScreen to connect in from the Internet." enable=yes >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="out" interface="any" program="%WinDir%\System32\smartscreen.exe" Description="DisAllow SmartScreen to connect out to the Internet." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="in" interface="any" program="%WinDir%\System32\smartscreen.exe" Description="Prevent SmartScreen Inbound Traffic." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="out" interface="any" program="%WinDir%\System32\smartscreen.exe" Description="Prevent SmartScreen Outbound Traffic." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="in" action="block" protocol="UDP" localport="3478" >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="in" action="block" protocol="UDP" remoteport=3478 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="in" action="block" protocol="UDP" localport=19302 >NUL 2>&1
@@ -2694,14 +2708,14 @@ NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="blo
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" remoteport=3478 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" localport=19302 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" remoteport=19302 >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="in" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="DisAllow CompatTelRunner to connect in from the Internet." enable=yes >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="out" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="DisAllow CompatTelRunner to connect out to the Internet." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="in" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Inbound Traffic." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="out" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Outbound Traffic." enable=yes >NUL 2>&1
 
  IF EXIST "%WINDIR%\System32\CompatTelRunner.exe" (
-	TAKEOWN /F "%WINDIR%\System32\CompatTelRunner.exe" /A >NUL
-	ICACLS "%WINDIR%\System32\CompatTelRunner.exe" /GRANT:R *S-1-5-32-544:F /C >NUL
-	TASKKILL /IM CompatTelRunner.exe /F >NUL
-	DEL "%WINDIR%\System32\CompatTelRunner.exe" /S /F /Q >NUL
+	TAKEOWN /F "%WINDIR%\System32\CompatTelRunner.exe" /A >NUL 2>&1
+	ICACLS "%WINDIR%\System32\CompatTelRunner.exe" /GRANT:R *S-1-5-32-544:F /C >NUL 2>&1
+	TASKKILL /IM CompatTelRunner.exe /F >NUL 2>&1
+	DEL /F /Q /S "%WINDIR%\System32\CompatTelRunner.exe" >NUL 2>&1
  )
 '@
         $SetupEnd = @'
@@ -2711,6 +2725,8 @@ NBTSTAT -R >NUL 2>&1
 IPCONFIG /FLUSHDNS >NUL 2>&1
 NET STOP DNSCACHE >NUL 2>&1
 NET START DNSCACHE >NUL 2>&1
+DEL /F /Q /S "%ProgramData%\Microsoft\Diagnosis\ETLLogs\*" >NUL 2>&1
+DEL /F /Q "%ProgramData%\Microsoft\Diagnosis\*.rbs" >NUL 2>&1
 DEL /F /Q "%WINDIR%\Panther\unattend.xml" >NUL 2>&1
 DEL /F /Q "%WINDIR%\System32\Sysprep\unattend.xml" >NUL 2>&1
 DEL "%~f0"
@@ -2735,7 +2751,7 @@ Try
     If ($NoSetup) { Clear-Host }
     $Host.UI.RawUI.WindowTitle = "Cleaning-up the Image."
     Out-Log -Content "Cleaning-up the Image."
-    If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true -or $ImageName -notlike "*LTSC")
+    If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true -and $ImageName -notlike "*LTSC")
     {
         Start-Process -FilePath TAKEOWN -ArgumentList ("/F `"$MountFolder\Program Files\WindowsApps`" /R") -WindowStyle Hidden -Wait
         Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -WindowStyle Hidden -Wait

@@ -1,10 +1,8 @@
 # ChangeLog #
 
-## Build 3.1.1.8 ##
+## Build 3.1.1.9 ##
 
-- Updated the Win32 Calculator.
-- Included the disabling of Security Health Services' SmartScreen integration if SecHealthUI is a removed System Application.
-- Added and updated multiple registry values.
-- Updated the SetupComplete.cmd script.
-- Included more support for Windows 10 Enterprise LTSC.
-- Fixed the logging timestamp so it now outputs the proper script completion time.
+- Added the removal of Windows Defender loggers if SecHealthUI is a removed System Application.
+- Added the removal of telemetry loggers to the optimizied registry value settings.
+- Improved the syntax within the SetupComplet.cmd script.
+- Corrected an incorrect comparison operator for the final image clean-up process.
