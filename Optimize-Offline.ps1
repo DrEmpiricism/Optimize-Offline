@@ -24,9 +24,9 @@
 		Populates and outputs a Gridview list of all System Applications for selective removal.
 	
 	.PARAMETER Packages
-        	Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
-        
-    	.PARAMETER Features
+		Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
+	
+	.PARAMETER Features
 		Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.
 	
 	.PARAMETER OneDrive
@@ -119,7 +119,6 @@ $ProgressPreference = 'SilentlyContinue'
 $ScriptRoot = (Get-Item -Path '.' -Force).FullName
 $Win32CalcPath = $ScriptRoot + "\Resources\Win32Calc"
 $DaRTPath = $ScriptRoot + "\Resources\DaRT"
-$TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
 $OfflineBackupDirectory = $WorkFolder + '\' + "OfflineRegistryBackup_" + $(Get-Date -Format "MM-dd-yyyy")
 $BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
 $OScript = "Optimize-Offline"
@@ -434,6 +433,7 @@ Function Exit-Script
         Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force -ErrorAction SilentlyContinue
         Move-Item -Path $ErrorLog -Destination $SaveDir -Force -ErrorAction SilentlyContinue
     }
+    $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
     Add-Content -Path $LogFile -Value ''
     Add-Content -Path $LogFile -Value "***************************************************************************************************"
     Add-Content -Path $LogFile -Value "`t`t$($OScript) stopped at [$($TimeStamp)]"
@@ -581,6 +581,7 @@ If ((Get-WindowsImage -ImagePath $InstallWim -Index $Index).InstallationType -eq
 Else
 {
     [void](New-Item -Path $LogFile -ItemType File -Force)
+    $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
     @"
 ***************************************************************************************************
 			$($OScript) started at [$($TimeStamp)]
@@ -1080,7 +1081,8 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
     }
 }
 
-If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Xbox*").Count -lt 5))
+If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or ((Get-AppxProvisionedPackage -Path $MountFolder |
+                Where PackageName -Like "*Xbox*").Count -lt 5) -and $ImageName -notlike "*LTSC")
 {
     Try
     {
@@ -1108,7 +1110,6 @@ If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCal
             }
         }
         [void](Dismount-OfflineHives)
-        Start-Sleep 3
         $DisableXboxComplete = $true
     }
     Catch
@@ -1174,7 +1175,6 @@ If ($Features)
             }
             Clear-Host
         }
-        $Int = $null
     }
     Catch
     {
@@ -1182,6 +1182,10 @@ If ($Features)
         Out-Log -Content "Failed to disable all Windows Features." -Level Error
         Exit-Script
         Break
+    }
+    Finally
+    {
+        $Int = $null
     }
 }
 
@@ -2199,6 +2203,7 @@ If ($ImageName -notlike "*LTSC")
         }
     }
 }
+Else { Write-Output '' }
 
 If ($DaRT)
 {
@@ -2714,7 +2719,6 @@ DEL "%~f0"
         ElseIf ($DisableDefenderComplete -eq $true -and $DisableXboxComplete -ne $true) { Out-File -FilePath $SetupScript -InputObject $DefenderTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII -ErrorAction Stop }
         ElseIf ($DisableDefenderComplete -ne $true -and $DisableXboxComplete -eq $true) { Out-File -FilePath $SetupScript -InputObject $XboxTasks, $FirewallRules, $SetupEnd -Append -Encoding ASCII -ErrorAction Stop }
         Else { Out-File -FilePath $SetupScript -InputObject $FirewallRules, $SetupEnd -Append -Encoding ASCII -ErrorAction Stop }
-        $SetupScriptComplete = $true
         Clear-Host
     }
     Catch
@@ -2953,6 +2957,7 @@ Try
 }
 Finally
 {
+    $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
     @"
 
 ***************************************************************************************************

@@ -7,3 +7,4 @@
 - Added and updated multiple registry values.
 - Updated the SetupComplete.cmd script.
 - Included more support for Windows 10 Enterprise LTSC.
+- Fixed the logging timestamp so it now outputs the proper script completion time.
