@@ -47,6 +47,10 @@
 	.PARAMETER NoSetup
 		Excludes the Setup and Post Installation Script(s) from being applied to the image.
 	
+	.PARAMETER WindowsStore
+        Specific to Windows 10 Enterprise LTSC only!
+        Sideloads the Microsoft Windows Store, and its dependencies, into the image.
+	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 16299 -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
 	
@@ -65,8 +69,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.1.9
-		Last updated:	10/12/2018
+		Version:        3.1.2.0
+		Last updated:	10/14/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -110,7 +114,9 @@ Param
     [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
     [string]$NetFx3,
     [Parameter(HelpMessage = 'Excludes the Setup and Post Installation Script(s) from being applied to the image.')]
-    [switch]$NoSetup
+    [switch]$NoSetup,
+    [Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
+    [switch]$WindowsStore
 )
 
 #region Script Variables
@@ -119,6 +125,7 @@ $ProgressPreference = 'SilentlyContinue'
 $ScriptRoot = (Get-Item -Path '.' -Force).FullName
 $Win32CalcPath = $ScriptRoot + "\Resources\Win32Calc"
 $DaRTPath = $ScriptRoot + "\Resources\DaRT"
+$StoreAppPath = $ScriptRoot + "\Resources\WindowsStore"
 $OfflineBackupDirectory = $WorkFolder + '\' + "OfflineRegistryBackup_" + $(Get-Date -Format "MM-dd-yyyy")
 $BkpTimestamp = Get-Date -Format "[M.dd.yy-hh.mm.ss]"
 $OScript = "Optimize-Offline"
@@ -1191,12 +1198,107 @@ If ($Features)
     }
 }
 
+If ($WindowsStore -and $ImageName -like "*LTSC")
+{
+    If (Test-Path -LiteralPath $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle)
+    {
+        If (!$Features) { Write-Output '' }
+        $Host.UI.RawUI.WindowTitle = "Sideloading the Microsoft Store Application."
+        Out-Log -Content "Sideloading the Microsoft Store Application." -Level Info
+        Try
+        {
+            $StoreBundle = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.WindowsStore*.appxbundle -Recurse -ErrorAction Stop).FullName
+            $PurchaseBundle = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.StorePurchaseApp*.appxbundle -Recurse -ErrorAction Stop).FullName
+            $XboxBundle = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.XboxIdentityProvider*.appxbundle -Recurse -ErrorAction Stop).FullName
+            $InstallerBundle = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.DesktopAppInstaller*.appxbundle -Recurse -ErrorAction Stop).FullName
+            $StoreLicense = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.WindowsStore*.xml -Recurse -ErrorAction Stop).FullName
+            $PurchaseLicense = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.StorePurchaseApp*.xml -Recurse -ErrorAction Stop).FullName
+            $IdentityLicense = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.XboxIdentityProvider*.xml -Recurse -ErrorAction Stop).FullName
+            $InstallerLicense = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.DesktopAppInstaller*.xml -Recurse -ErrorAction Stop).FullName
+            $DepAppx = @()
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Include Microsoft.VCLibs*.appx -Recurse -ErrorAction Stop).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Include *Native.Framework*.appx -Recurse -ErrorAction Stop).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Include *Native.Runtime*.appx -Recurse -ErrorAction Stop).FullName
+            Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord -ErrorAction Stop
+            Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
+            $StorePackage = @{
+                Path                  = $MountFolder
+                PackagePath           = $StoreBundle
+                DependencyPackagePath = $DepAppx
+                LicensePath           = $StoreLicense
+                ScratchDirectory      = $ScratchFolder
+                LogPath               = $DISMLog
+                LogLevel              = 1
+                ErrorAction           = "Stop"
+            }
+            [void](Add-AppxProvisionedPackage @StorePackage)
+            $PurchasePackage = @{
+                Path                  = $MountFolder
+                PackagePath           = $PurchaseBundle
+                DependencyPackagePath = $DepAppx
+                LicensePath           = $PurchaseLicense
+                ScratchDirectory      = $ScratchFolder
+                LogPath               = $DISMLog
+                LogLevel              = 1
+                ErrorAction           = "Stop"
+            }
+            [void](Add-AppxProvisionedPackage @PurchasePackage)
+            $IdentityPackage = @{
+                Path                  = $MountFolder
+                PackagePath           = $XboxBundle
+                DependencyPackagePath = $DepAppx
+                LicensePath           = $IdentityLicense
+                ScratchDirectory      = $ScratchFolder
+                LogPath               = $DISMLog
+                LogLevel              = 1
+                ErrorAction           = "Stop"
+            }
+            [void](Add-AppxProvisionedPackage @IdentityPackage)
+            $DepAppx = @()
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Include *Native.Runtime*.appx -Recurse -ErrorAction Stop).FullName
+            $InstallerPackage = @{
+                Path                  = $MountFolder
+                PackagePath           = $InstallerBundle
+                DependencyPackagePath = $DepAppx
+                LicensePath           = $InstallerLicense
+                ScratchDirectory      = $ScratchFolder
+                LogPath               = $DISMLog
+                LogLevel              = 1
+                ErrorAction           = "Stop"
+            }
+            [void](Add-AppxProvisionedPackage @InstallerPackage)
+            Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord -ErrorAction Stop
+            Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
+            Get-AppxProvisionedPackage -Path $MountFolder | Format-List | Out-File -FilePath $WorkFolder\Sideloaded.txt
+        }
+        Catch
+        {
+            Write-Output ''
+            Out-Log -Content "Failed to Sideload the Microsoft Store Application." -Level Error
+            Exit-Script
+            Break
+        }
+        Finally
+        {
+            If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
+        }
+    }
+    Else
+    {
+        Write-Output ''
+        Out-Log -Content "Missing the required Microsoft Store package files." -Level Error
+        Start-Sleep 3
+    }
+}
+
 #region Registry Optimizations
 If ($Registry)
 {
     Try
     {
-        If (!$Features) { Write-Output '' }
+        Write-Output ''
         $Host.UI.RawUI.WindowTitle = "Applying Optimized Registry Values."
         Out-Log -Content "Applying Optimized Registry Values." -Level Info
         If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
@@ -1574,6 +1676,7 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -ErrorAction Stop
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
@@ -1584,6 +1687,9 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -Name "Value" -Value "Deny" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -Name "Value" -Value "Deny" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -Name "Value" -Value "Deny" -Type String
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
@@ -1601,11 +1707,17 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableMmx" -Value 0 -Type DWord
         #***************************************************************	
-        Write-Output "Disabling Background Application Access." >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Disabling Running Background Applications." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        Get-ChildItem -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Exclude "Microsoft.Windows.Cortana*" | ForEach {
-            Set-ItemProperty -LiteralPath $_ -Name "Disabled" -Value 1 -Type DWord -ErrorAction Stop
-            Set-ItemProperty -LiteralPath $_ -Name "DisabledByUser" -Value 1 -Type DWord -ErrorAction Stop
+        If ($ImageName -notlike "*LTSC") 
+        {
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 1 -Type DWord
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "Migrated" -Value 4 -Type DWord
+            Get-ChildItem -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Exclude "Microsoft.Windows.Cortana*" -ErrorAction SilentlyContinue | ForEach {
+                Set-ItemProperty -LiteralPath $_ -Name "Disabled" -Value 1 -Type DWord -ErrorAction Stop
+                Set-ItemProperty -LiteralPath $_ -Name "DisabledByUser" -Value 1 -Type DWord -ErrorAction Stop
+            }
         }
         #****************************************************************
         Write-Output "Disabling App Access from Linked Devices." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1712,7 +1824,7 @@ If ($Registry)
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord
         #****************************************************************
-        If ($ImageBuild -ge '17134')
+        If ($ImageBuild -ge '17134' -and $ImageName -notlike "*LTSC")
         {
             #****************************************************************	
             Write-Output "Removing Microsoft Edge Desktop Shortcut Creation." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1720,22 +1832,24 @@ If ($Registry)
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord
         }
-        #****************************************************************
-        Write-Output "Removing Windows Store Icon from Taskbar." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Removing Windows Mail Icon from Taskbar." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -Name "MailPin" -Value 2 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling the Windows Mail Application." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -Name "ManualLaunchAllowed" -Value 0 -Type DWord
-        #****************************************************************
+        If ($ImageName -notlike "*LTSC")
+        {
+            #****************************************************************
+            Write-Output "Removing Windows Store Icon from Taskbar." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1 -Type DWord
+            #****************************************************************
+            Write-Output "Removing Windows Mail Icon from Taskbar." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -Name "MailPin" -Value 2 -Type DWord
+            #****************************************************************
+            Write-Output "Disabling the Windows Mail Application." >> "$WorkFolder\Registry-Optimizations.log"
+            #****************************************************************
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -Name "ManualLaunchAllowed" -Value 0 -Type DWord
+        }
         If ($ImageBuild -ge '16273')
         {
             #****************************************************************	
@@ -2311,19 +2425,12 @@ If ($DaRT)
                     [void](Set-FileOwnership -Path "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
-                If (Test-Path -Path "$BootMount\Windows\WinSxS\ManifestCache\*.bin")
+                If (Test-Path -Path "$BootMount\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
                 {
                     [void](Set-FileOwnership -Path "$BootMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
                 }
-                If (Test-Path -Path "$BootMount\Windows\WinSxS\Backup\*.*")
-                {
-                    Get-ChildItem -Path "$BootMount\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue | ForEach {
-                        [void](Set-FileOwnership -Path $($_) -ErrorAction SilentlyContinue)
-                        Remove-Item -Path $($_) -Recurse -Force -ErrorAction SilentlyContinue
-                    }
-                }
-                If (Test-Path -Path "$BootMount\Windows\INF\*.log")
+                If (Test-Path -Path "$BootMount\Windows\INF\*" -Filter *.log)
                 {
                     [void](Set-FileOwnership -Path "$BootMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
@@ -2432,19 +2539,12 @@ If ($DaRT)
                     [void](Set-FileOwnership -Path "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
-                If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin")
+                If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
                 {
                     [void](Set-FileOwnership -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
                 }
-                If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\Backup\*.*")
-                {
-                    Get-ChildItem -Path "$RecoveryMount\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue | ForEach {
-                        [void](Set-FileOwnership -Path $($_) -ErrorAction SilentlyContinue)
-                        Remove-Item -Path $($_) -Recurse -Force -ErrorAction SilentlyContinue
-                    }
-                }
-                If (Test-Path -Path "$RecoveryMount\Windows\INF\*.log")
+                If (Test-Path -Path "$RecoveryMount\Windows\INF\*" -Filter *.log)
                 {
                     [void](Set-FileOwnership -Path "$RecoveryMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
@@ -2531,7 +2631,7 @@ If ($Drivers)
                 ErrorAction      = "Stop"
             }
             [void](Add-WindowsDriver @InjectDriverPackages)
-            Get-WindowsDriver -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+            Get-WindowsDriver -Path $MountFolder | Format-List | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
         }
         Else
         {
@@ -2672,10 +2772,10 @@ SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2016" >NUL 2>&1 && SCH
 SCHTASKS /QUERY | FINDSTR /B /I "Office 17 Subscription Heartbeat" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\Office 17 Subscription Heartbeat" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2019" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetry\OfficeTelemetryAgentLogOn2019" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL 2>&1
+SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "SmartScreenSpecific" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\AppID\SmartScreenSpecific" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "SpeechModelDownloadTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Speech\SpeechModelDownloadTask" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "UpdateLibrary" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Media Sharing\UpdateLibrary" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Uploader" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Uploader" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "UsbCeip" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /Disable >NUL 2>&1
@@ -2694,8 +2794,15 @@ SCHTASKS /QUERY | FINDSTR /B /I "Windows Defender Verification" >NUL 2>&1 && SCH
 '@
         $FirewallRules = @'
 
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="DisAllow ContentDelivery to connect in from the Internet." enable=yes >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="DisAllow ContentDelivery to connect out to the Internet." enable=yes >NUL 2>&1
+SET LOCALAPPDATA=%USERPROFILE%\AppData\Local
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -Like `"*@{*`" | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -EQ `"DiagTrack`" | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -EQ `"Delivery Optimization`" } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -Like `"Windows Media Player Network Sharing Service*`" } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Set-AutologgerConfig -Name `"AutoLogger-Diagtrack-Listener`" -Start 0 -ErrorAction SilentlyContinue }"
+
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Inbound Traffic." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Outbound Traffic." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Block Windows Telemetry [DiagTrack]" dir="Out" action="Block" program="%SystemDrive%\windows\system32\svchost.exe" service="DiagTrack" protocol="TCP" remoteport=80,443 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Block Windows Error Reporting Service [WerSvc]" dir="Out" action="Block" program="%SystemDrive%\windows\system32\svchost.exe" service="WerSvc" protocol="TCP" remoteport=80,443 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="in" interface="any" program="%WinDir%\System32\smartscreen.exe" Description="Prevent SmartScreen Inbound Traffic." enable=yes >NUL 2>&1
@@ -2708,8 +2815,8 @@ NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="blo
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" remoteport=3478 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" localport=19302 >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="WebRTC Leak Fix" dir="out" action="block" protocol="UDP" remoteport=19302 >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="in" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Inbound Traffic." enable=yes >NUL 2>&1
-NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="out" interface="any" program="%SystemDrive%\windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Outbound Traffic." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Inbound Traffic." enable=yes >NUL 2>&1
+NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Compatability Telemetry Runner" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\system32\CompatTelRunner.exe" Description="Prevent CompatTelRunner Outbound Traffic." enable=yes >NUL 2>&1
 
  IF EXIST "%WINDIR%\System32\CompatTelRunner.exe" (
 	TAKEOWN /F "%WINDIR%\System32\CompatTelRunner.exe" /A >NUL 2>&1
@@ -2769,19 +2876,12 @@ Try
         [void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin")
+    If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
     {
         [void](Set-FileOwnership -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
     }
-    If (Test-Path -Path "$MountFolder\Windows\WinSxS\Backup\*.*")
-    {
-        Get-ChildItem -Path "$MountFolder\Windows\WinSxS\Backup\*.*" -Recurse -Force -ErrorAction SilentlyContinue | ForEach -Process {
-            [void](Set-FileOwnership -Path $($_) -ErrorAction SilentlyContinue)
-            Remove-Item -Path $($_) -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-    If (Test-Path -Path "$MountFolder\Windows\INF\*.log")
+    If (Test-Path -Path "$MountFolder\Windows\INF\*" -Filter *.log)
     {
         [void](Set-FileOwnership -Path "$MountFolder\Windows\INF\*.log" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue

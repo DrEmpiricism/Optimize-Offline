@@ -1,8 +1,10 @@
 # ChangeLog #
 
-## Build 3.1.1.9 ##
+## Build 3.1.2.0 ##
 
-- Added the removal of Windows Defender loggers if SecHealthUI is a removed System Application.
-- Added the removal of telemetry loggers to the optimizied registry value settings.
-- Improved the syntax within the SetupComplet.cmd script.
-- Corrected an incorrect comparison operator for the final image clean-up process.
+- Added a new -WindowsStore flag which will sideload the latest Microsoft Windows Store, and its dependencies, into Windows 10 Enterprise LTSC. Only an image detected as Windows 10 Enterprise LTSC will be processed.
+- Added further detection of Windows 10 Enterprise LTSC when applying registry settings that affect default Provisioned Application Packages.
+- Removed the recursive clean-up of the \WinSxS\Backup directory.
+- Updated the SetupComplete.cmd script.
+>> *This script will be getting replaced with a full PowerShell script within the next few updates*
+- Updated the WIM files containing the Microsoft DaRT 10 Debugging Tools to build 17663.
