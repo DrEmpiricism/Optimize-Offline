@@ -48,8 +48,8 @@
 		Excludes the Setup and Post Installation Script(s) from being applied to the image.
 	
 	.PARAMETER WindowsStore
-        Specific to Windows 10 Enterprise LTSC only!
-        Sideloads the Microsoft Windows Store, and its dependencies, into the image.
+        	Specific to Windows 10 Enterprise LTSC only!
+        	Sideloads the Microsoft Windows Store, and its dependencies, into the image.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 16299 -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
