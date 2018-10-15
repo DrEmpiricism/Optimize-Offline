@@ -29,6 +29,10 @@
 	.PARAMETER Features
 		Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.
 	
+	.PARAMETER WindowsStore
+		Specific to Windows 10 Enterprise LTSC only!
+		Sideloads the Microsoft Windows Store, and its dependencies, into the image.
+	
 	.PARAMETER OneDrive
 		Performs a complete removal of Microsoft OneDrive, its associated directories and registry keys.
 	
@@ -46,10 +50,6 @@
 	
 	.PARAMETER NoSetup
 		Excludes the Setup and Post Installation Script(s) from being applied to the image.
-	
-	.PARAMETER WindowsStore
-        	Specific to Windows 10 Enterprise LTSC only!
-        	Sideloads the Microsoft Windows Store, and its dependencies, into the image.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 16299 -MetroApps "Select" -SystemApps -Packages -OneDrive -Registry -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
@@ -76,47 +76,47 @@
 [CmdletBinding()]
 Param
 (
-    [Parameter(Mandatory = $true,
-        HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
-    [ValidateScript( {
-            If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
-            ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
-            Else { Throw "Invalid image path: $_" }
-        })]
-    [Alias('ISO', 'WIM')]
-    [string]$ImagePath,
-    [Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')]
-    [ValidateRange(1, 16)]
-    [int]$Index = 1,
-    [Parameter(Mandatory = $true,
-        HelpMessage = 'The build number of the Windows image being optimized.')]
-    [ValidateRange(15063, 18204)]
-    [int]$Build,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal or performs a complete removal of all packages.')]
-    [ValidateSet('Select', 'All')]
-    [Alias('Appx')]
-    [string]$MetroApps = 'Select',
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
-    [switch]$SystemApps,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
-    [switch]$Packages,
-    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.')]
-    [switch]$Features,
-    [Parameter(HelpMessage = 'Performs a complete removal of Microsoft OneDrive, its associated directories and registry keys.')]
-    [switch]$OneDrive,
-    [Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
-    [switch]$Registry,
-    [Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
-    [switch]$DaRT,
-    [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-    [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
-    [string]$Drivers,
-    [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
-    [string]$NetFx3,
-    [Parameter(HelpMessage = 'Excludes the Setup and Post Installation Script(s) from being applied to the image.')]
-    [switch]$NoSetup,
-    [Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
-    [switch]$WindowsStore
+	[Parameter(Mandatory = $true,
+			   HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
+	[ValidateScript({
+			If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
+			ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
+			Else { Throw "Invalid image path: $_" }
+		})]
+	[Alias('ISO', 'WIM')]
+	[string]$ImagePath,
+	[Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image.')]
+	[ValidateRange(1, 16)]
+	[int]$Index = 1,
+	[Parameter(Mandatory = $true,
+			   HelpMessage = 'The build number of the Windows image being optimized.')]
+	[ValidateRange(15063, 18204)]
+	[int]$Build,
+	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal or performs a complete removal of all packages.')]
+	[ValidateSet('Select', 'All')]
+	[Alias('Appx')]
+	[string]$MetroApps = 'Select',
+	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
+	[switch]$SystemApps,
+	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
+	[switch]$Packages,
+	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.')]
+	[switch]$Features,
+	[Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
+	[switch]$WindowsStore,
+	[Parameter(HelpMessage = 'Performs a complete removal of Microsoft OneDrive, its associated directories and registry keys.')]
+	[switch]$OneDrive,
+	[Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
+	[switch]$Registry,
+	[Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
+	[switch]$DaRT,
+	[Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+	[ValidateScript({ Test-Path $(Resolve-Path -Path $_) })]
+	[string]$Drivers,
+	[Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
+	[string]$NetFx3,
+	[Parameter(HelpMessage = 'Excludes the Setup and Post Installation Script(s) from being applied to the image.')]
+	[switch]$NoSetup
 )
 
 #region Script Variables
@@ -419,7 +419,7 @@ Function Clear-CurrentMount
     $MountPath = (Get-WindowsImage -Mounted).MountPath
     $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR "WIM"')
     If ($QueryHives) { [void]($QueryHives.ForEach{ REG UNLOAD $_ }) }
-    Start-Process -FilePath DISM -ArgumentList ("/English /Unmount-Wim /MountDir:`"${MountPath}`" /Discard") -WindowStyle Hidden -Wait
+    Start-Process -FilePath DISM -ArgumentList @("/English", "/Unmount-Wim", "/MountDir:`"${MountPath}`"", "/Discard") -WindowStyle Hidden -Wait
     Get-ChildItem -Path '.' -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void](Clear-WindowsCorruptMountPoint)
 }
@@ -607,14 +607,14 @@ Try
         If ($ImageBuild -lt '15063')
         {
             Write-Output ''
-            Write-Warning "The image build is not supported [$($ImageBuild.ToString())]"
+            Write-Warning "Unsupported Image Build: [$($ImageBuild.ToString())]"
             Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
             Break
         }
         Else
         {
             Write-Output ''
-            Out-Log -Content "The image build is supported [$($ImageBuild.ToString())]" -Level Info
+            Out-Log -Content "Supported Image Build: [$($ImageBuild.ToString())]" -Level Info
             Start-Sleep 3
             $Error.Clear()
         }
@@ -622,7 +622,7 @@ Try
     Else
     {
         Write-Output ''
-        Write-Warning "The image version is not supported [$($ImageVersion.ToString())]"
+        Write-Warning "Unsupported Image Version: [$($ImageVersion.ToString())]"
         Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
         Break
     }
@@ -630,7 +630,7 @@ Try
 Catch
 {
     Write-Output ''
-    Write-Warning "Failed to return the image version and build."
+    Write-Warning "Failed to return the Image Version and Build."
     Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     Break
 }
@@ -653,7 +653,7 @@ Try
     If ($ImageHealth -eq "Healthy")
     {
         Write-Output ''
-        Out-Log -Content "The image health state has returned as [Healthy]" -Level Info
+        Out-Log -Content "Pre-Optimization Image Health State: [Healthy]" -Level Info
         Start-Sleep 3
     }
     Else
@@ -679,10 +679,10 @@ Try
     Out-Log -Content "Backing-up the Default Registry." -Level Info
     [void](New-Item -Path $OfflineBackupDirectory -ItemType Directory -Force -ErrorAction Stop)
     [void](Mount-OfflineHives)
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKLM_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait -ErrorAction Stop
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKCU_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKCU") -WindowStyle Hidden -Wait -ErrorAction Stop
-    Start-Process -FilePath REGEDIT -ArgumentList ("/E $OfflineBackupDirectory\HKU_$BkpTimestamp.reg HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E `"$OfflineBackupDirectory\HKLM_$BkpTimestamp.reg`" HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E `"$OfflineBackupDirectory\HKLM_$BkpTimestamp.reg`" HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E `"$OfflineBackupDirectory\HKCU_$BkpTimestamp.reg`" HKEY_LOCAL_MACHINE\WIM_HKCU") -WindowStyle Hidden -Wait -ErrorAction Stop
+    Start-Process -FilePath REGEDIT -ArgumentList ("/E `"$OfflineBackupDirectory\HKU_$BkpTimestamp.reg`" HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT") -WindowStyle Hidden -Wait -ErrorAction Stop
     [void](Dismount-OfflineHives)
     [void](Compress-Archive -Path $OfflineBackupDirectory -DestinationPath "$WorkFolder\RegistryBackup.Zip" -CompressionLevel Optimal -ErrorAction Stop)
     Remove-Item -Path $OfflineBackupDirectory -Recurse -Force -ErrorAction SilentlyContinue
@@ -699,7 +699,7 @@ Finally
     If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
 }
 
-If (($MetroApps -and $ImageName -notlike "*LTSC"))
+If ($MetroApps -and $ImageName -notlike "*LTSC")
 {
     Try
     {
@@ -792,7 +792,7 @@ If ($SystemApps)
                 $FullKeyPath = $InboxAppsKey + '\' + $($_)
                 $AppKey = $FullKeyPath.Replace("HKLM:", "HKLM")
                 Out-Log -Content "Removing System Application: $($_.Split('_')[0])" -Level Info
-                [void](Invoke-Expression -Command ('REG DELETE $AppKey /F') -ErrorAction Stop)
+                [void](Invoke-Expression -Command ("REG DELETE `"$AppKey`" /F") -ErrorAction Stop)
                 [void]$RemovedSystemApps.Add($($_.Split('_')[0]))
                 Start-Sleep 2
             }
@@ -1202,9 +1202,10 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
 {
     If (Test-Path -LiteralPath $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle)
     {
-        If (!$Features) { Write-Output '' }
-        $Host.UI.RawUI.WindowTitle = "Sideloading the Microsoft Store Application."
-        Out-Log -Content "Sideloading the Microsoft Store Application." -Level Info
+        Clear-Host
+        $Host.UI.RawUI.WindowTitle = "Sideloading the Microsoft Store Application Packages."
+        Write-Host "Sideloading the Microsoft Store Application Packages..." -ForegroundColor Cyan
+        Start-Sleep 3
         Try
         {
             $StoreBundle = (Get-ChildItem -Path $StoreAppPath -Include Microsoft.WindowsStore*.appxbundle -Recurse -ErrorAction Stop).FullName
@@ -1232,6 +1233,8 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
                 LogLevel              = 1
                 ErrorAction           = "Stop"
             }
+            Write-Output ''
+            Out-Log -Content "Sideloading Provisioned App Package: Microsoft.WindowsStore"
             [void](Add-AppxProvisionedPackage @StorePackage)
             $PurchasePackage = @{
                 Path                  = $MountFolder
@@ -1243,6 +1246,8 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
                 LogLevel              = 1
                 ErrorAction           = "Stop"
             }
+            Write-Output ''
+            Out-Log -Content "Sideloading Provisioned App Package: Microsoft.StorePurchaseApp"
             [void](Add-AppxProvisionedPackage @PurchasePackage)
             $IdentityPackage = @{
                 Path                  = $MountFolder
@@ -1254,6 +1259,8 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
                 LogLevel              = 1
                 ErrorAction           = "Stop"
             }
+            Write-Output ''
+            Out-Log -Content "Sideloading Provisioned App Package: Microsoft.XboxIdentityProvider"
             [void](Add-AppxProvisionedPackage @IdentityPackage)
             $DepAppx = @()
             $DepAppx += (Get-ChildItem -Path $StoreAppPath -Include *Native.Runtime*.appx -Recurse -ErrorAction Stop).FullName
@@ -1267,28 +1274,28 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
                 LogLevel              = 1
                 ErrorAction           = "Stop"
             }
+            Write-Output ''
+            Out-Log -Content "Sideloading Provisioned App Package: Microsoft.DesktopAppInstaller"
             [void](Add-AppxProvisionedPackage @InstallerPackage)
             Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord -ErrorAction Stop
             Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait
             Get-AppxProvisionedPackage -Path $MountFolder | Format-List | Out-File -FilePath $WorkFolder\Sideloaded.txt
+            $StoreSideloaded = $true
+            Clear-Host
         }
         Catch
         {
             Write-Output ''
-            Out-Log -Content "Failed to Sideload the Microsoft Store Application." -Level Error
+            Out-Log -Content "Failed to Sideload the Microsoft Store Application Packages." -Level Error
             Exit-Script
             Break
-        }
-        Finally
-        {
-            If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
         }
     }
     Else
     {
         Write-Output ''
-        Out-Log -Content "Missing the required Microsoft Store package files." -Level Error
+        Out-Log -Content "Missing the required Microsoft Store Application package files." -Level Error
         Start-Sleep 3
     }
 }
@@ -1298,7 +1305,7 @@ If ($Registry)
 {
     Try
     {
-        Write-Output ''
+        If (!$Features -or $StoreSideloaded -ne $true) { Write-Output '' }
         $Host.UI.RawUI.WindowTitle = "Applying Optimized Registry Values."
         Out-Log -Content "Applying Optimized Registry Values." -Level Info
         If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
@@ -1382,53 +1389,19 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\AppV\CEIP" -Name "CEIPEnable" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" -Name "CEIPEnable" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\DiagTrack" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
-        @("AutoLogger-Diagtrack-Listener", "Circular Kernel Context Logger", "Diagtrack-Listener", "WFP-IPsec Trace", "WPR_initiated_DiagTrackMiniLogger_WPR System Collector") | ForEach {
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\$_")
-            {
-                Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\$_" -Recurse -Force -ErrorAction Stop
-            }
-        }
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord
+		#****************************************************************
+		Write-Output "Disabling Windows Update Peer-to-Peer Distribution and Delivery Optimization." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        Write-Output "Disabling Office 2016 Telemetry and Logging." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Office\16.0\osm" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Office\16.0\osm" -Name "Enablelogging" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Office\16.0\osm" -Name "EnableUpload" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Windows Update Peer-to-Peer Distribution and Delivery Optimization." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Windows Update Automatic Driver Downloads." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Device Metadata" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Device Metadata" -Name "PreventDeviceMetadataFromNetwork" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontPromptForWindowsUpdate" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontSearchWindowsUpdate" -Value 1 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DriverUpdateWizardWuSearchEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\DoSvc" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
         Write-Output "Disabling 'Find My Device'." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\FindMyDevice" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\FindMyDevice" -Name "AllowFindMyDevice" -Value 0 -Type DWord
-        #***************************************************************
-        Write-Output "Disabling Activity History." >> "$WorkFolder\Registry-Optimizations.log"
-        #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0 -Type DWord
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Enabling PIN requirement for pairing devices." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -1443,7 +1416,8 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" -Name "value" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" -Name "value" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0 -Type DWord
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "WiFISenseAllowed" -Value 0 -Type DWord
+		#****************************************************************
         If ($ImageBuild -lt '17134')
         {
             #****************************************************************
@@ -1462,52 +1436,29 @@ If ($Registry)
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
-        }
-        #****************************************************************
-        Write-Output "Disabling Text Suggestions and Screen Monitoring." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Steps Recorder." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisableUAR" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Compatibility Assistant." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisablePCA" -Value 1 -Type DWord
+		}
+		If ($RemovedSystemApps -contains "Microsoft.Windows.SecureAssessmentBrowser")
+		{
+			#****************************************************************
+			Write-Output "Disabling Text Suggestions and Screen Monitoring." >> "$WorkFolder\Registry-Optimizations.log"
+			#****************************************************************
+			New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -ErrorAction Stop
+			Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
+			Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
+			Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
+		}
         #****************************************************************
         Write-Output "Disabling Windows Asking for Feedback." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Siuf\Rules" -ErrorAction Stop
+		New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Siuf\Rules" -ErrorAction Stop
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Siuf\Rules" -Name "NumberOfSIUFInPeriod" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Siuf\Rules" -Name "PeriodInNanoSeconds" -Value 0 -Type DWord
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "DoNotShowFeedbackNotifications" -Value 1 -Type DWord
         #****************************************************************
         Write-Output "Disabling the Password Reveal button." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CredUI" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CredUI" -Name "DisablePasswordReveal" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Windows Media Player Statistics Tracking." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\MediaPlayer\Preferences" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\MediaPlayer\Preferences" -Name "UsageTracking" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Microsoft Windows Media Digital Rights Management." >> "$WorkFolder\Registry-Optimizations.log"
-        #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\WMDRM" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\WMDRM" -Name "DisableOnline" -Value 1 -Type DWord
-        #***************************************************************
-        Write-Output "Disabling Advertisement ID." >> "$WorkFolder\Registry-Optimizations.log"
-        #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Disabling Explorer Tips, Sync Notifications and Document Tracking." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -1549,15 +1500,6 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotification" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoToastApplicationNotificationOnLockScreen" -Value 1 -Type DWord
         #****************************************************************
-        Write-Output "Disabling Feature Advertisement Notifications." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoBalloonFeatureAdvertisements" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling System Tray Promotion Notifications." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoSystraySystemPromotion" -Value 1 -Type DWord
-        #****************************************************************
         Write-Output "Disabling Typing Data Telemetry." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Input\TIPC" -ErrorAction Stop
@@ -1566,36 +1508,18 @@ If ($Registry)
         Write-Output "Disabling Automatic Download of Content, Ads and Suggestions." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -ErrorAction Stop
-        @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
-            "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContent-202914Enabled",
-            "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
-            "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled",
-            "SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled",
-            "SubscribedContent-353698Enabled") | ForEach {
+		@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled",
+			"RotatingLockScreenEnabled", "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled",
+			"SubscribedContent-310093Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled",
+			"SubscribedContent-338393Enabled", "SubscribedContent-353696Enabled", "SubscribedContent-353698Enabled") | ForEach {
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $_ -Value 0 -Type DWord -ErrorAction Stop
         }
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\PenWorkspace" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\PenWorkspace" -Name "PenWorkspaceAppSuggestionsEnabled" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackProgs" -Value 0 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Explorer Ads and Tips." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowSyncProviderNotifications" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "AllowOnlineTips" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Disabling Windows 'Getting to Know Me' and Tablet Mode Keylogging." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\InputPersonalization" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\TabletPC" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\HandwritingErrorReports" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Value 1 -Type DWord
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\TabletPC" -Name "PreventHandwritingDataSharing" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\HandwritingErrorReports" -Name "PreventHandwritingErrorReports" -Value 1 -Type DWord
         #***************************************************************
         Write-Output "Disabling the Windows Insider Program and its Telemetry." >> "$WorkFolder\Registry-Optimizations.log"
         #***************************************************************
@@ -1630,15 +1554,9 @@ If ($Registry)
         #****************************************************************
         Write-Output "Disabling Windows Auto-Update and Auto-Reboot." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "UxOption" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Value 2 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Value 3 -Type DWord
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -ErrorAction Stop
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Disabling System and Settings Syncronization." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -1670,92 +1588,26 @@ If ($Registry)
         #****************************************************************
         Write-Output "Disabling System Tracking, Location Sensors and Non-Explicit App Access." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -ErrorAction Stop
+		New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{8BC668CF-7728-45BD-93F8-CF2B3B41D7AB}" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{992AFA70-6F47-4148-B3E9-3003349C1548}" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\{21157C1F-2651-4CC1-90CA-1F28B02263F6}" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Type" -Value "LooselyCoupled" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeviceAccess\Global\LooselyCoupled" -Name "InitialAppValue" -Value "Unspecified" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name "LetAppsAccessLocation" -Value 2 -Type DWord
+		Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord
         #****************************************************************	
         Write-Output "Disabling Shared Experiences." >>  "$WorkFolder\Registry-Optimizations.log"
         #***************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP" -Name "RomeSdkChannelUserAuthzPolicy" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableMmx" -Value 0 -Type DWord
-        #***************************************************************	
-        Write-Output "Disabling Running Background Applications." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        If ($ImageName -notlike "*LTSC") 
-        {
-            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 1 -Type DWord
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "Migrated" -Value 4 -Type DWord
-            Get-ChildItem -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Exclude "Microsoft.Windows.Cortana*" -ErrorAction SilentlyContinue | ForEach {
-                Set-ItemProperty -LiteralPath $_ -Name "Disabled" -Value 1 -Type DWord -ErrorAction Stop
-                Set-ItemProperty -LiteralPath $_ -Name "DisabledByUser" -Value 1 -Type DWord -ErrorAction Stop
-            }
-        }
-        #****************************************************************
-        Write-Output "Disabling App Access from Linked Devices." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SmartGlass" -Name "UserAuthPolicy" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Hiding 'Recently Added Apps' on Start Menu." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Value 1 -Type DWord
         #****************************************************************
-        Write-Output "Disabling Web Access to Language List." >> "$WorkFolder\Registry-Optimizations.log"
-        #***************************************************************
-        New-Container -Path "HKLM:\WIM_HKCU\Control Panel\International\User Profile" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\Control Panel\International\User Profile" -Name "HttpAcceptLanguageOptOut" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Advertising ID." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling the Link-Local Multicast Name Resolution (LLMNR) Protocol." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Value 0 -Type DWord
-        #****************************************************************
         Write-Output "Disabling Error Reporting." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\Windows Error Reporting" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Settings" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" -Name "Disabled" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" -Name "DontSendAdditionalData" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" -Name "LoggingDisabled" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Name "Disabled" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Settings" -Name "DisableSendGenericDriverNotFoundToWER" -Value 1 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Settings" -Name "DisableSendRequestAdditionalSoftwareToWER" -Value 1 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WerSvc" -Name "Start" -Value 4 -Type DWord
         #****************************************************************
         Write-Output "Enabling .NET Strong Cryptography." >> "$WorkFolder\Registry-Optimizations.log"
@@ -1764,13 +1616,6 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\.NETFramework\v4.0.30319" -ErrorAction Stop
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
-        #****************************************************************
-        Write-Output "Disabling Speech Model Updates." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Speech" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Speech" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Speech" -Name "AllowSpeechModelUpdate" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Speech" -Name "AllowSpeechModelUpdate" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Disabling First Log-on Animation." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2111,10 +1956,6 @@ If ($Registry)
             }
         }
         #****************************************************************
-        Write-Output "Disabling Recent Document History." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoRecentDocsHistory" -Value 1 -Type DWord
-        #****************************************************************
         Write-Output "Disabling Automatic Sound Reduction." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Multimedia\Audio" -ErrorAction Stop
@@ -2265,7 +2106,7 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\Shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"(Get-Process -Name explorer).Kill()`"" -Type String
         #****************************************************************
-        $SetRegistryComplete = $true
+		$SetRegistryComplete = $true
         [void](Dismount-OfflineHives)
     }
     Catch
@@ -2282,7 +2123,7 @@ If ($ImageName -notlike "*LTSC")
 {
     If ((Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0))
     {
-        If ((Test-Path -Path "$Win32CalcPath\System32" -Filter win32calc*) -and (Test-Path -Path "$Win32CalcPath\SysWOW64" -Filter win32calc*))
+        If ((Test-Path -LiteralPath "$Win32CalcPath\System32" -Filter win32calc*) -and (Test-Path -LiteralPath "$Win32CalcPath\SysWOW64" -Filter win32calc*))
         {
             Try
             {
@@ -2344,14 +2185,14 @@ If ($DaRT)
         {
             Clear-Host
             $Host.UI.RawUI.WindowTitle = "Applying Microsoft DaRT 10."
-            Out-Log -Content "Applying Microsoft DaRT 10 $($BuildCode) to Windows Setup and Windows Recovery." -Level Info
+            Write-Host "Applying Microsoft DaRT 10 $($BuildCode) to Windows Setup and Windows Recovery..." -ForegroundColor Cyan
             Start-Sleep 3
         }
         Else
         {
             Clear-Host
             $Host.UI.RawUI.WindowTitle = "Applying Microsoft DaRT 10."
-            Out-Log -Content "Applying Microsoft DaRT 10 $($BuildCode) to Windows Recovery." -Level Info
+            Write-Host "Applying Microsoft DaRT 10 $($BuildCode) to Windows Recovery..." -ForegroundColor Cyan
             Start-Sleep 3
         }
         Try
@@ -2413,8 +2254,6 @@ If ($DaRT)
 %WINDIR%\system32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
 '@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -ErrorAction Stop
-                Write-Output ''
-                Out-Log -Content "Cleaning-up the Boot Image."
                 If (Test-Path -Path "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*")
                 {
                     [void](Set-FileOwnership -Path "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
@@ -2462,15 +2301,16 @@ If ($DaRT)
                 [void](Dismount-WindowsImage @DismountBootImage)
                 Write-Output ''
                 Out-Log -Content "Rebuilding the Boot Image." -Level Info
-                $ExportBoot = "/English /Export-Image /SourceImageFile:`"${ImageFolder}\boot.wim`" /All /DestinationImageFile:`"${WorkFolder}\boot.wim`" /Compress:Max /CheckIntegrity /Quiet"
-                Start-Process -FilePath DISM -ArgumentList $ExportBoot -WindowStyle Hidden -Wait
+                $ExportBoot = @("/English", "/Export-Image", "/SourceImageFile:`"${ImageFolder}\boot.wim`"", "/All", "/DestinationImageFile:`"${WorkFolder}\boot.wim`"",
+                    "/Compress:Max", "/CheckIntegrity", "/Quiet")
+                Start-Process -FilePath DISM -ArgumentList $ExportBoot -WindowStyle Hidden -Wait -ErrorAction Stop
                 Remove-Item -Path $BootWim -Force -ErrorAction SilentlyContinue
                 Remove-Item -Path $BootMount -Recurse -Force -ErrorAction SilentlyContinue
                 $BootWim = Get-Item -Path "$($WorkFolder)\boot.wim" -Force -ErrorAction Stop
             }
             If (Test-Path -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -PathType Leaf)
             {
-                Start-Process -FilePath ATTRIB -ArgumentList ("-S -H -I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -NoNewWindow -Wait
+                Start-Process -FilePath ATTRIB -ArgumentList ("-S -H -I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -NoNewWindow -Wait -ErrorAction Stop
                 Copy-Item -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -Destination $ImageFolder -Force -ErrorAction Stop
                 $RecoveryWim = Get-Item -Path "$ImageFolder\winre.wim" -Force -ErrorAction Stop
                 $NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "RecoveryMount_$(Get-Random)" -ErrorAction Stop))
@@ -2527,8 +2367,6 @@ If ($DaRT)
 %WINDIR%\system32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
 '@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -ErrorAction Stop
-                Write-Output ''
-                Out-Log -Content "Cleaning-up the Recovery Image."
                 If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*")
                 {
                     [void](Set-FileOwnership -Path "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
@@ -2576,10 +2414,11 @@ If ($DaRT)
                 [void](Dismount-WindowsImage @DismountRecoveryImage)
                 Write-Output ''
                 Out-Log -Content "Rebuilding the Recovery Image." -Level Info
-                $ExportRecovery = "/English /Export-Image /SourceImageFile:`"${ImageFolder}\winre.wim`" /All /DestinationImageFile:`"${WorkFolder}\winre.wim`" /Compress:Max /CheckIntegrity /Quiet"
-                Start-Process -FilePath DISM -ArgumentList $ExportRecovery -WindowStyle Hidden -Wait
+                $ExportRecovery = @("/English", "/Export-Image", "/SourceImageFile:`"${ImageFolder}\winre.wim`"", "/All", "/DestinationImageFile:`"${WorkFolder}\winre.wim`"",
+                    "/Compress:Max", "/CheckIntegrity", "/Quiet")
+                Start-Process -FilePath DISM -ArgumentList $ExportRecovery -WindowStyle Hidden -Wait -ErrorAction Stop
                 Copy-Item -Path "$($WorkFolder)\winre.wim" -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorAction Stop
-                Start-Process -FilePath ATTRIB -ArgumentList ("+S +H +I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -NoNewWindow -Wait
+                Start-Process -FilePath ATTRIB -ArgumentList ("+S +H +I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -NoNewWindow -Wait -ErrorAction Stop
                 Remove-Item -Path $RecoveryWim -Force -ErrorAction SilentlyContinue
                 Remove-Item -Path $RecoveryMount -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -2614,7 +2453,7 @@ If ($Drivers)
 {
     Try
     {
-        If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf)
+        If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf -ErrorAction Stop)
         {
             If ($DaRTApplied -eq $true) { Clear-Host }
             Else { Write-Output '' }
@@ -2657,7 +2496,7 @@ If ($NetFx3)
     {
         Try
         {
-            If (($ISOIsExported -eq $true) -and (Get-ChildItem -Path "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab))
+            If (($ISOIsExported -eq $true) -and (Get-ChildItem -LiteralPath "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab -ErrorAction Stop))
             {
                 $EnableNetFx3 = @{
                     FeatureName      = "NetFx3"
@@ -2675,7 +2514,7 @@ If ($NetFx3)
                 Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
                 [void](Enable-WindowsOptionalFeature @EnableNetFx3)
             }
-            ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -Path $NetFx3 -Recurse -Include *netfx3*.cab))
+            ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -LiteralPath $NetFx3 -Recurse -Include *netfx3*.cab -ErrorAction Stop))
             {
                 $EnableNetFx3 = @{
                     FeatureName      = "NetFx3"
@@ -2740,8 +2579,6 @@ RMDIR /S /Q "%SYSTEMDRIVE%\Users\%PROFILENAME%" >NUL
 GOTO :CONTINUE
 
 :CONTINUE
-SCHTASKS /QUERY | FINDSTR /B /I "AgentFallBack2016" >NUL 2>&1 && SCHTASKS /change /TN "\Microsoft\Office\OfficeTelemetry\AgentFallBack2016" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "AgentFallBack2019" >NUL 2>&1 && SCHTASKS /change /TN "\Microsoft\Office\OfficeTelemetry\AgentFallBack2019" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "AitAgent" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\AitAgent" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Background Synchronization" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Offline Files\Background Synchronization" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "BackgroundUploadTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\SettingSync\BackgroundUploadTask" /Disable >NUL 2>&1
@@ -2750,7 +2587,7 @@ SCHTASKS /QUERY | FINDSTR /B /I "BthSQM" >NUL 2>&1 && SCHTASKS /Change /TN "\Mic
 SCHTASKS /QUERY | FINDSTR /B /I "Cellular" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Management\Provisioning\Cellular" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "CleanupOfflineContent" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\RetailDemo\CleanupOfflineContent" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Consolidator" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "CreateObjectTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\CloudExperienceHost\" /Disable >NUL 2>&1
+SCHTASKS /QUERY | FINDSTR /B /I "CreateObjectTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\CloudExperienceHost" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Microsoft-Windows-DiskDiagnosticDataCollector" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable >NUL 2>&1   
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitor" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitor" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "FamilySafetyMonitorToastTask" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Shell\FamilySafetyMonitorToastTask" /Disable >NUL 2>&1
@@ -2764,13 +2601,6 @@ SCHTASKS /QUERY | FINDSTR /B /I "Microsoft Compatibility Appraiser" >NUL 2>&1 &&
 SCHTASKS /QUERY | FINDSTR /B /I "MNO Metadata Parser" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Mobile Broadband Accounts\MNO Metadata Parser" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "MobilityManager" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Ras\MobilityManager" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Notifications" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Location\Notifications" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetryAgentLogOn" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentFallBack" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetryAgentFallBack" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "Office 15 Subscription Heartbeat" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\Office 15 Subscription Heartbeat" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "Office 16 Subscription Heartbeat" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\Office 16 Subscription Heartbeat" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2016" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetry\OfficeTelemetryAgentLogOn2016" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "Office 17 Subscription Heartbeat" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\Office 17 Subscription Heartbeat" /Disable >NUL 2>&1
-SCHTASKS /QUERY | FINDSTR /B /I "OfficeTelemetryAgentLogOn2019" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Office\OfficeTelemetry\OfficeTelemetryAgentLogOn2019" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "ProgramDataUpdater" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "Proxy" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Autochk\Proxy" /Disable >NUL 2>&1
 SCHTASKS /QUERY | FINDSTR /B /I "QueueReporting" >NUL 2>&1 && SCHTASKS /Change /TN "\Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable >NUL 2>&1
@@ -2858,7 +2688,7 @@ Try
     If ($NoSetup) { Clear-Host }
     $Host.UI.RawUI.WindowTitle = "Cleaning-up the Image."
     Out-Log -Content "Cleaning-up the Image."
-    If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true -and $ImageName -notlike "*LTSC")
+    If ($MetroApps -eq "All" -and $MetroAppsComplete -eq $true)
     {
         Start-Process -FilePath TAKEOWN -ArgumentList ("/F `"$MountFolder\Program Files\WindowsApps`" /R") -WindowStyle Hidden -Wait
         Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Program Files\WindowsApps`" /INHERITANCE:E /GRANT `"$($Env:USERNAME):(OI)(CI)F`" /T /C") -WindowStyle Hidden -Wait
@@ -2908,7 +2738,7 @@ Finally
 If ($ImageHealth -eq "Healthy")
 {
     Write-Output ''
-    Out-Log -Content "The image health state has returned as [Healthy]" -Level Info
+    Out-Log -Content "Post-Optimization Image Health State: [Healthy]" -Level Info
     Start-Sleep 3
 }
 Else
@@ -2948,7 +2778,8 @@ Try
     $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting the Image."
     Write-Output ''
     Out-Log -Content "Rebuilding and Exporting the Image." -Level Info
-    $ExportInstall = "/English /Export-Image /SourceImageFile:`"${InstallWim}`" /All /DestinationImageFile:`"${WorkFolder}\install.wim`" /Compress:Max /CheckIntegrity /Quiet"
+    $ExportInstall = @("/English", "/Export-Image", "/SourceImageFile:`"${InstallWim}`"", "/All", "/DestinationImageFile:`"${WorkFolder}\install.wim`"", "/Compress:Max",
+        "/CheckIntegrity", "/Quiet")
     Start-Process -FilePath DISM -ArgumentList $ExportInstall -WindowStyle Hidden -Wait -ErrorAction Stop
 }
 Catch

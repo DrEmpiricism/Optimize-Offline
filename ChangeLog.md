@@ -8,3 +8,4 @@
 - Updated the SetupComplete.cmd script.
 >> *This script will be getting replaced with a full PowerShell script within the next few updates*
 - Updated the WIM files containing the Microsoft DaRT 10 Debugging Tools to build 17663.
+- Cleaned-up multiple registry values that are applied.
