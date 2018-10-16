@@ -1,6 +1,6 @@
 # ChangeLog #
 
-## Build 3.1.2.0 ##
+## Build 3.1.2.1 ##
 
 - Added a new -WindowsStore flag which will sideload the latest Microsoft Windows Store, and its dependencies, into Windows 10 Enterprise LTSC. Only an image detected as Windows 10 Enterprise LTSC will be processed.
 - Added further detection of Windows 10 Enterprise LTSC when applying registry settings that affect default Provisioned Application Packages.
