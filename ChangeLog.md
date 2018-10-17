@@ -2,10 +2,9 @@
 
 ## Build 3.1.2.1 ##
 
-- Added a new -WindowsStore flag which will sideload the latest Microsoft Windows Store, and its dependencies, into Windows 10 Enterprise LTSC. Only an image detected as Windows 10 Enterprise LTSC will be processed.
-- Added further detection of Windows 10 Enterprise LTSC when applying registry settings that affect default Provisioned Application Packages.
-- Removed the recursive clean-up of the \WinSxS\Backup directory.
-- Updated the SetupComplete.cmd script.
->> *This script will be getting replaced with a full PowerShell script within the next few updates*
-- Updated the WIM files containing the Microsoft DaRT 10 Debugging Tools to build 17663.
-- Cleaned-up multiple registry values that are applied.
+- Converted the -Registry switch into a parameter that will accept set values of "Default" and "Harden" for applying registry hive settings and values.
+- Running -Registry "Harden" will apply the Default entries, as well as additional entries that are more restritive of system sensor and background access as well as more stringint telemetry blocking.
+>> More settings will be added to the "Harden" parameter set in the next update.
+- Removed the recursive deletion of the WinSxS OneDrive directories during OneDrive's removal as I've had people concerned about /ScanHealth returning benign corruption results due to these missing directories.
+- All log files and any package lists are now archived into a single zip file.
+- The default language of the image is assigned to a variable and used in place of the static 'en-US' string in order to accommodate other image languages.
