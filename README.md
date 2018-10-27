@@ -5,16 +5,17 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 ## About Optimize-Offline ##
 
 - Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
+- Accepts either a full Windows 10 installtion ISO, or a Windows 10 install.wim file.
 - Does not perform any changes to an installed or live system nor can it optimize a live system.
 - Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
 - Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
-- Adds removed System Applications' scheduled tasks to the SetupComplete script to be automatically disabled during Windows installation.
-- Optional Features and Windows Packages can be removed and/or disabled by adding them to the editable field list and using their respective switches.
+- Generates a SetupComplete.cmd script based on System Application removal, to further disable any Scheduled Tasks and the like that are enabled by default during Windows installation.
+- Allows offline removal of default Windows Packages and the disabling of Windows Features.
 
 ## Script safety ##
 
-It is the responsibility of the end-user to be aware of what each parameter and switch does.
+It is the responsibility of the end-user to be aware of what each parameter and switch does.  Moreover, the script is designed to optimize OEM images and not images already optimized by another script/program.
 
 ## About the -Registry switch ##
 
@@ -57,6 +58,12 @@ This can vary, depending on the end-user's final image requirements, but SecHeal
 
 The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Store Apps Troubleshooter from working properly and likewise affect the Windows Store. It is not recommended to remove these if the Windows Store is required.
 
+## Microsoft DaRT 10 and Windows 10 Debugging Tools ##
+
+> Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
+
+*The supplied WIMs used for applying MS DaRT 10 and associated debugging tools are compressed using recovery compression.  This type of compression cannot be viewed in a GUI by some ISO image programs.*
+
 ## About the Defaultuser0 ghost account ##
 
 Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
@@ -67,3 +74,9 @@ Optimize-Offline remidies this issue by first setting the proper key property in
 This ensures the defaultuser0 ghost account, if present, is always entirely removed immediately after the installation of Windows.
 
 **A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
+
+## Using Optimize-Offline ##
+
+- Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
+- If maintaining fully updated OEM images, it's best to integrate updates into the image and then running Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
+- Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
