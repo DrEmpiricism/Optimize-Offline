@@ -1,10 +1,9 @@
 # ChangeLog #
 
-## Build 3.1.2.1 ##
+## Build 3.1.2.2 ##
 
-- Converted the -Registry switch into a parameter that will accept set values of "Default" and "Harden" for applying registry hive settings and values.
-- Running -Registry "Harden" will apply the Default entries as well as additional entries that are more restrictive of system sensor and background access as well as more stringint telemetry blocking.
->> More settings will be added to the "Harden" parameter set in the next update.
-- Removed the recursive deletion of the WinSxS OneDrive directories during OneDrive's removal as I've had people concerned about /ScanHealth returning benign corruption results due to these missing directories.
-- All log files and any package lists are now archived into a single zip file.
-- The default language of the image is assigned to a variable and used in place of the static 'en-US' string in order to accommodate other image languages.
+- Added a -Features switch which will output a Gridview list of all enabled Windows Features for selective disabling.
+- Removed the -OneDrive switch and the removal of OneDrive as a process. This switch and process were just script clutter.
+- Updated and added multiple Default registry values and settings.
+- Updated the SetupComplete script with additional commands and rules specific to telemetry.
+- Updated a few helper functions and removed a helper function that was not necessary.

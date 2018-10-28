@@ -1,5 +1,14 @@
 # Previous Version Log #
 
+## Build 3.1.2.1 (10-17-2018) ##
+
+- Converted the -Registry switch into a parameter that will accept set values of "Default" and "Harden" for applying registry hive settings and values.
+- Running -Registry "Harden" will apply the Default entries as well as additional entries that are more restrictive of system sensor and background access as well as more stringint telemetry blocking.
+>> More settings will be added to the "Harden" parameter set in the next update.
+- Removed the recursive deletion of the WinSxS OneDrive directories during OneDrive's removal as I've had people concerned about /ScanHealth returning benign corruption results due to these missing directories.
+- All log files and any package lists are now archived into a single zip file.
+- The default language of the image is assigned to a variable and used in place of the static 'en-US' string in order to accommodate other image languages.
+
 ## 3.1.2.0 (10-14-2018) ##
 
 - Added a new -WindowsStore flag which will sideload the latest Microsoft Windows Store, and its dependencies, into Windows 10 Enterprise LTSC. Only an image detected as Windows 10 Enterprise LTSC will be processed.
