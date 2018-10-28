@@ -30,8 +30,12 @@
 		Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.
 	
 	.PARAMETER WindowsStore
-		Specific to Windows 10 Enterprise LTSC only!
+		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Sideloads the Microsoft Windows Store, and its dependencies, into the image.
+
+	.PARAMETER MicrosoftEdge
+		Specific to Windows 10 Enterprise LTSC 2019 only!
+		Applies the Microsoft Edge Browser packages into the image.
 	
 	.PARAMETER Registry
 		Default = Applies optimized registry values into the registry hives of the image.
@@ -50,10 +54,10 @@
 		Excludes the Setup and Post Installation Script(s) from being applied to the image.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 16299 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 17134 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17134 -MetroApps "All" -SystemApps -Packages -Features -Registry "Harden" -NetFx3 "C:\Windows 10\sources\sxs"
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17763 -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry "Harden" -NetFx3 "C:\Windows 10\sources\sxs"
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -101,6 +105,8 @@ Param
     [switch]$Features,
     [Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
     [switch]$WindowsStore,
+    [Parameter(HelpMessage = 'Applies the Microsoft Edge Browser packages into the image.')]
+    [switch]$MicrosoftEdge,
     [Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
     [ValidateSet('Default', 'Harden')]
     [string]$Registry = 'Default',
@@ -122,6 +128,7 @@ $ScriptRoot = (Get-Item -Path '.' -Force).FullName
 $Win32CalcPath = $ScriptRoot + "\Resources\Win32Calc"
 $DaRTPath = $ScriptRoot + "\Resources\DaRT"
 $StoreAppPath = $ScriptRoot + "\Resources\WindowsStore"
+$EdgeAppPath = $ScriptRoot + "\Resources\MicrosoftEdge"
 $OScript = "Optimize-Offline"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
@@ -926,7 +933,7 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Removing Windows Defender Remnants."
-        Write-Output ''
+        If ($ImageName -notlike "*LTSC") { Write-Output '' }
         Out-Log -Content "Disabling Windows Defender Services, Drivers and Smartscreen Integration." -Level Info
         [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -ErrorAction Stop
@@ -1006,6 +1013,8 @@ If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCal
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
+        If ($DisableDefenderComplete -eq $true) { Write-Output '' }
+        ElseIf ($ImageName -notlike "*LTSC") { Write-Output '' }
         Write-Output ''
         Out-Log -Content "Disabling Xbox Services and Drivers." -Level Info
         [void](Mount-OfflineHives)
@@ -1208,12 +1217,59 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
     }
 }
 
+If ($MicrosoftEdge -and $ImageName -like "*LTSC")
+{
+    If (Test-Path -LiteralPath $EdgeAppPath -Filter Microsoft-Windows-Internet-Browser-Package*.cab)
+    {
+        If (!$Features -or !$WindowsStore) { Write-Output '' }
+        $Host.UI.RawUI.WindowTitle = "Applying the Microsoft Edge Browser Application Packages."
+        Out-Log -Content "Applying the Microsoft Edge Browser Application Packages." -Level Info
+        Start-Sleep 3
+        Try
+        {
+            $EdgeBasePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package-amd64-10.0.17763.1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                LogLevel         = 1
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @EdgeBasePackage)
+            $EdgeLanguagePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package-amd64-10.0.17763.1-en-US.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                LogLevel         = 1
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @EdgeLanguagePackage)
+        }
+        Catch
+        {
+            Write-Output ''
+            Out-Log -Content "Failed to Apply the Microsoft Edge Browser Application Packages." -Level Error
+            Exit-Script
+            Break
+        }
+    }
+    Else
+    {
+        Write-Output ''
+        Out-Log -Content "Missing the required Microsoft Edge Browser Application package files." -Level Error
+        Start-Sleep 3
+    }
+}
+
 #region Registry Optimizations0.
 If ($Registry)
 {
     Try
     {
-        If ($Features -or $WindowsStore) { Clear-Host } Else { Write-Output '' }
+        If ($Features -or $WindowsStore -or $MicrosoftEdge) { Clear-Host } Else { Write-Output '' }
         $Host.UI.RawUI.WindowTitle = "Applying Optimized Registry Values."
         Out-Log -Content "Applying Optimized Registry Values." -Level Info
         If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Remove-Item -Path "$WorkFolder\Registry-Optimizations.log" -Force }
