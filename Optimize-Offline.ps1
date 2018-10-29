@@ -2708,13 +2708,13 @@ NETSH ADVFIREWALL FIREWALL ADD RULE NAME="SmartScreen" action="block" dir="out" 
 
 SET LOCALAPPDATA=%USERPROFILE%\AppData\Local
 PowerShell -Command "& { Get-Service -Name DiagTrack -ErrorAction SilentlyContinue | Stop-Service | Set-Service -StartupType Disabled }"
-PowerShell -Command "& { Get-ScheduledTask -TaskName @(`"Microsoft Compatibility Appraiser`", `"ProgramDataUpdater`") -ErrorAction SilentlyContinue | Disable-ScheduledTask }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -EQ `"DiagTrack`" | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { Set-AutologgerConfig -Name `"AutoLogger-Diagtrack-Listener`" -Start 0 -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { New-NetFirewallRule -DisplayName `"Block DiagTrack`" -Action Block -Description `"Block the DiagTrack Telemetry Service`" -Direction Outbound -Name `"Block DiagTrack`" -Profile Any -Service DiagTrack }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -Like `"*@{*`" | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -EQ `"Delivery Optimization`" } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -Like `"Windows Media Player Network Sharing Service*`" } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-ScheduledTask -TaskName @('Microsoft Compatibility Appraiser', 'ProgramDataUpdater') -ErrorAction SilentlyContinue | Disable-ScheduledTask }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -EQ 'DiagTrack' | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Set-AutologgerConfig -Name 'AutoLogger-Diagtrack-Listener' -Start 0 -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { New-NetFirewallRule -DisplayName 'Block DiagTrack' -Action Block -Description 'Block the DiagTrack Telemetry Service' -Direction Outbound -Name 'Block DiagTrack' -Profile Any -Service DiagTrack }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -Like '*@{*' | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -EQ 'Delivery Optimization' } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -Like 'Windows Media Player Network Sharing Service*' } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Inbound Traffic." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Outbound Traffic." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="Block Windows Error Reporting Service [WerSvc]" dir="Out" action="Block" program="%SystemDrive%\windows\system32\svchost.exe" service="WerSvc" protocol="TCP" remoteport=80,443 >NUL 2>&1
