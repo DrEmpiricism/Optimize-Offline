@@ -18,7 +18,7 @@
 	
 	.PARAMETER MetroApps
 		Select = Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal.
-		All = Automatically removes all Provisioned Application Packages.
+        All = Automatically removes all Provisioned Application Packages.
 	
 	.PARAMETER SystemApps
 		Populates and outputs a Gridview list of all System Applications for selective removal.
@@ -32,7 +32,7 @@
 	.PARAMETER WindowsStore
 		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Sideloads the Microsoft Windows Store, and its dependencies, into the image.
-
+	
 	.PARAMETER MicrosoftEdge
 		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Applies the Microsoft Edge Browser packages into the image.
@@ -57,7 +57,10 @@
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -Build 17134 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17763 -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry "Harden" -NetFx3 "C:\Windows 10\sources\sxs"
+        .\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -Build 17134 -MetroApps "All" -SystemApps -Packages -Features -Registry "Harden" -NoSetup
+        
+    .EXAMPLE
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -Build 17763 -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry "Default" -NetFx3 "C:\Windows 10\sources\sxs" -DaRT
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -71,8 +74,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.2.2
-		Last updated:	10/28/2018
+		Version:        3.1.2.3
+		Last updated:	10/29/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -455,6 +458,24 @@ Function New-Container
         [void](New-Item -Path $Path -ItemType Directory -Force)
     }
 }
+
+Function Get-OscdimgPath
+{
+    [CmdletBinding()]
+    Param ()
+	
+    $WOW6432 = Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows Kits\Installed Roots" -ErrorAction SilentlyContinue
+    $SYSTEM32 = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots" -ErrorAction SilentlyContinue
+    If ($WOW6432)
+    {
+        If ($SYSTEM32) { $ADK_ROOT = $SYSTEM32.KitsRoot10 }
+        Else { $ADK_ROOT = $WOW6432.KitsRoot10 }
+        $ADK = $ADK_ROOT + "Assessment and Deployment Kit"
+        $DEPLOYMENT_TOOLS = $ADK + "\Deployment Tools"
+        $Oscdimg = $DEPLOYMENT_TOOLS + "\$Arch\Oscdimg"
+    }
+    If (Test-Path -Path $Oscdimg) { Return $Oscdimg }
+}
 #endregion Helper Functions
 
 If (!(Test-Admin)) { Write-Warning "Administrative access is required. Please re-launch $OScript with elevation."; Break }
@@ -508,8 +529,8 @@ Try
         $SourceMount = Mount-DiskImage -ImagePath $Source -StorageType ISO -PassThru -ErrorAction Stop
         $DriveLetter = ($SourceMount | Get-Volume).DriveLetter + ':'
         $ISODrive = Get-Item -Path $DriveLetter -Force -ErrorAction Stop
-        $SourceName = $($Source.Split('\')[-1]).TrimEnd('.iso')
-        $ISOMedia = "$($ScriptDirectory)\$($SourceName)"
+        $ISOName = $($Source.Split('\')[-1]).TrimEnd('.iso')
+        $ISOMedia = "$($ScriptDirectory)\$($ISOName)"
         [void](New-Item -Path $ISOMedia -ItemType Directory -Force -ErrorAction Stop)
         $InstallWim = "$($DriveLetter)\sources\install.wim"
         If (!(Test-Path -Path $InstallWim))
@@ -523,8 +544,8 @@ Try
             Write-Host ('Exporting media from "{0}"' -f $(Split-Path -Path $Source -Leaf)) -ForegroundColor Cyan
             ForEach ($File In Get-ChildItem -Path $ISODrive.FullName -Recurse)
             {
-                $NewPath = $ISOMedia + $File.FullName.Replace($ISODrive, '\')
-                Copy-Item -Path $File.FullName -Destination $NewPath -Force -ErrorAction Stop
+                $MediaPath = $ISOMedia + $File.FullName.Replace($ISODrive, '\')
+                Copy-Item -Path $File.FullName -Destination $MediaPath -Force -ErrorAction Stop
             }
             Dismount-DiskImage -ImagePath $Source -StorageType ISO
             $ISOIsExported = $true
@@ -680,11 +701,11 @@ If ($MetroApps -and $ImageName -notlike "*LTSC")
 {
     Try
     {
-        $RemovedProvisionedApps = [System.Collections.ArrayList]@()
         Clear-Host
         $Host.UI.RawUI.WindowTitle = "Removing Metro Apps."
         If ($MetroApps -eq "Select")
         {
+            $RemovedProvisionedApps = [System.Collections.ArrayList]@()
             $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder
             $Int = 1
             ForEach ($Appx In $GetAppx)
@@ -759,8 +780,7 @@ If ($SystemApps)
         $InboxAppsPackage = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
         $GetSystemApps = $InboxAppsPackage | Select -Property `
         @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
-        @{ Label = 'PackageName'; Expression = { ($_) } } |
-            Out-GridView -Title "Remove System Applications." -PassThru
+        @{ Label = 'PackageName'; Expression = { ($_) } } | Out-GridView -Title "Remove System Applications." -PassThru
         $SystemAppPackage = $GetSystemApps.PackageName
         If ($GetSystemApps)
         {
@@ -1013,9 +1033,7 @@ If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCal
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
-        If ($DisableDefenderComplete -eq $true) { Write-Output '' }
-        ElseIf ($ImageName -notlike "*LTSC") { Write-Output '' }
-        Write-Output ''
+        If ($DisableDefenderComplete -eq $true -or $ImageName -notlike "*LTSC") { Write-Output '' }
         Out-Log -Content "Disabling Xbox Services and Drivers." -Level Info
         [void](Mount-OfflineHives)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -ErrorAction Stop
@@ -2864,11 +2882,11 @@ Finally
     [void](Clear-WindowsCorruptMountPoint)
 }
 
-If ($ISOIsExported -eq $true -and (Test-Path -Path $ISOMedia -PathType Container))
+If ($ISOIsExported -eq $true)
 {
-    $Host.UI.RawUI.WindowTitle = "Optimizing the Windows Setup File Structure."
+    $Host.UI.RawUI.WindowTitle = "Optimizing the Windows Media File Structure."
     Write-Output ''
-    Out-Log -Content "Optimizing the Windows Setup File Structure." -Level Info
+    Out-Log -Content "Optimizing the Windows Media File Structure." -Level Info
     If (Test-Path -Path "$ISOMedia\autorun.inf") { Remove-Item -Path "$ISOMedia\autorun.inf" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\setup.exe") { Remove-Item -Path "$ISOMedia\setup.exe" -Force -ErrorAction SilentlyContinue }
     Get-ChildItem -Path "$ISOMedia\*.dll" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
@@ -2929,28 +2947,58 @@ If ($ISOIsExported -eq $true -and (Test-Path -Path $ISOMedia -PathType Container
     If (Test-Path -Path "$ISOMedia\setup.exe") { Move-Item -Path "$ISOMedia\setup.exe" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\lang.ini") { Move-Item -Path "$ISOMedia\lang.ini" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
+    Start-Sleep 3
+}
+
+If ($ISOIsExported -eq $true)
+{
+    Try
+    {
+        $OscdimgPath = Get-OscdimgPath
+        If (Get-ChildItem -Path $OscdimgPath -Filter oscdimg.exe)
+        {
+            $OscdimgPath = Get-Item -Path $OscdimgPath -Force -ErrorAction Stop
+            If ((Test-Path -Path "$ISOMedia\boot\etfsboot.com") -and (Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys.bin"))
+            {
+                $BootData = '2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$ISOMedia\boot\etfsboot.com", "$ISOMedia\efi\Microsoft\boot\efisys.bin"
+                $ISOLabel = $ImageName.ToString()
+                $ISOName = $ISOName.Replace(' ', '')
+                $Destination = $($WorkFolder.FullName) + '\' + "$($ISOName).iso"
+                $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"${ISOLabel}`"", "`"${ISOMedia}`"", "`"${Destination}`"")
+                $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
+                Write-Output ''
+                Out-Log -Content "Creating a Bootable Windows Installation Media ISO." -Level Info
+                Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop
+                If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop }
+                Start-Process -FilePath "$($OscdimgPath.FullName)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -ErrorAction Stop
+            }
+        }
+        If (Test-Path -Path "$($WorkFolder)\$($ISOName).iso") { $ISOIsCreated = $true }
+    }
+    Catch
+    {
+        Write-Output ''
+        Out-Log -Content "Failed creating a Bootable Windows Installation Media ISO." -Level Error
+        Start-Sleep 3
+    }
 }
 
 Try
 {
-    $Host.UI.RawUI.WindowTitle = "Finalizing Image Optimizations."
+    $Host.UI.RawUI.WindowTitle = "Finalizing $OScript Processes."
     Write-Output ''
-    Out-Log -Content "Finalizing Image Optimizations." -Level Info
+    Out-Log -Content "Finalizing $OScript Processes." -Level Info
     [void]($SaveFolder = New-SaveDirectory)
-    If ($ISOIsExported -eq $true)
-    {
-        Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force
-        If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force }
-        Move-Item -Path $ISOMedia -Destination $SaveFolder -Force
-    }
+    If ($ISOIsExported -eq $true -and $ISOIsCreated -eq $true) { Move-Item -Path "$($WorkFolder)\$($ISOName).iso" -Destination $SaveFolder -Force }
+    ElseIf ($ISOIsExported -eq $true -and $ISOIsCreated -ne $true) { Move-Item -Path $ISOMedia -Destination $SaveFolder -Force }
     Else
     {
         Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
         If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination $SaveFolder -Force }
     }
     Get-ChildItem -Path "$($WorkFolder)\*" -Exclude *.wim -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue | Out-Null
-    Start-Sleep 3
     $Timer.Stop()
+    Start-Sleep 3
     If ($Error.Count.Equals(0))
     {
         Write-Output ''

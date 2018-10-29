@@ -1,10 +1,10 @@
 # ChangeLog #
 
-## Build 3.1.2.2 ##
+## Build 3.1.2.3 ##
 
-- Added a new -MicrosoftEdge switch which will integrate Microsoft Edge Browser 10.0.17763.1 into Windows 10 Enterprise LTSC 2019. Only an image detected as Windows 10 Enterprise LTSC 2019 will be processed.
-- Re-added the -Features switch which will output a Gridview list of all enabled Windows Features for selective disabling.
-- Removed the -OneDrive switch and the removal of OneDrive as a process. This switch and process were just script clutter.
-- Updated and added multiple Default registry values and settings.
-- Updated the SetupComplete script with additional commands and rules specific to telemetry.
-- Updated a few helper functions and removed a helper function that was not necessary.
+- If an ISO file is used as the source image, and the Windows ADK is installed, the script will automatically remaster and create a new bootable Windows Installation Media ISO before it finalizes.
+- This alieviates the annoyance of having to copy the fully expanded ISO media to another location in order to create a bootable ISO after the script completes.
+- If any of the required boot files cannot be located by the script, it will silently skip over the ISO creation process and return the fully expanded ISO media like before.
+- Fixed a sintax error within the SetupComplete.cmd script.
+- Removed some redundant and unecessary variables.
+- Added the SeBackupPrivilege to the File and Folder Ownership functions, as this process privilege allows for system-level recursive nagivation of protected folders and directories.
