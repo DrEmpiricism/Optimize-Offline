@@ -6,7 +6,6 @@ REM The variables carry over to the PowerShell script, as do the switches.
 
 REM Start PowerShell Variables
 SET "SourcePath=X:\PathToImage"
-SET "SourceBuild=17134"
 SET "DriverPath=X:\PathToDrivers"
 SET "NetFx3Path=X:\PathToPayload" -OR- $true
 REM End PowerShell Variables
@@ -20,8 +19,8 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -Build %SourceBuild% -MetroApps "All" -SystemApps -Packages -Registry "Harden" -DaRT -NetFx3 $true -WindowsStore -MicrosoftEdge
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
+    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "All" -SystemApps -Packages -Registry "Harden" -DaRT -NetFx3 $true -WindowsStore -MicrosoftEdge
 )
 PAUSE
 EXIT

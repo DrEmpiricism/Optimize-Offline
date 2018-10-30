@@ -1,5 +1,14 @@
 # Previous Version Log #
 
+## Build 3.1.2.3 (10-29-2018) ##
+
+- If an ISO file is used as the source image, and the Windows ADK is installed, the script will automatically remaster and create a new bootable Windows Installation Media ISO before it finalizes.
+- This alieviates the annoyance of having to copy the fully expanded ISO media to another location in order to create a bootable ISO after the script completes.
+- If any of the required boot files cannot be located by the script, it will silently skip over the ISO creation process and return the fully expanded ISO media like before.
+- Fixed a sintax error within the SetupComplete.cmd script.
+- Removed some redundant and unecessary variables.
+- Added the SeBackupPrivilege to the File and Folder Ownership functions, as this process privilege allows for system-level recursive nagivation of protected folders and directories.
+
 ## Build 3.1.2.2 (10-28-2018) ##
 
 - Added a new -MicrosoftEdge switch which will integrate Microsoft Edge Browser 10.0.17763.1 into Windows 10 Enterprise LTSC 2019. Only an image detected as Windows 10 Enterprise LTSC 2019 will be processed.
@@ -34,14 +43,5 @@
 - Added the removal of telemetry loggers to the optimizied registry value settings.
 - Improved the syntax within the SetupComplet.cmd script.
 - Corrected an incorrect comparison operator for the final image clean-up process.
-
-## 3.1.1.8 (10-11-2018) ##
-
-- Updated the Win32 Calculator.
-- Included the disabling of Security Health Services' SmartScreen integration if SecHealthUI is a removed System Application.
-- Added and updated multiple registry values.
-- Updated the SetupComplete.cmd script.
-- Included more support for Windows 10 Enterprise LTSC.
-- Fixed the logging timestamp so it now outputs the proper script completion time.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
