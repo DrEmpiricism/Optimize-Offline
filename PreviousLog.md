@@ -1,5 +1,12 @@
 # Previous Version Log #
 
+## Build 3.1.2.4 (10-30-2018) ##
+
+- The -Build parameter has been removed. This was originally added to verify an image being optimized was supported; however, it is no longer required since the script automatically queries the build number from the image itself.
+- In order support additional languages, all language cabinet (.cab) file packages for the integration of Microsoft Edge 10.17763.1 into Windows 10 LTSC 2019 have been uploaded to the \Resources\MicrosoftEdge directory.
+- The script now automatically gets the default language of the Windows 10 LTSC 2019 image being optimized and applies the Microsoft Edge 10.17763.1 cabinet file packages of the same language.
+- How the verbose content is displayed has been tweaked and cleaned-up a bit, and now outputs to the console window with a single-space instead of a double-space.
+
 ## Build 3.1.2.3 (10-29-2018) ##
 
 - If an ISO file is used as the source image, and the Windows ADK is installed, the script will automatically remaster and create a new bootable Windows Installation Media ISO before it finalizes.
@@ -36,12 +43,5 @@
 >> *This script will be getting replaced with a full PowerShell script within the next few updates*
 - Updated the WIM files containing the Microsoft DaRT 10 Debugging Tools to build 17663.
 - Cleaned-up multiple registry values that are applied.
-
-## 3.1.1.9 (10-12-2018) ##
-
-- Added the removal of Windows Defender loggers if SecHealthUI is a removed System Application.
-- Added the removal of telemetry loggers to the optimizied registry value settings.
-- Improved the syntax within the SetupComplet.cmd script.
-- Corrected an incorrect comparison operator for the final image clean-up process.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
