@@ -1,5 +1,11 @@
 # Previous Version Log #
 
+## Build 3.1.2.5 (10-31-2018) ##
+
+- COM component objects that are created in a process are now released from memory when the process completes.
+- Updated a few registry optimization values applied with the -Registry "Default" parameter.
+- Removed redundant and unnecessary code within the process that applies Microsoft DaRT 10.
+
 ## Build 3.1.2.4 (10-30-2018) ##
 
 - The -Build parameter has been removed. This was originally added to verify an image being optimized was supported; however, it is no longer required since the script automatically queries the build number from the image itself.
@@ -33,15 +39,5 @@
 - Removed the recursive deletion of the WinSxS OneDrive directories during OneDrive's removal as I've had people concerned about /ScanHealth returning benign corruption results due to these missing directories.
 - All log files and any package lists are now archived into a single zip file.
 - The default language of the image is assigned to a variable and used in place of the static 'en-US' string in order to accommodate other image languages.
-
-## 3.1.2.0 (10-14-2018) ##
-
-- Added a new -WindowsStore switch which will sideload the latest Microsoft Windows Store, and its dependencies, into Windows 10 Enterprise LTSC 2019. Only an image detected as Windows 10 Enterprise LTSC 2019 will be processed.
-- Added further detection of Windows 10 Enterprise LTSC when applying registry settings that affect default Provisioned Application Packages.
-- Removed the recursive clean-up of the \WinSxS\Backup directory.
-- Updated the SetupComplete.cmd script.
->> *This script will be getting replaced with a full PowerShell script within the next few updates*
-- Updated the WIM files containing the Microsoft DaRT 10 Debugging Tools to build 17663.
-- Cleaned-up multiple registry values that are applied.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
