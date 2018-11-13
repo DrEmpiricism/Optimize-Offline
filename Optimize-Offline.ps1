@@ -29,7 +29,7 @@
 	
 	.PARAMETER WindowsStore
 		Specific to Windows 10 Enterprise LTSC 2019 only!
-		Sideloads the Microsoft Windows Store, and its dependencies, into the image.
+		Applies the Microsoft Windows Store packages, and its dependencies packages, into the image.
 	
 	.PARAMETER MicrosoftEdge
 		Specific to Windows 10 Enterprise LTSC 2019 only!
@@ -38,6 +38,10 @@
 	.PARAMETER Registry
 		Default = Applies optimized registry values into the registry hives of the image.
 		Harden = Applies additional registry values that further restrict non-explicit access to system sensors and additional telemetry.
+
+	.PARAMETER Win32Calc
+		Specific to non-Windows 10 Enterprise LTSC 2019 editions only!
+		Applies the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
 	
 	.PARAMETER DaRT
 		Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.
@@ -52,7 +56,7 @@
 		Excludes the Setup and Post Installation Script(s) from being applied to the image.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -Win32Calc -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Registry "Harden" -NoSetup
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry "Default" -NetFx3 "C:\Windows 10\sources\sxs" -DaRT
 	
@@ -68,8 +72,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.2.7
-		Last updated:	11/10/2018
+		Version:        3.1.2.8
+		Last updated:	11/13/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -102,6 +106,8 @@ Param
     [Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
     [ValidateSet('Default', 'Harden')]
     [string]$Registry = 'Default',
+    [Parameter(HelpMessage = 'Applies the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
+    [switch]$Win32Calc,
     [Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
     [switch]$DaRT,
     [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
@@ -118,7 +124,7 @@ $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptRoot = (Get-Location).Path
 $ScriptName = "Optimize-Offline"
-$ScriptVersion = "3.1.2.7"
+$ScriptVersion = "3.1.2.8"
 $LogFile = "$Env:TEMP\Optimize-Offline.log"
 $DISMLog = "$Env:TEMP\DISM.log"
 #endregion Script Variables
@@ -1205,7 +1211,6 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
             Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord -ErrorAction Stop
             Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
-            (Get-AppxProvisionedPackage -Path $MountFolder).ForEach('PackageName') | Out-File -FilePath $WorkFolder\SideloadedAppxPackages.txt
         }
         Catch
         {
@@ -1213,6 +1218,7 @@ If ($WindowsStore -and $ImageName -like "*LTSC")
             Exit-Script
             Break
         }
+        Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -ExpandProperty PackageName | Out-File -LiteralPath $WorkFolder\SideloadedAppxPackages.txt
     }
     Else
     {
@@ -2196,101 +2202,152 @@ If ($Registry)
 }
 #endregion Registry Optimizations
 
-If ($ImageName -notlike "*LTSC" -and (Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like "*Calculator*").Count.Equals(0))
+If ($Win32Calc -and $ImageName -notlike "*LTSC")
 {
-    $Win32CalcPath = Join-Path -Path $ScriptRoot -ChildPath "Resources\Win32Calc" -Resolve -ErrorAction SilentlyContinue
-    $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator Packages."
-    Out-Log -Content "Applying the Win32 Calculator Packages." -Level Info
-    If ($ImageBuild -ge '17763')
+    If ($null -eq (Get-ChildItem -Path "$MountFolder\Windows\servicing\Packages" -Filter Microsoft-Windows-win32calc-Package*10.0.17763.1.mum))
     {
-        If (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab)
+        $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator Packages."
+        Out-Log -Content "Applying the Win32 Calculator Packages." -Level Info
+        $Win32CalcPath = Join-Path -Path $ScriptRoot -ChildPath "Resources\Win32Calc" -Resolve -ErrorAction SilentlyContinue
+        If ($ImageBuild -ge '17763')
         {
-            Try
+            If (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab)
             {
-                $CalcBasePackage = @{
-                    Path             = $MountFolder
-                    PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$ImageArchitecture~~10.0.17763.1.cab"
-                    IgnoreCheck      = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorAction      = "Stop"
+                Try
+                {
+                    $CalcBasePackage = @{
+                        Path             = $MountFolder
+                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$ImageArchitecture~~10.0.17763.1.cab"
+                        IgnoreCheck      = $true
+                        ScratchDirectory = $ScratchFolder
+                        LogPath          = $DISMLog
+                        ErrorAction      = "Stop"
+                    }
+                    [void](Add-WindowsPackage @CalcBasePackage)
+                    $CalcLanguagePackage = @{
+                        Path             = $MountFolder
+                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$ImageArchitecture~$ImageLanguage~10.0.17763.1.cab"
+                        IgnoreCheck      = $true
+                        ScratchDirectory = $ScratchFolder
+                        LogPath          = $DISMLog
+                        ErrorAction      = "Stop"
+                    }
+                    [void](Add-WindowsPackage @CalcLanguagePackage)
                 }
-                [void](Add-WindowsPackage @CalcBasePackage)
-                $CalcLanguagePackage = @{
-                    Path             = $MountFolder
-                    PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$ImageArchitecture~$ImageLanguage~10.0.17763.1.cab"
-                    IgnoreCheck      = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorAction      = "Stop"
+                Catch
+                {
+                    Out-Log -Content "Failed to apply the Win32 Calculator Packages." -Level Error
+                    Exit-Script
+                    Break
                 }
-                [void](Add-WindowsPackage @CalcLanguagePackage)
+                Try
+                {
+                    Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
+                    Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
+                }
+                Catch
+                {
+                    Out-Log -Content "Failed to apply the Win32 Calculator registry properties." -Level Error
+                    Exit-Script
+                    Break
+                }
+                Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Windows-win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\AppliedWindowsPackages.txt -Append
             }
-            Catch
+            Else
             {
-                Out-Log -Content "Failed to apply the Win32 Calculator Packages." -Level Error
-                Exit-Script
-                Break
+                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
+                Start-Sleep 3
             }
-            Try
+        }
+        Else
+        {
+            If (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab)
             {
-                Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
-                Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
+                Try
+                {
+                    Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
+                    Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+                    $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
+                    $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+                    $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+                    $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+                    $CalcShortcut.Save()
+                    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
+                    $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+                    $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
+                    If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction Stop }
+                }
+                Catch
+                {
+                    Out-Log -Content "Failed to apply the Win32 Calculator Packages." -Level Error
+                    Exit-Script
+                    Break
+                }
+                Try
+                {
+                    $SSDL = @'
+
+D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
+'@
+                    $SSDL.Insert(0, "win32calc.exe") | Out-File -FilePath "$($WorkFolder)\ACL.ssdl" -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32`" /RESTORE `"$($WorkFolder)\ACL.ssdl`" /T") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64`" /RESTORE `"$($WorkFolder)\ACL.ssdl`" /T") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    $SSDL.Insert(0, "win32calc.exe.mui") | Out-File -FilePath "$($WorkFolder)\ACL.ssdl" -Force -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\ACL.ssdl`" /T") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\ACL.ssdl`" /T") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
+                    $ACL = Get-Acl -Path "$MountFolder\Windows\System32\win32calc.exe" -ErrorAction Stop
+                    $ACL.SetOwner($TrustedInstaller)
+                    $ACL | Set-Acl -Path "$MountFolder\Windows\System32\win32calc.exe" -ErrorAction Stop
+                    $ACL = Get-Acl -Path "$MountFolder\Windows\SysWOW64\win32calc.exe" -ErrorAction Stop
+                    $ACL.SetOwner($TrustedInstaller)
+                    $ACL | Set-Acl -Path "$MountFolder\Windows\SysWOW64\win32calc.exe" -ErrorAction Stop
+                    $ACL = Get-Acl -Path "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -ErrorAction Stop
+                    $ACL.SetOwner($TrustedInstaller)
+                    $ACL | Set-Acl -Path "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -ErrorAction Stop
+                    $ACL = Get-Acl -Path "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui" -ErrorAction Stop
+                    $ACL.SetOwner($TrustedInstaller)
+                    $ACL | Set-Acl -Path "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui" -ErrorAction Stop
+                    Remove-Item -Path "$($WorkFolder)\ACL.ssdl" -Force -ErrorAction SilentlyContinue
+                }
+                Catch
+                {
+                    Out-Log -Content "Failed to set the Win32 Calculator ACLs." -Level Error
+                    Exit-Script
+                    Break
+                }
             }
-            Catch
+            Else
             {
-                Out-Log -Content "Failed to apply the Win32 Calculator registry properties." -Level Error
-                Exit-Script
-                Break
+                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
+                Start-Sleep 3
             }
-            Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Windows-win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\AppliedWindowsPackages.txt -Append
         }
     }
     Else
     {
-        If (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab)
-        {
-            Try
-            {
-                Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait -ErrorAction Stop
-                Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
-                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                Start-Process -FilePath REG -ArgumentList ("UNLOAD HKLM\WIM_HKLM_SOFTWARE") -WindowStyle Hidden -Wait -ErrorAction Stop
-                $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-                $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
-                $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
-                $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
-                $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
-                $CalcShortcut.Save()
-                [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
-                $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-                $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-                If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force }
-            }
-            Catch
-            {
-                Out-Log -Content "Failed to apply the Win32 Calculator Packages." -Level Error
-                Exit-Script
-                Break
-            }
-        }
+        Out-Log -Content "The Win32 Calculator is already installed." -Level Error
+        Start-Sleep 3
     }
 }
 
