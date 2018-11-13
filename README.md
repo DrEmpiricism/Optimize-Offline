@@ -5,7 +5,7 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 ## About Optimize-Offline ##
 
 - Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
-- Accepts either a full Windows 10 installtion ISO, or a Windows 10 install.wim file.
+- Accepts either a full Windows 10 installation ISO, or a Windows 10 install.wim file.
 - Does not perform any changes to an installed or live system nor can it optimize a live system.
 - Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
@@ -29,7 +29,7 @@ A few of the switch settings:
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system sensor access.
 - Disables error reporting and automatic syncronization.
-- Improves the default aesthetics by cleaning-up redundant or unused links.
+- Improves the default aesthetics by cleaning-up redundant or unused links in the default Control Panel and Immersive Control Panel.
 - etc.
 
 ## About the SetupComplete.cmd script ##
@@ -64,19 +64,25 @@ The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Stor
 
 *The supplied WIMs used for applying MS DaRT 10 and associated debugging tools are compressed using recovery compression.  This type of compression cannot be viewed in a GUI by some ISO image programs.*
 
+## Win32Calc ##
+
+Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
+
+Optimize-Offline can implement the traditional Calculator using the latest Win32Calc.exe, language files and Package Features found in the Windows 10 Enterprise LTSC 2019 edition.
+
 ## About the Defaultuser0 ghost account ##
 
 Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
 defaultuser0 is not a real account, however, and is a bug that has been present in Windows through countless flavors and variations. It is not added to any user groups nor does it even have a profile.
 Conversely, failing to remove the defaultuser0 account immediately after Windows Installation completes can lead to future headaches.  As an example, if you reset Windows with the defaultuser0 ghost account still present, upon the restart of the device, Windows will force you to log into the defaultuser0 account to continue.
 
-Optimize-Offline remidies this issue by first setting the proper key property in the offline registry hives that enables non-elevated removal of the defaultuser0 ghost account, and second by adding a function in the SetupComplete.cmd script that queries the registry for the SID of the defaultuser0 ghost account, and then proceeding to remove the account, registry keys and profile directories automatically if that SID is found.
+Optimize-Offline remedies this issue by first setting the proper key property in the offline registry hives that enables non-elevated removal of the defaultuser0 ghost account, and second by adding a function in the SetupComplete.cmd script that queries the registry for the SID of the defaultuser0 ghost account, and then proceeding to remove the account, registry keys and profile directories automatically if that SID is found.
 This ensures the defaultuser0 ghost account, if present, is always entirely removed immediately after the installation of Windows.
 
 **A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
 
-## Using Optimize-Offline ##
+## Optimize-Offline best practices ##
 
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
-- If maintaining fully updated OEM images, it's best to integrate updates into the image and then running Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
+- If maintaining fully updated OEM images, it's best to integrate offline updates into the image and then run Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
