@@ -1,5 +1,14 @@
 # Previous Version Log #
 
+## Build 3.1.2.7 (11-10-2018) ##
+
+- Updated the Debugging Tools for Windows 10 to version 17763.107
+- There is a new "Whitelist" value that can be used with the -MetroApps parameter. In the Resources directory there is an AppxPackageWhitelist.xml file where one can add Provisioned Appx Packages by their DisplayName.  The removal process will then remove all Provisioned Appx Packages that are NOT whitelisted. This is convenient for those who do not want to remove all Appx Packages nor want to constantly select the same Appx Packages each time they optimize an image.
+- The Win32Calc has been updated with its Feature Package CAB file(s) version 17763.1
+- Registry values have been updated and some new ones added.
+- A handful of processes have been changed around and include additional Try/Catch blocks for error-handling.
+- Made multiple code changes to processes, variables and methods for handling the WIM file.
+
 ## Build 3.1.2.6 (11-04-2018) ##
 
 - Some helper function and process code have been changed and updated.
@@ -27,14 +36,5 @@
 - Fixed a sintax error within the SetupComplete.cmd script.
 - Removed some redundant and unecessary variables.
 - Added the SeBackupPrivilege to the File and Folder Ownership functions, as this process privilege allows for system-level recursive nagivation of protected folders and directories.
-
-## Build 3.1.2.2 (10-28-2018) ##
-
-- Added a new -MicrosoftEdge switch which will integrate Microsoft Edge Browser 10.0.17763.1 into Windows 10 Enterprise LTSC 2019. Only an image detected as Windows 10 Enterprise LTSC 2019 will be processed.
-- Re-added the -Features switch which will output a Gridview list of all enabled Windows Features for selective disabling.
-- Removed the -OneDrive switch and the removal of OneDrive as a process. This switch and process were just script clutter.
-- Updated and added multiple Default registry values and settings.
-- Updated the SetupComplete script with additional commands and rules specific to telemetry.
-- Updated a few helper functions and removed a helper function that was not necessary.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
