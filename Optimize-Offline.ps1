@@ -2803,8 +2803,8 @@ PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -EQ 'DiagTrack
 PowerShell -Command "& { Set-AutologgerConfig -Name 'AutoLogger-Diagtrack-Listener' -Start 0 -ErrorAction SilentlyContinue }"
 PowerShell -Command "& { New-NetFirewallRule -DisplayName 'Block DiagTrack' -Action Block -Description 'Block the DiagTrack Telemetry Service' -Direction Outbound -Name 'Block DiagTrack' -Profile Any -Service DiagTrack -ErrorAction SilentlyContinue }"
 PowerShell -Command "& { Get-NetFirewallRule | Where-Object Group -Like '*@{*' | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -EQ 'Delivery Optimization' } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
-PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -Like 'Windows Media Player Network Sharing Service*' } | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -EQ 'Delivery Optimization' | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
+PowerShell -Command "& { Get-NetFirewallRule | Where-Object DisplayGroup -Like 'Windows Media Player Network Sharing Service*' | Remove-NetFirewallRule -ErrorAction SilentlyContinue }"
 SET PSExecutionPolicyPreference=Restricted
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="in" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Inbound Traffic." enable=yes >NUL 2>&1
 NETSH ADVFIREWALL FIREWALL ADD RULE NAME="ContentDeliveryAdverts" action="block" dir="out" interface="any" program="%SystemDrive%\Windows\SystemApps\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\ContentDeliveryManager.Background.dll" Description="Prevent ContentDeliveryManager Outbound Traffic." enable=yes >NUL 2>&1
