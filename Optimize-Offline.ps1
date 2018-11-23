@@ -73,7 +73,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.1.2.8
-		Last updated:	11/13/2018
+		Last updated:	11/23/2018
 		===========================================================================
 #>
 [CmdletBinding()]
