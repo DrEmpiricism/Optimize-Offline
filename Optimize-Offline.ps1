@@ -92,7 +92,7 @@ Param
     [int]$Index = 1,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal, or performs a complete removal of all packages.')]
     [ValidateSet('Select', 'All', 'Whitelist')]
-    [string]$MetroApps = 'Select',
+    [string]$MetroApps,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
     [switch]$SystemApps,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
@@ -105,7 +105,7 @@ Param
     [switch]$MicrosoftEdge,
     [Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
     [ValidateSet('Default', 'Harden')]
-    [string]$Registry = 'Default',
+    [string]$Registry,
     [Parameter(HelpMessage = 'Applies the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
     [switch]$Win32Calc,
     [Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
