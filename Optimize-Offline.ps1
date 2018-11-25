@@ -25,7 +25,7 @@
 		Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
 	
 	.PARAMETER Features
-        Populates and outputs both a Gridview list of all enabled Windows Optional Features for selective disabling followed by all disabled Windows Optional Features for selective enabling.
+        	Populates and outputs both a Gridview list of all enabled Windows Optional Features for selective disabling followed by all disabled Windows Optional Features for selective enabling.
 	
 	.PARAMETER WindowsStore
 		Specific to Windows 10 Enterprise LTSC 2019 only!
@@ -53,11 +53,11 @@
 		Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.
 	
 	.PARAMETER NoSetup
-        Excludes the Setup and Post Installation Script(s) from being applied to the image.
+        	Excludes the Setup and Post Installation Script(s) from being applied to the image.
         
-    .PARAMETER NoISO
-        Only applicable when a Windows Installation Media ISO image is used as the source image.
-        Excludes the automatic creation of a bootable Windows Installation Media ISO.
+    	.PARAMETER NoISO
+        	Only applicable when a Windows Installation Media ISO image is used as the source image.
+        	Excludes the automatic creation of a bootable Windows Installation Media ISO.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -Win32Calc -DaRT -NetFx3 $true -Drivers "E:\Driver Folder"
