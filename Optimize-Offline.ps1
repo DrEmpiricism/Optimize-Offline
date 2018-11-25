@@ -798,7 +798,7 @@ If ($MetroApps -and $ImageName -notlike "*LTSC" -and (Get-AppxProvisionedPackage
             Exit-Script
             Break
         }
-        Finally 
+        Finally
         {
             $Int = $null
             [void]$RemovedProvisionedApps.Clear()
@@ -868,7 +868,7 @@ If ($MetroApps -and $ImageName -notlike "*LTSC" -and (Get-AppxProvisionedPackage
                     Exit-Script
                     Break
                 }
-                Finally 
+                Finally
                 {
                     $AppxWhitelist = @()
                 }
@@ -919,7 +919,7 @@ If ($SystemApps)
         Exit-Script
         Break
     }
-    Finally 
+    Finally
     {
         Clear-Host
     }
@@ -966,7 +966,7 @@ If ($Packages)
         Exit-Script
         Break
     }
-    Finally 
+    Finally
     {
         [void]$RemovedWindowsPackages.Clear()
         $Int = $null
@@ -1233,7 +1233,7 @@ If ($Features)
         Exit-Script
         Break
     }
-    Finally 
+    Finally
     {
         [void]$DisabledOptionalFeatures.Clear()
         $Int = $null
@@ -1280,7 +1280,7 @@ If ($Features)
         Exit-Script
         Break
     }
-    Finally 
+    Finally
     {
         [void]$EnabledOptionalFeatures.Clear()
         $Int = $null
@@ -3164,7 +3164,7 @@ If ($ISOIsExported -eq $true)
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
 }
 
-If (!$NoISO) 
+If (!$NoISO)
 {
     Try
     {
