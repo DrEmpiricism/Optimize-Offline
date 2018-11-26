@@ -77,7 +77,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.1.2.9
-		Last updated:	11/25/2018
+		Last updated:	11/26/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -1530,12 +1530,7 @@ If ($Registry)
         Write-Output "Disabling Windows Update Peer-to-Peer Distribution and Delivery Optimization." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Value 0 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Value 0 -Type DWord
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\DoSvc")
-        {
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\DoSvc" -Name "Start" -Value 4 -Type DWord
-        }
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Value 100 -Type DWord
         #****************************************************************
         Write-Output "Disabling 'Find My Device'." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -1865,7 +1860,12 @@ If ($Registry)
         #****************************************************************
         Write-Output "Disabling 'Shortcut' text for Shortcuts." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "link" -Value 00000000 -Type Binary
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "link" -Value ([Byte[]](0, 0, 0, 0)) -Type Binary
+        #****************************************************************
+        Write-Output "Disabling Shortcut arrow for Shortcuts." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Name "29" -Value "%WINDIR%\System32\shell32.dll,-50" -Type ExpandString
         #****************************************************************
         Write-Output "Enabling Explorer opens to This PC." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2009,7 +2009,7 @@ If ($Registry)
             New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -ErrorAction Stop
             New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Classes\$_" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value (New-Object Byte[] 0)
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$_\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value (New-Object Byte[] 0) -Type Binary
         }
         #****************************************************************
         Write-Output "Removing 'Restore Previous Versions' from the Property Tab and Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
@@ -2037,6 +2037,16 @@ If ($Registry)
         Write-Output "Removing 'Cast To Device' from the Context Menu." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{7AD84985-87B4-4a16-BE58-8B72A5B390F7}" -Value "" -Type String
+        #****************************************************************
+        Write-Output "Removing Network Options from Lockscreen." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "DontDisplayNetworkSelectionUI" -Value 1 -Type DWord
+        #****************************************************************
+        Write-Output "Removing Shutdown Options from Lockscreen." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ShutdownWithoutLogon" -Value 0 -Type DWord
         #****************************************************************
         Write-Output "Removing Recently and Frequently Used Items in Explorer." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2069,6 +2079,13 @@ If ($Registry)
         #****************************************************************
         Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction Stop
         Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction Stop
+        #****************************************************************
+        Write-Output "Disabling OneDrive Automatic Start-up." >> "$WorkFolder\Registry-Optimizations.log"
+        #****************************************************************
+        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run") -match "OneDriveSetup")
+        {
+            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction Stop
+        }
         #****************************************************************
         Write-Output "Disabling OneDrive Automatic Sync." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2166,14 +2183,10 @@ If ($Registry)
         Grant-RegistryAccess -SubKey "WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Broker\ElevatedClsids\{2b2cad40-19c1-4794-b32d-397e41d5e8a7}" -Name "AutoElevationAllowed" -Value 1 -Type DWord
         #****************************************************************
-        Write-Output "Disabling Sticky Keys." >> "$WorkFolder\Registry-Optimizations.log"
+        Write-Output "Disabling Sticky Keys Prompt." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\Keyboard Response" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKCU\Control Panel\Accessibility\ToggleKeys" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value 506 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\Control Panel\Accessibility\Keyboard Response" -Name "Flags" -Value 122 -Type DWord
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\Control Panel\Accessibility\ToggleKeys" -Name "Flags" -Value 58 -Type DWord
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value 506 -Type String
         #****************************************************************
         Write-Output "Increasing Icon Cache Size." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
@@ -2318,16 +2331,12 @@ If ($Registry)
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontSearchWindowsUpdate" -Value 1 -Type DWord
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DriverUpdateWizardWuSearchEnabled" -Value 0 -Type DWord
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord
+            #***************************************************************	
+            Write-Output "Disabling Running Background Applications." >> "$WorkFolder\Registry-Optimizations.log"
             #****************************************************************
-            If ($ImageName -notlike "*LTSC")
-            {
-                #***************************************************************	
-                Write-Output "Disabling Running Background Applications." >> "$WorkFolder\Registry-Optimizations.log"
-                #****************************************************************
-                Get-ChildItem -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Exclude "Microsoft.Windows.Cortana*" -ErrorAction SilentlyContinue | ForEach {
-                    Set-ItemProperty -LiteralPath $_ -Name "Disabled" -Value 1 -Type DWord
-                    Set-ItemProperty -LiteralPath $_ -Name "DisabledByUser" -Value 1 -Type DWord
-                }
+            Get-ChildItem -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Exclude "Microsoft.Windows.Cortana*", "Microsoft.Windows.ShellExperienceHost*" -ErrorAction SilentlyContinue | ForEach {
+                Set-ItemProperty -LiteralPath $_ -Name "Disabled" -Value 1 -Type DWord
+                Set-ItemProperty -LiteralPath $_ -Name "DisabledByUser" -Value 1 -Type DWord
             }
             #****************************************************************
             Write-Output "Disabling Windows Media Player Statistics Tracking." >> "$WorkFolder\Registry-Optimizations.log"
@@ -3175,19 +3184,14 @@ If ($ISOIsExported -eq $true)
     If (Test-Path -Path "$ISOMedia\setup.exe") { Move-Item -Path "$ISOMedia\setup.exe" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\lang.ini") { Move-Item -Path "$ISOMedia\lang.ini" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
-}
-
-If ($ISOIsCopied -eq $true)
-{
     If (!$NoISO)
     {
-        Try
+        $OscdimgPath = Get-OscdimgPath
+        If (Get-ChildItem -Path $OscdimgPath -Filter oscdimg.exe)
         {
-            $OscdimgPath = Get-OscdimgPath
-            If (Get-ChildItem -Path $OscdimgPath -Filter oscdimg.exe)
+            If ((Test-Path -Path "$ISOMedia\boot\etfsboot.com") -and (Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys.bin"))
             {
-                $OscdimgPath = Get-Item -Path $OscdimgPath -Force -ErrorAction Stop
-                If ((Test-Path -Path "$ISOMedia\boot\etfsboot.com") -and (Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys.bin"))
+                Try
                 {
                     $BootData = '2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$ISOMedia\boot\etfsboot.com", "$ISOMedia\efi\Microsoft\boot\efisys.bin"
                     $ISOLabel = $ImageName
@@ -3198,15 +3202,15 @@ If ($ISOIsCopied -eq $true)
                     Out-Log -Content "Creating a Bootable Windows Installation Media ISO." -Level Info
                     Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop
                     If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop }
-                    Start-Process -FilePath "$($OscdimgPath.FullName)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath "$($OscdimgPath)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -ErrorAction Stop
                     $ISOIsCreated = $true
                 }
+                Catch
+                {
+                    Out-Log -Content "Failed creating a Bootable Windows Installation Media ISO." -Level Error
+                    Start-Sleep 3
+                }
             }
-        }
-        Catch
-        {
-            Out-Log -Content "Failed creating a Bootable Windows Installation Media ISO." -Level Error
-            Start-Sleep 3
         }
     }
 }
@@ -3233,10 +3237,10 @@ Try
             Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
             If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination $SaveFolder -Force }
         }
-        Get-ChildItem -Path "$($WorkFolder)\*" -Include *.txt | Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -CompressionLevel Fastest | Out-Null
-        $Timer.Stop()
-        Start-Sleep 3
     }
+    Get-ChildItem -Path "$($WorkFolder)\*" -Include *.txt | Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -CompressionLevel Fastest | Out-Null
+    $Timer.Stop()
+    Start-Sleep 3
     If ($Error.Count.Equals(0))
     {
         Write-Host "$ScriptName completed in [$($Timer.Elapsed.Minutes.ToString())] minutes with [$($Error.Count)] errors." -ForegroundColor White
