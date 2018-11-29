@@ -77,7 +77,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.1.2.9
-		Last updated:	11/26/2018
+		Last updated:	11/29/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -159,7 +159,7 @@ Function Out-Log
         'Info' { Write-Host $Content -ForegroundColor Cyan; $LogLevel = "INFO:" }
         'Error' { Write-Host $Content -ForegroundColor Red; $LogLevel = "ERROR:" }
     }
-    Add-Content -Path $ScriptLog -Value "$LogLevel $Content"
+    Add-Content -Path $ScriptLog -Value "$LogLevel $Content" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
 Function Grant-ProcessPrivilege
@@ -314,8 +314,9 @@ Function Grant-FileAccess
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$Path
+        [string]$FilePath
     )
+	
     Begin
     {
         $OwnershipPrivilege = "SeTakeOwnershipPrivilege"
@@ -323,7 +324,7 @@ Function Grant-FileAccess
     }
     Process
     {
-        $ACL = Get-Acl -Path $Path
+        $ACL = Get-Acl -Path $FilePath
         $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
         $OwnershipPrivilege | Grant-ProcessPrivilege
         $BackupPrivilege | Grant-ProcessPrivilege
@@ -333,7 +334,7 @@ Function Grant-FileAccess
         $Propagation = [System.Security.AccessControl.PropagationFlags]::None
         $Type = [System.Security.AccessControl.AccessControlType]::Allow
         $ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Type)))
-        $ACL | Set-Acl -Path $Path
+        $ACL | Set-Acl -Path $FilePath
         $OwnershipPrivilege | Grant-ProcessPrivilege -Disable
         $BackupPrivilege | Grant-ProcessPrivilege -Disable
     }
@@ -347,20 +348,21 @@ Function Grant-FolderAccess
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$Path
+        [string]$FolderPath
     )
+	
     Process
     {
-        Grant-FileAccess -Path $Path
-        ForEach ($Item In Get-ChildItem -Path $Path -Recurse -Force)
+        Grant-FileAccess -FilePath $FolderPath
+        ForEach ($Item In Get-ChildItem -Path $FolderPath -Recurse -Force)
         {
             If (Test-Path -Path $Item -PathType Container)
             {
-                Grant-FolderAccess -Path $($Item.FullName)
+                Grant-FolderAccess -FolderPath $($Item.FullName)
             }
             Else
             {
-                Grant-FileAccess -Path $($Item.FullName)
+                Grant-FileAccess -FilePath $($Item.FullName)
             }
         }
     }
@@ -424,46 +426,6 @@ Function Test-OfflineHives
     Return $HivesLoaded
 }
 
-Function Exit-Script
-{
-    [CmdletBinding()]
-    Param ()
-	
-    $Host.UI.RawUI.WindowTitle = "Terminating Script."
-    Start-Sleep 3
-    Out-Log -Content "Cleaning-up and terminating script." -Level Info
-    If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
-    If ($MountFolder)
-    {
-        [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog)
-        [void](Clear-WindowsCorruptMountPoint)
-    }
-    ElseIf (Get-WindowsImage -Mounted)
-    {
-        $MountFolder = (Get-WindowsImage -Mounted).MountPath
-        [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog)
-        [void](Clear-WindowsCorruptMountPoint)
-    }
-    $SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]")); [void]$SaveDir
-    If ($Error.Count)
-    {
-        $ErrorLog = Join-Path -Path $Env:TEMP -ChildPath "ErrorLog.log"
-        Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force -ErrorAction SilentlyContinue
-        Move-Item -Path $ErrorLog -Destination $SaveDir -Force -ErrorAction SilentlyContinue
-    }
-    $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
-    Add-Content -Path $ScriptLog -Value ""
-    Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    Add-Content -Path $ScriptLog -Value "Stopped processing at [$($TimeStamp)]"
-    Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    Move-Item -Path $ScriptLog -Destination $SaveDir -Force -ErrorAction SilentlyContinue
-    If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force -ErrorAction SilentlyContinue }
-    Remove-Item -Path "$Env:TEMP\DISM.log" -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path $ScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Output ''
-    Break
-}
-
 Function New-Container
 {
     [CmdletBinding()]
@@ -486,17 +448,15 @@ Function Get-OscdimgPath
     [CmdletBinding()]
     Param ()
 	
-    $WOW6432 = Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows Kits\Installed Roots" -ErrorAction SilentlyContinue
-    $SYSTEM32 = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots" -ErrorAction SilentlyContinue
-    If ($WOW6432)
-    {
-        If ($SYSTEM32) { $ADK_ROOT = $SYSTEM32.KitsRoot10 }
-        Else { $ADK_ROOT = $WOW6432.KitsRoot10 }
-        $ADK = $ADK_ROOT + "Assessment and Deployment Kit"
-        $DEPLOYMENT_TOOLS = $ADK + "\Deployment Tools"
-        $Oscdimg = $DEPLOYMENT_TOOLS + "\$($Env:PROCESSOR_ARCHITECTURE.ToLower())\Oscdimg"
+    @("HKLM:\Software\Wow6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach {
+        If (Test-Path -Path $($_)) { $ADK_ROOT = Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction SilentlyContinue | Select -ExpandProperty KitsRoot10 | Where { $($_) } }
     }
-    If (Test-Path -Path $Oscdimg) { Return $Oscdimg }
+    If ($ADK_ROOT)
+    {
+        $DEPLOYMENT_TOOLS = Join-Path -Path $ADK_ROOT -ChildPath ("Assessment and Deployment Kit" + '\' + "Deployment Tools")
+        $OSCDIMG = Join-Path -Path $DEPLOYMENT_TOOLS -ChildPath ($Env:PROCESSOR_ARCHITECTURE + '\' + "Oscdimg")
+        If (Test-Path -Path $OSCDIMG) { Return $OSCDIMG }
+    }
 }
 
 Function Test-UEFI
@@ -530,6 +490,35 @@ public class Firmware
     {
         [Firmware]::IsUEFI()
     }
+}
+
+Function Exit-Script
+{
+    [CmdletBinding()]
+    Param ()
+	
+    $Host.UI.RawUI.WindowTitle = "Terminating Script."
+    Start-Sleep 3
+    Out-Log -Content "Cleaning-up and terminating script." -Level Info
+    If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
+    [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog)
+    [void](Clear-WindowsCorruptMountPoint)
+    $SaveDir = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptRoot -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]")); [void]$SaveDir
+    If ($Error)
+    {
+        $ErrorLog = Join-Path -Path $SaveDir -ChildPath "ErrorLog.log"
+        Set-Content -Path $ErrorLog -Value $Error.ToArray() -Force -ErrorAction SilentlyContinue
+    }
+    $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
+    Add-Content -Path $ScriptLog -Value ""
+    Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
+    Add-Content -Path $ScriptLog -Value "Stopped processing at [$($TimeStamp)]"
+    Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
+    Move-Item -Path $ScriptLog -Destination $SaveDir -Force -ErrorAction SilentlyContinue
+    If (Test-Path -Path "$WorkFolder\Registry-Optimizations.log") { Move-Item -Path "$WorkFolder\Registry-Optimizations.log" -Destination $SaveDir -Force -ErrorAction SilentlyContinue }
+    Remove-Item -Path "$Env:TEMP\DISM.log" -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $ScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Exit
 }
 #endregion Helper Functions
 
@@ -586,18 +575,18 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
         {
             $ISODrive = Get-Item -Path $DriveLetter -ErrorAction Stop
             $ISOMedia = Join-Path -Path $ScriptDirectory -ChildPath $SourceName
-            New-Container -Path $ISOMedia -ErrorAction Stop
+            [void](New-Item -Path $ISOMedia -ItemType Directory -ErrorAction Stop)
             ForEach ($File In Get-ChildItem -Path $ISODrive.FullName -Recurse)
             {
                 $MediaPath = $ISOMedia + $File.FullName.Replace($ISODrive, '\')
-                Copy-Item -Path $File.FullName -Destination $MediaPath -Force -ErrorAction Stop
+                Copy-Item -Path $File.FullName -Destination $MediaPath -ErrorAction Stop
             }
             $ISOIsExported = $true
         }
         Catch
         {
             Write-Warning ('Unable to export media from "{0}"' -f $(Split-Path -Path $SourceImage -Leaf))
-            Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $ScriptDirectory -Recurse -ErrorAction SilentlyContinue
             Break
         }
         Finally
@@ -611,13 +600,13 @@ If (([IO.FileInfo]$ImagePath).Extension -eq ".ISO")
             [void]($WorkFolder = New-WorkDirectory)
             [void]($ScratchFolder = New-ScratchDirectory)
             Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "$ImageFolder\install.wim" -Name IsReadOnly -Value $false -ErrorAction Stop
-            $InstallWim = (Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop).FullName
+            Set-ItemProperty -LiteralPath "$ImageFolder\install.wim" -Name IsReadOnly -Value $false
+            $InstallWim = (Get-Item -Path "$ImageFolder\install.wim" -ErrorAction Stop).FullName
             If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT))
             {
                 Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -ErrorAction Stop
-                Set-ItemProperty -LiteralPath "$ImageFolder\boot.wim" -Name IsReadOnly -Value $false -ErrorAction Stop
-                $BootWim = (Get-Item -Path "$ImageFolder\boot.wim" -Force -ErrorAction Stop).FullName
+                Set-ItemProperty -LiteralPath "$ImageFolder\boot.wim" -Name IsReadOnly -Value $false
+                $BootWim = (Get-Item -Path "$ImageFolder\boot.wim" -ErrorAction Stop).FullName
             }
         }
         Catch
@@ -642,8 +631,8 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
             [void]($WorkFolder = New-WorkDirectory)
             [void]($ScratchFolder = New-ScratchDirectory)
             Copy-Item -Path $SourceImage -Destination $ImageFolder -ErrorAction Stop
-            Set-ItemProperty -LiteralPath "$ImageFolder\install.wim" -Name IsReadOnly -Value $false -ErrorAction Stop
-            $InstallWim = (Get-Item -Path "$ImageFolder\install.wim" -Force -ErrorAction Stop).FullName
+            Set-ItemProperty -LiteralPath "$ImageFolder\install.wim" -Name IsReadOnly -Value $false
+            $InstallWim = (Get-Item -Path "$ImageFolder\install.wim" -ErrorAction Stop).FullName
         }
         Catch
         {
@@ -720,8 +709,8 @@ Try
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path $DISMLog) { Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path $ScriptLog) { Remove-Item -Path $ScriptLog -Force -ErrorAction SilentlyContinue }
-    [void](New-Item -Path $DISMLog -ItemType File -Force)
-    [void](New-Item -Path $ScriptLog -ItemType File -Force)
+    [void](New-Item -Path $DISMLog -ItemType File -Force -ErrorAction SilentlyContinue)
+    [void](New-Item -Path $ScriptLog -ItemType File -Force -ErrorAction SilentlyContinue)
     $TimeStamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss tt"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value ""
@@ -901,7 +890,7 @@ If ($SystemApps)
         Start-Sleep 5
         Start-Process -FilePath REG -ArgumentList ("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"") -WindowStyle Hidden -Wait -ErrorAction Stop
         $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-        $InboxAppsPackage = (Get-ChildItem -Path $InboxAppsKey).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
+        $InboxAppsPackage = (Get-ChildItem -Path $InboxAppsKey -ErrorAction Stop).Name.Split('\') | Where { $_ -like "*Microsoft.*" }
         $GetSystemApps = $InboxAppsPackage | Select -Property `
         @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } },
         @{ Label = 'Package'; Expression = { ($_) } } | Out-GridView -Title "Remove System Applications." -PassThru
@@ -1059,7 +1048,7 @@ Try
     Else
     {
         $FirmwareLnk = '<start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UEFI Firmware.lnk" />'
-        (Get-Content -Path $LayoutFile).Replace($FirmwareLnk, $null) | Where { $_.Trim() -ne '' } | Set-Content -Path $LayoutFile -Encoding UTF8 -Force -ErrorAction Stop
+        (Get-Content -Path $LayoutFile).Replace($FirmwareLnk, $null) | Where { $_.Trim() -ne '' } | Set-Content -Path $LayoutFile -Encoding UTF8 -Force
     }
 }
 Catch
@@ -1071,6 +1060,27 @@ Catch
 
 If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
 {
+    If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Windows-Defender-Default-Definitions).State -eq "Enabled")
+    {
+        Try
+        {
+            Out-Log -Content "Disabling Windows Feature: Windows-Defender-Default-Defintions" -Level Info
+            $DisableDefenderFeature = @{
+                Path             = $MountFolder
+                FeatureName      = "Windows-Defender-Default-Definitions"
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = "Stop"
+            }
+            [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
+        }
+        Catch
+        {
+            Out-Log -Content "Failed Disabling Windows Feature: Windows-Defender-Default-Defintions" -Level Error
+            Exit-Script
+            Break
+        }
+    }
     Try
     {
         $Host.UI.RawUI.WindowTitle = "Removing Windows Defender Remnants."
@@ -1120,18 +1130,6 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
         Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger" -Recurse -Force -ErrorAction SilentlyContinue
         [void](Dismount-OfflineHives)
         Start-Sleep 3
-        If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Windows-Defender-Default-Definitions).State -eq "Enabled")
-        {
-            Out-Log -Content "Disabling Windows Feature: Windows-Defender-Default-Defintions" -Level Info
-            $DisableDefenderFeature = @{
-                Path             = $MountFolder
-                FeatureName      = "Windows-Defender-Default-Definitions"
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = "Stop"
-            }
-            [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
-        }
         $DisableDefenderComplete = $true
     }
     Catch
@@ -2077,10 +2075,6 @@ If ($Registry)
         Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}" -Force -ErrorAction SilentlyContinue
         #****************************************************************
-        Write-Output "Disabling OneDrive Automatic Start-up." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction SilentlyContinue
-        #****************************************************************
         Write-Output "Disabling OneDrive Automatic Sync." >> "$WorkFolder\Registry-Optimizations.log"
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive" -ErrorAction Stop
@@ -2092,7 +2086,7 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Name "System.IsPinnedToNameSpaceTree" -Value 0 -Type DWord
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Name "System.IsPinnedToNameSpaceTree" -Value 0 -Type DWord
-        If (Test-Path -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") 
+        If (Test-Path -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}")
         {
             Remove-Item -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Force -ErrorAction SilentlyContinue
         }
@@ -2468,7 +2462,7 @@ If ($Win32Calc -and $ImageName -notlike "*LTSC")
                     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
                     $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
                     $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-                    If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction Stop }
+                    If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force }
                 }
                 Catch
                 {
@@ -2488,20 +2482,13 @@ D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;
                     $SSDL.Insert(0, "win32calc.exe.mui") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
                     Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
                     Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
-                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
-                    $ACL = Get-Acl -Path "$MountFolder\Windows\System32\win32calc.exe" -ErrorAction Stop
-                    $ACL.SetOwner($TrustedInstaller)
-                    $ACL | Set-Acl -Path "$MountFolder\Windows\System32\win32calc.exe" -ErrorAction Stop
-                    $ACL = Get-Acl -Path "$MountFolder\Windows\SysWOW64\win32calc.exe" -ErrorAction Stop
-                    $ACL.SetOwner($TrustedInstaller)
-                    $ACL | Set-Acl -Path "$MountFolder\Windows\SysWOW64\win32calc.exe" -ErrorAction Stop
-                    $ACL = Get-Acl -Path "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -ErrorAction Stop
-                    $ACL.SetOwner($TrustedInstaller)
-                    $ACL | Set-Acl -Path "$MountFolder\Windows\System32\en-US\win32calc.exe.mui" -ErrorAction Stop
-                    $ACL = Get-Acl -Path "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui" -ErrorAction Stop
-                    $ACL.SetOwner($TrustedInstaller)
-                    $ACL | Set-Acl -Path "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui" -ErrorAction Stop
                     Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force -ErrorAction SilentlyContinue
+                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
+                    @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach {
+                        $ACL = Get-Acl -Path $($_) -ErrorAction Stop
+                        $ACL.SetOwner($TrustedInstaller)
+                        $ACL | Set-Acl -Path $($_) -ErrorAction Stop
+                    }
                 }
                 Catch
                 {
@@ -2604,27 +2591,27 @@ If ($DaRT)
 '@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
                 If (Test-Path -Path "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*")
                 {
-                    [void](Grant-FolderAccess -Path "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*")
                 {
-                    [void](Grant-FolderAccess -Path "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$BootMount\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
                 {
-                    [void](Grant-FolderAccess -Path "$BootMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$BootMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$BootMount\Windows\INF\*" -Filter *.log)
                 {
-                    [void](Grant-FolderAccess -Path "$BootMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$BootMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$BootMount\Windows\CbsTemp\*")
                 {
-                    [void](Grant-FolderAccess -Path "$BootMount\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$BootMount\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$BootMount\Windows\CbsTemp\*" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$BootMount\PerfLogs")
@@ -2723,27 +2710,27 @@ If ($DaRT)
 '@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
                 If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*")
                 {
-                    [void](Grant-FolderAccess -Path "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*")
                 {
-                    [void](Grant-FolderAccess -Path "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
                 {
-                    [void](Grant-FolderAccess -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$RecoveryMount\Windows\INF\*" -Filter *.log)
                 {
-                    [void](Grant-FolderAccess -Path "$RecoveryMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$RecoveryMount\Windows\INF\*.log" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$RecoveryMount\Windows\CbsTemp\*")
                 {
-                    [void](Grant-FolderAccess -Path "$RecoveryMount\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
+                    [void](Grant-FolderAccess -FolderPath "$RecoveryMount\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
                     Remove-Item -Path "$RecoveryMount\Windows\CbsTemp\*" -Force -ErrorAction SilentlyContinue
                 }
                 If (Test-Path -Path "$RecoveryMount\PerfLogs")
@@ -2874,6 +2861,7 @@ If ($NetFx3 -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Net
             Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
             [void](Enable-WindowsOptionalFeature @EnableNetFx3)
         }
+        Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
     }
     Catch
     {
@@ -3016,27 +3004,27 @@ Try
     Out-Log -Content "Cleaning-up the Image."
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*")
     {
-        [void](Grant-FolderAccess -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
+        [void](Grant-FolderAccess -FolderPath "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\PendingDeletes\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*")
     {
-        [void](Grant-FolderAccess -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
+        [void](Grant-FolderAccess -FolderPath "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\WinSxS\Temp\TransformerRollbackData\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\WinSxS\ManifestCache\*" -Filter *.bin)
     {
-        [void](Grant-FolderAccess -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
+        [void](Grant-FolderAccess -FolderPath "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\WinSxS\ManifestCache\*.bin" -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\INF\*" -Filter *.log)
     {
-        [void](Grant-FolderAccess -Path "$MountFolder\Windows\INF\*.log" -ErrorAction SilentlyContinue)
+        [void](Grant-FolderAccess -FolderPath "$MountFolder\Windows\INF\*.log" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\INF\*.log" -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\Windows\CbsTemp\*")
     {
-        [void](Grant-FolderAccess -Path "$MountFolder\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
+        [void](Grant-FolderAccess -FolderPath "$MountFolder\Windows\CbsTemp\*" -ErrorAction SilentlyContinue)
         Remove-Item -Path "$MountFolder\Windows\CbsTemp\*" -Force -ErrorAction SilentlyContinue
     }
     If (Test-Path -Path "$MountFolder\PerfLogs")
@@ -3180,31 +3168,23 @@ If ($ISOIsExported -eq $true)
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (!$NoISO)
     {
-        $OscdimgPath = Get-OscdimgPath
-        If (Get-ChildItem -Path $OscdimgPath -Filter oscdimg.exe)
+        Try
         {
-            If ((Test-Path -Path "$ISOMedia\boot\etfsboot.com") -and (Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys.bin"))
-            {
-                Try
-                {
-                    $BootData = '2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$ISOMedia\boot\etfsboot.com", "$ISOMedia\efi\Microsoft\boot\efisys.bin"
-                    $ISOLabel = $ImageName
-                    $ISOName = $SourceName.Replace(' ', '')
-                    $Destination = $($WorkFolder.FullName) + '\' + "$($ISOName).iso"
-                    $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"${ISOLabel}`"", "`"${ISOMedia}`"", "`"${Destination}`"")
-                    $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
-                    Out-Log -Content "Creating a Bootable Windows Installation Media ISO." -Level Info
-                    Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop
-                    If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force -ErrorAction Stop }
-                    Start-Process -FilePath "$($OscdimgPath)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -ErrorAction Stop
-                    $ISOIsCreated = $true
-                }
-                Catch
-                {
-                    Out-Log -Content "Failed creating a Bootable Windows Installation Media ISO." -Level Error
-                    Start-Sleep 3
-                }
-            }
+            $BootData = '2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$ISOMedia\boot\etfsboot.com", "$ISOMedia\efi\Microsoft\boot\efisys.bin"
+            $ISOLabel = $ImageName
+            $ISOName = $SourceName.Replace(' ', '')
+            $ISOFile = Join-Path -Path $($WorkFolder.FullName) -ChildPath "$($ISOName).iso"
+            $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"${ISOLabel}`"", "`"${ISOMedia}`"", "`"${ISOFile}`"")
+            $OscdimgPath = Get-OscdimgPath
+            $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
+            Out-Log -Content "Creating a Bootable Windows Installation Media ISO." -Level Info
+            Get-ChildItem -Path "$($WorkFolder)\*" -Include *.wim -Recurse | Move-Item -Destination "$($ISOMedia)\sources" -Force
+            Start-Process -FilePath "$($OscdimgPath)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait
+        }
+        Catch
+        {
+            Out-Log -Content "Failed creating a Bootable Windows Installation Media ISO." -Level Error
+            Start-Sleep 3
         }
     }
 }
@@ -3214,25 +3194,23 @@ Try
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Out-Log -Content "Finalizing Optimizations." -Level Info
     [void]($SaveFolder = New-SaveDirectory)
-    If ($ISOIsCreated -eq $true)
+    If ($ISOFile -and (Test-Path -Path $ISOFile -Filter *.iso))
     {
-        Move-Item -Path "$($WorkFolder)\$($ISOName).iso" -Destination $SaveFolder -Force
+        Move-Item -Path $ISOFile -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
     }
-    Else 
+    Else
     {
-        If ($ISOIsExported -eq $true) 
+        If ($ISOIsExported -eq $true)
         {
-            Move-Item -Path "$WorkFolder\install.wim" -Destination "$ISOMedia\sources" -Force
-            If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination "$ISOMedia\sources" -Force }
-            Move-Item -Path $ISOMedia -Destination $SaveFolder -Force
+            Get-ChildItem -Path "$($WorkFolder)\*" -Include *.wim -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue
+            Move-Item -Path $ISOMedia -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
         }
         Else
         {
-            Move-Item -Path "$WorkFolder\install.wim" -Destination $SaveFolder -Force
-            If (Test-Path -Path "$WorkFolder\boot.wim") { Move-Item -Path "$WorkFolder\boot.wim" -Destination $SaveFolder -Force }
+            Get-ChildItem -Path "$($WorkFolder)\*" -Include *.wim -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
         }
     }
-    Get-ChildItem -Path "$($WorkFolder)\*" -Include *.txt | Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -CompressionLevel Fastest | Out-Null
+    [void](Get-ChildItem -Path "$($WorkFolder)\*" -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
     $Timer.Stop()
     Start-Sleep 3
     If ($Error.Count.Equals(0))
@@ -3243,9 +3221,9 @@ Try
     }
     Else
     {
-        $SaveErrorLog = Join-Path -Path $Env:TEMP -ChildPath ErrorLog.log
+        $SaveErrorLog = Join-Path -Path $SaveFolder -ChildPath ErrorLog.log
         Set-Content -Path $SaveErrorLog -Value $Error.ToArray() -Force
-        Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -Path "$Env:TEMP\ErrorLog.log" -Update | Out-Null
+        [void](Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -Path $SaveErrorLog -Update -ErrorAction SilentlyContinue)
         Remove-Item -Path "$Env:TEMP\ErrorLog.log" -Force -ErrorAction SilentlyContinue
         Write-Warning "$ScriptName completed in [$($Timer.Elapsed.Minutes.ToString())] minutes with [$($Error.Count)] errors."
         Start-Sleep 3
@@ -3259,11 +3237,11 @@ Finally
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value "Stopped processing at [$($TimeStamp)]"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -Path $ScriptLog -Update | Out-Null
-    Move-Item -Path "$Env:TEMP\OptimizeLogs.Zip" -Destination $SaveFolder -Force
+    [void](Compress-Archive -DestinationPath "$Env:TEMP\OptimizeLogs.Zip" -Path $ScriptLog -Update -ErrorAction SilentlyContinue)
+    Move-Item -Path "$Env:TEMP\OptimizeLogs.Zip" -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
-    Remove-Item -Path $DISMLog -Force
-    Remove-Item -Path $ScriptDirectory -Recurse -Force
+    Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path $ScriptDirectory -Recurse -Force -ErrorAction SilentlyContinue
     [void]$RemovedSystemApps.Clear()
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
 }

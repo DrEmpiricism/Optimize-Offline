@@ -1,6 +1,6 @@
 # ChangeLog #
 
-## Build 3.1.2.9 ##
+## Build 3.1.2.9 (updated on 11-29-2019) ##
 
 - Updated multiple helper functions.
 - Updated Microsoft Store and Dependency Packages.
@@ -10,4 +10,6 @@
 - The -Registry parameter no longer has "Default" automatically set as a value and must be explicitly entered (like other parameters) when calling Optimize-Offline.
 - Fixed two areas in the SetupComplete here-string that included duplicate closing brackets.
 - Added a -NoISO switch that will prevent the automatic creation of a bootable Windows Installation ISO when Windows Installation Media is used as the source image.
-- Other minor code adjustments.
+- Corrected a few benign error returns on some property values.
+- Corrected a few missplaced variables within the script and a helper function.
+- Optimized and reduced some process and helper function code.
