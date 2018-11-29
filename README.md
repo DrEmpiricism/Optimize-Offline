@@ -15,8 +15,9 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 
 ## Script disclaimer ##
 
-It is the responsibility of the end-user to be aware of what each parameter and switch does.  Moreover, the script is designed to optimize OEM images and not images already optimized by another script/program.
-Be aware that properties, features, packages, etc. can and often do change between builds (i.e. RS3 to RS4).  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.
+- It is the responsibility of the end-user to be aware of what each parameter and switch does.
+- Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
+- Properties, features, packages, etc. can and often do change between builds (i.e. RS3 to RS4).  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.
 
 ## About the -Registry parameter ##
 
