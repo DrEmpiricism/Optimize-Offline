@@ -13,13 +13,14 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Generates a SetupComplete.cmd script based on System Application removal, to further disable any Scheduled Tasks and the like that are enabled by default during Windows installation.
 - Allows offline removal of default Windows Packages and the disabling of Windows Features.
 
-## Script safety ##
+## Script disclaimer ##
 
 It is the responsibility of the end-user to be aware of what each parameter and switch does.  Moreover, the script is designed to optimize OEM images and not images already optimized by another script/program.
+Be aware that properties, features, packages, etc. can and often do change between builds (i.e. RS3 to RS4).  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.
 
-## About the -Registry switch ##
+## About the -Registry parameter ##
 
-The -Registry switch applies an array of entries and values to the image's registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
+The -Registry parameter applies an array of entries and values to the image's registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
 The script only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported.
 A few of the switch settings:
 
@@ -50,7 +51,7 @@ This method is safer than force removing the System Application using its compon
 
 ## System Applications universally safe, and recommended, to remove ##
 
-This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used (see below). Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
+This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, MicrosoftEdgeDevelopmentTools, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used (see below). Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
 
 **ShellExperienceHost should never be removed**.
 
@@ -86,3 +87,4 @@ This ensures the defaultuser0 ghost account, if present, is always entirely remo
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
 - If maintaining fully updated OEM images, it's best to integrate offline updates into the image and then run Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
+- Do not manually meddle in either the working directories nor the registry while it's optimizing an image.
