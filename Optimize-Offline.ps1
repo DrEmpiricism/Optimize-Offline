@@ -825,7 +825,7 @@ If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
     {
         Try
         {
-            Out-Log -Content "Disabling Windows Feature: Windows-Defender-Default-Defintions" -Level Info
+            Out-Log -Content "Disabling Windows Feature: Windows-Defender-Default-Definitions" -Level Info
             $DisableDefenderFeature = @{
                 Path             = $MountFolder
                 FeatureName      = "Windows-Defender-Default-Definitions"
