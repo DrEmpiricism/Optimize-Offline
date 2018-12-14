@@ -1,15 +1,13 @@
 # ChangeLog #
 
-## Build 3.1.2.9 (updated on 11-29-2019) ##
+## Build 3.1.3.0 (updated on 12-14-2019) ##
 
-- Updated multiple helper functions.
-- Updated Microsoft Store and Dependency Packages.
-- Created a new helper function, with a small C# wrapper, to detect whether a system is running on UEFI firmware.
-- Optimize-Offline now checks whether the running system is UEFI. If a system is NOT detected as UEFI, the string data adding the UEFI Firmware icon, and its associated custom link, will be omitted from the custom Start Menu and Taskbar Layout and link creation object process.
-- Using the -Features switch will now also display all disabled Windows Features in a Gridview list where they can be enabled.
-- The -Registry parameter no longer has "Default" automatically set as a value and must be explicitly entered (like other parameters) when calling Optimize-Offline.
-- Fixed two areas in the SetupComplete here-string that included duplicate closing brackets.
-- Added a -NoISO switch that will prevent the automatic creation of a bootable Windows Installation ISO when Windows Installation Media is used as the source image.
-- Corrected a few benign error returns on some property values.
-- Corrected a few missplaced variables within the script and a helper function.
-- Optimized and reduced some process and helper function code.
+- Made multiple changes and removals to registry settings applied, as many of them have changed and are not applicable to older builds. As such, Optimize-Offline no longer supports builds lower than RS4 (17134).
+- The -Registry parameter has been changed to a switch.
+- Many registry settings that modified the layout of the desktop and GUI have been removed as to allow for pure end-user customization.
+- Removed multiple Helper Functions that are no longer applicable to the new registry changes.
+- There is no longer a SetupComplete.cmd script that is generated and added to the image allowing for its inclusion using a distribution share (i.e. OEM folder added to the installation media).
+- The -NoISO switch has been removed.
+- There is a new -ISO switch that can be used to remaster a new ISO if an ISO was used at the source image.
+- Updated the Windows Store Appx Packages.
+- Additional optimization process and code changes.

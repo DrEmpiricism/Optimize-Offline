@@ -19,10 +19,10 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Registry "Default" -Win32Calc -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "All" -SystemApps -Packages -Registry "Harden" -Win32Calc -DaRT -NetFx3 $true
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Whitelist" -SystemApps -Packages -NoSetup
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -SystemApps -Packages -Registry "Default" -DaRT -WindowsStore -MicrosoftEdge -NoISO
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -DaRT
+    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "All" -SystemApps -Packages -Registry -Win32Calc -DaRT -Drivers "%DriverPath%" -NetFx3 "%NetFx3Path%"
+    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Whitelist" -SystemApps -Packages -NetFx3 $true
+    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -SystemApps -Packages -Registry -DaRT -WindowsStore -MicrosoftEdge -ISO
 )
 PAUSE
 EXIT
