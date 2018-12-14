@@ -52,8 +52,9 @@
 		Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.
 	
 	.PARAMETER ISO
+		Requires the installation of the Windows ADK (Assessment and Deployment Kit)
 		Only applicable when a Windows Installation Media ISO image is used as the source image.
-		Excludes the automatic creation of a bootable Windows Installation Media ISO.
+		Creates a new bootable Windows Installation Media ISO.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -DaRT -NetFx3 $true -Drivers "E:\Driver Folder" -ISO
@@ -79,43 +80,43 @@
 [CmdletBinding()]
 Param
 (
-	[Parameter(Mandatory = $true,
-			   HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
-	[ValidateScript({
-			If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
-			ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
-			Else { Throw "Invalid image path: $_" }
-		})]
-	[string]$ImagePath,
-	[Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image to be optimized.')]
-	[ValidateRange(1, 16)]
-	[int]$Index = 1,
-	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal, or performs a complete removal of all packages.')]
-	[ValidateSet('Select', 'All', 'Whitelist')]
-	[string]$MetroApps,
-	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
-	[switch]$SystemApps,
-	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
-	[switch]$Packages,
-	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.')]
-	[switch]$Features,
-	[Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
-	[switch]$WindowsStore,
-	[Parameter(HelpMessage = 'Applies the Microsoft Edge Browser packages into the image.')]
-	[switch]$MicrosoftEdge,
-	[Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
-	[switch]$Registry,
-	[Parameter(HelpMessage = 'Applies the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
-	[switch]$Win32Calc,
-	[Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
-	[switch]$DaRT,
-	[Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-	[ValidateScript({ Test-Path $(Resolve-Path -Path $_) })]
-	[string]$Drivers,
-	[Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
-	[string]$NetFx3,
-	[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
-	[switch]$ISO
+    [Parameter(Mandatory = $true,
+        HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
+    [ValidateScript( {
+            If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
+            ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
+            Else { Throw "Invalid image path: $_" }
+        })]
+    [string]$ImagePath,
+    [Parameter(HelpMessage = 'If using a multi-index image, specify the index of the image to be optimized.')]
+    [ValidateRange(1, 16)]
+    [int]$Index = 1,
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal, or performs a complete removal of all packages.')]
+    [ValidateSet('Select', 'All', 'Whitelist')]
+    [string]$MetroApps,
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
+    [switch]$SystemApps,
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
+    [switch]$Packages,
+    [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.')]
+    [switch]$Features,
+    [Parameter(HelpMessage = 'Sideloads the Microsoft Windows Store, and its dependencies, into the image.')]
+    [switch]$WindowsStore,
+    [Parameter(HelpMessage = 'Applies the Microsoft Edge Browser packages into the image.')]
+    [switch]$MicrosoftEdge,
+    [Parameter(HelpMessage = 'Applies optimized registry values into the registry hives of the image.')]
+    [switch]$Registry,
+    [Parameter(HelpMessage = 'Applies the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
+    [switch]$Win32Calc,
+    [Parameter(HelpMessage = 'Applies the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
+    [switch]$DaRT,
+    [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
+    [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
+    [string]$Drivers,
+    [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
+    [string]$NetFx3,
+    [Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
+    [switch]$ISO
 )
 
 #region Script Variables
@@ -215,17 +216,17 @@ Function Test-OfflineHives
 
 Function New-Container
 {
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true)]
-		[string]$Path
-	)
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
 	
-	If (!(Test-Path -LiteralPath $Path))
-	{
-		[void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction SilentlyContinue)
-	}
+    If (!(Test-Path -LiteralPath $Path))
+    {
+        [void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction SilentlyContinue)
+    }
 }
 
 Function Test-UEFI
@@ -2046,7 +2047,7 @@ If ($DaRT)
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
 '@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
-                If (Test-Path -Path ("$BootMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$MountFolder\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                If (Test-Path -Path ("$BootMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$BootMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountBootImage = @{
                     Path             = $BootMount
                     Save             = $true
@@ -2133,7 +2134,7 @@ If ($DaRT)
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
 '@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
-                If (Test-Path -Path ("$RecoveryMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$MountFolder\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                If (Test-Path -Path ("$RecoveryMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$RecoveryMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountRecoveryImage = @{
                     Path             = $RecoveryMount
                     Save             = $true
