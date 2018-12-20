@@ -92,7 +92,7 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 **A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
 
-## MicrosoftStore side-loading ##
+## Microsoft Store side-loading ##
 
 For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
 
@@ -101,7 +101,6 @@ For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into
 For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state. Be aware, that one of the System Applications that can be removed are Windows Edge Development Tools, so if you plan to use any tools for Microsoft Edge development, it's recommended to not remove this System Application.
 
 Again, I try to keep these packages up-to-date with their latest packages.
-
 
 ## Optimize-Offline best practices ##
 
