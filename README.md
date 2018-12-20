@@ -64,7 +64,42 @@ The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Stor
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
+For Windows builds 17763 and above, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For builds lower than 17763, a custom created cabinet package, incorporating the latest win32calc.exe and language file, is expanded into the image and the ACL SSDLs (security descriptors) are edited so they're identical to the SSDLs applied by the OEM cabinet packages. This allows for proper system management and user control. Optimize-Offline then creates the proper Win32Calc link and adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
+
 Optimize-Offline can implement the traditional Calculator using the latest Win32Calc.exe, language files and Package Features found in the Windows 10 Enterprise LTSC 2019 edition.
+
+## ISO File Strucuture Optimization ##
+
+This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The steps that it takes to optimize the file structure should NOT be changed, as the order they're written are critical to proper file structure optimization for bootup installation.
+
+## ISO Remastering and Creation ##
+
+When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Because of this, using the -ISO switch will make Optimize-Offline tell to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO without displaying an error or producing any optimization failures.
+
+Optimize-Offline does this without any end-user input by quering specific registry keys that contain the full path to the ADK's installed location and then tests the location to the Deployment Tools directory which contains the oscdimg.exe command-line tool used to create bootable Windows ISOs. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO.
+
+Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
+
+## About the Defaultuser0 ghost account ##
+
+Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
+defaultuser0 is not a real account, however, and is a bug that has been present in Windows through countless flavors and variations. It is not added to any user groups nor does it even have a profile.
+Conversely, failing to remove the defaultuser0 account immediately after Windows Installation completes can lead to future headaches.  As an example, if you reset Windows with the defaultuser0 ghost account still present, upon the restart of the device, Windows will force you to log into the defaultuser0 account to continue.
+
+In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
+
+**A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
+
+## MicrosoftStore side-loading ##
+
+For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
+
+## Microsoft Edge side-loading ##
+
+For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state. Be aware, that one of the System Applications that can be removed are Windows Edge Development Tools, so if you plan to use any tools for Microsoft Edge development, it's recommended to not remove this System Application.
+
+Again, I try to keep these packages up-to-date with their latest packages.
+
 
 ## Optimize-Offline best practices ##
 
