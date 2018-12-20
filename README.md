@@ -64,6 +64,8 @@ The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Stor
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
+What Optimize-Offline does to remedy this:
+
 For Windows builds 17763 and above, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For builds lower than 17763, a custom created cabinet package, incorporating the latest win32calc.exe and language file, is expanded into the image and the ACL SSDLs (security descriptors) are edited so they're identical to the SSDLs applied by the OEM cabinet packages. This allows for proper system management and user control. Optimize-Offline then creates the proper Win32Calc link and adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
 
 Optimize-Offline can implement the traditional Calculator using the latest Win32Calc.exe, language files and Package Features found in the Windows 10 Enterprise LTSC 2019 edition.
