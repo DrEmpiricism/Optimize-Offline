@@ -94,7 +94,7 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 ## Microsoft Store side-loading ##
 
-For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
+For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
 
 ## Microsoft Edge side-loading ##
 
