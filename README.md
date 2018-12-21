@@ -78,7 +78,7 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO without displaying an error or producing any optimization failures.
 
-Optimize-Offline does this without any end-user input by quering specific registry keys that contain the full path to the ADK's installed location and then tests the location to the Deployment Tools directory which contains the oscdimg.exe command-line tool used to create bootable Windows ISOs. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO.
+Optimize-Offline does this without any end-user input by querying specific registry keys that contain the path to the ADK's installed location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO.
 
 Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
 
