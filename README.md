@@ -108,3 +108,10 @@ Again, I try to keep these packages up-to-date with their latest packages.
 - If maintaining fully updated OEM images, it's best to integrate offline updates into the image and then run Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
 - Do not manually meddle in either the working directories nor the registry while it's optimizing an image.
+
+## How to call Optimize-Offline ##
+
+The easist way to call Optimize-Offline is by using the provided Start.cmd script. Right-click the script and edit the variables to accommodate your optimization requirements. You can enter the full paths to driver locations, the source image, NetFx3 packets, etc. Then simply add or remove the parameters and switches to the line that calls Optimize-Offline. Once finished, simply right click the Start.cmd script and select "Run as Administrator" and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
+
+The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
+> .\Optimize-Offline -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -DaRT -Drivers "D:\My Driver Packages"
