@@ -35,12 +35,12 @@
 		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Integrates the Microsoft Edge Browser packages into the image.
 	
-	.PARAMETER Registry
-		Integrates optimized registry values into the registry hives of the image.
-	
 	.PARAMETER Win32Calc
 		Specific to non-Windows 10 Enterprise LTSC 2019 editions only!
 		Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
+
+	.PARAMETER Dedup
+		Integrates the Windows Server Data Deduplication packages into the image.
 	
 	.PARAMETER DaRT
 		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.
@@ -50,6 +50,9 @@
 	
 	.PARAMETER NetFx3
 		Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.
+
+	.PARAMETER Registry
+		Integrates optimized registry values into the registry hives of the image.
 	
 	.PARAMETER ISO
 		Requires the installation of the Windows ADK (Assessment and Deployment Kit)
@@ -57,8 +60,8 @@
 		Creates a new bootable Windows Installation Media ISO.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -DaRT -NetFx3 $true -Drivers "E:\Driver Folder" -ISO
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Registry
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 $true -Drivers "E:\Driver Folder" -ISO
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 "D:\Win10 LTSC 2019\sources\sxs" -DaRT
 	
 	.NOTES
@@ -73,8 +76,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.3.1
-		Last updated:	12/23/2018
+		Version:        3.1.3.2
+		Last updated:	12/24/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -104,10 +107,10 @@ Param
     [switch]$WindowsStore,
     [Parameter(HelpMessage = 'Integrates the Microsoft Edge Browser packages into the image.')]
     [switch]$MicrosoftEdge,
-    [Parameter(HelpMessage = 'Integrates optimized registry values into the registry hives of the image.')]
-    [switch]$Registry,
     [Parameter(HelpMessage = 'Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
     [switch]$Win32Calc,
+    [Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication packages into the image.')]
+    [switch]$Dedup,
     [Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
     [switch]$DaRT,
     [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
@@ -115,6 +118,8 @@ Param
     [string]$Drivers,
     [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
     [string]$NetFx3,
+    [Parameter(HelpMessage = 'Integrates optimized registry values into the registry hives of the image.')]
+    [switch]$Registry,
     [Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
     [switch]$ISO
 )
@@ -123,7 +128,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = "Black"; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = "Optimize-Offline"
-$ScriptVersion = "3.1.3.1"
+$ScriptVersion = "3.1.3.2"
 $ScriptLog = Join-Path -Path $Env:TEMP -ChildPath Optimize-Offline.log
 $DISMLog = Join-Path -Path $Env:TEMP -ChildPath DISM.log
 #endregion Script Variables
@@ -192,9 +197,6 @@ Function New-SaveDirectory
 
 Function Mount-OfflineHives
 {
-    [CmdletBinding()]
-    Param ()
-	
     Invoke-Expression -Command ("REG LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"")
     Invoke-Expression -Command ("REG LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"")
     Invoke-Expression -Command ("REG LOAD HKLM\WIM_HKCU `"$MountFolder\Users\Default\NTUSER.DAT`"")
@@ -203,9 +205,6 @@ Function Mount-OfflineHives
 
 Function Dismount-OfflineHives
 {
-    [CmdletBinding()]
-    Param ()
-	
     [System.GC]::Collect()
     Invoke-Expression -Command ("REG UNLOAD HKLM\WIM_HKLM_SOFTWARE")
     Invoke-Expression -Command ("REG UNLOAD HKLM\WIM_HKLM_SYSTEM")
@@ -394,7 +393,7 @@ ElseIf (([IO.FileInfo]$ImagePath).Extension -eq ".WIM")
 
 Try
 {
-    $WimImage = (Get-WindowsImage -ImagePath $InstallWim -Index 1 -ErrorVariable +ProcessError -ErrorAction Stop)
+    $WimImage = (Get-WindowsImage -ImagePath $InstallWim -Index $Index -ErrorVariable +ProcessError -ErrorAction Stop)
     $WimInfo = [PSCustomObject]@{
         Name     = $WimImage.ImageName
         Edition  = $WimImage.EditionID
@@ -571,7 +570,7 @@ If ($MetroApps -and $WimInfo.Name -notlike "*LTSC" -and (Get-AppxProvisionedPack
     }
     ElseIf ($MetroApps -eq "Whitelist")
     {
-        $AppxWhitelistPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxPackageWhitelist.xml" 
+        $AppxWhitelistPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxPackageWhitelist.xml"
         If (Test-Path -Path $AppxWhitelistPath)
         {
             [XML]$GetList = Get-Content -Path $AppxWhitelistPath
@@ -726,8 +725,8 @@ Try
             $Host.UI.RawUI.WindowTitle = "Disabling Provisioned App Package Services."
             Out-Log -Content "Disabling Provisioned App Package Services." -Level Info
             [void](Mount-OfflineHives)
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorVariable +ProcessError -ErrorAction Stop }
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorVariable +ProcessError -ErrorAction Stop }
             [void](Dismount-OfflineHives)
         }
     }
@@ -737,29 +736,6 @@ Catch
     Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
     If (Test-OfflineHives) { [void](Dismount-OfflineHives) }
     Start-Sleep 3
-}
-
-If ($MetroAppsComplete -eq $true)
-{
-    $Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu and Taskbar Layout."
-    Out-Log -Content "Cleaning-up the Start Menu and Taskbar Layout." -Level Info
-    Start-Sleep 3
-    $LayoutFile = "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml"
-    @'
-<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-  <LayoutOptions StartTileGroupCellWidth="6" />
-  <DefaultLayoutOverride>
-    <StartLayoutCollection>
-      <defaultlayout:StartLayout GroupCellWidth="6">
-        <start:Group Name="">
-          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
-          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
-        </start:Group>
-      </defaultlayout:StartLayout>
-    </StartLayoutCollection>
-  </DefaultLayoutOverride>
-</LayoutModificationTemplate>
-'@ | Set-Content -Path $LayoutFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
 If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
@@ -882,7 +858,6 @@ Try
             }
         }
         [void](Dismount-OfflineHives)
-        $DisableXboxComplete = $true
     }
 }
 Catch
@@ -1001,7 +976,7 @@ If ($Features)
 
 If ($WindowsStore -and $WimInfo.Name -like "*LTSC")
 {
-    $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore" 
+    $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
     If (Test-Path -LiteralPath $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle)
     {
         $Host.UI.RawUI.WindowTitle = "Applying the Microsoft Store Application Packages."
@@ -1101,7 +1076,7 @@ If ($MicrosoftEdge -and $WimInfo.Name -like "*LTSC")
             {
                 $EdgeBasePackage = @{
                     Path             = $MountFolder
-                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~~10.0.17763.1.cab"
+                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
                     IgnoreCheck      = $true
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
@@ -1111,7 +1086,7 @@ If ($MicrosoftEdge -and $WimInfo.Name -like "*LTSC")
                 [void](Add-WindowsPackage @EdgeBasePackage)
                 $EdgeLanguagePackage = @{
                     Path             = $MountFolder
-                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.17763.1.cab"
+                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
                     IgnoreCheck      = $true
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
@@ -1138,6 +1113,567 @@ If ($MicrosoftEdge -and $WimInfo.Name -like "*LTSC")
     {
         Out-Log -Content "The Microsoft Edge Browser is already installed." -Level Error
         Start-Sleep 3
+    }
+}
+
+If ($Win32Calc -and $WimInfo.Name -notlike "*LTSC")
+{
+    If ($null -eq (Get-ChildItem -Path "$MountFolder\Windows\servicing\Packages" -Filter Microsoft-Windows-win32calc-Package*.mum -ErrorAction SilentlyContinue))
+    {
+        $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator Packages."
+        Out-Log -Content "Applying the Win32 Calculator Packages." -Level Info
+        $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
+        If ($WimInfo.Build -ge '17763')
+        {
+            If (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab)
+            {
+                Try
+                {
+                    $CalcBasePackage = @{
+                        Path             = $MountFolder
+                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+                        IgnoreCheck      = $true
+                        ScratchDirectory = $ScratchFolder
+                        LogPath          = $DISMLog
+                        ErrorVariable    = '+ProcessError'
+                        ErrorAction      = "Stop"
+                    }
+                    [void](Add-WindowsPackage @CalcBasePackage)
+                    $CalcLanguagePackage = @{
+                        Path             = $MountFolder
+                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+                        IgnoreCheck      = $true
+                        ScratchDirectory = $ScratchFolder
+                        LogPath          = $DISMLog
+                        ErrorVariable    = '+ProcessError'
+                        ErrorAction      = "Stop"
+                    }
+                    [void](Add-WindowsPackage @CalcLanguagePackage)
+                }
+                Catch
+                {
+                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+                    Exit-Script
+                    Break
+                }
+                Try
+                {
+                    [void](Mount-OfflineHives)
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+                    [void](Dismount-OfflineHives)
+                }
+                Catch
+                {
+                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+                    Exit-Script
+                    Break
+                }
+                Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Windows-win32calc* | Select -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\AppliedWindowsPackages.txt -Append
+            }
+            Else
+            {
+                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
+                Start-Sleep 3
+            }
+        }
+        Else
+        {
+            If (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab)
+            {
+                Try
+                {
+                    Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait
+                    [void](Mount-OfflineHives)
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorVariable +ProcessError -ErrorAction Stop
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
+                    [void](Dismount-OfflineHives)
+                    $CalcShell = New-Object -ComObject WScript.Shell -ErrorVariable +ProcessError -ErrorAction Stop
+                    $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
+                    $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+                    $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+                    $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+                    $CalcShortcut.Save()
+                    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
+                    $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+                    $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
+                    If ((Get-Content -Path $IniFile -ErrorAction SilentlyContinue).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
+                }
+                Catch
+                {
+                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+                    Exit-Script
+                    Break
+                }
+                Try
+                {
+                    $SSDL = @'
+
+D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
+'@
+                    $SSDL.Insert(0, "win32calc.exe") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -ErrorVariable +ProcessError -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    $SSDL.Insert(0, "win32calc.exe.mui") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force -ErrorAction SilentlyContinue
+                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
+                    @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach {
+                        $ACL = Get-Acl -Path $($_) -ErrorVariable +ProcessError -ErrorAction Stop
+                        $ACL.SetOwner($TrustedInstaller)
+                        $ACL | Set-Acl -Path $($_) -ErrorVariable +ProcessError -ErrorAction Stop
+                    }
+                }
+                Catch
+                {
+                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+                    Exit-Script
+                    Break
+                }
+            }
+            Else
+            {
+                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
+                Start-Sleep 3
+            }
+        }
+    }
+    Else
+    {
+        Out-Log -Content "The Win32 Calculator is already installed." -Level Error
+        Start-Sleep 3
+    }
+}
+
+If ($Dedup) 
+{
+    $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
+    If ((Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-FileServer-ServerCore-Package*.cab) -and (Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-Dedup-Package*.cab)) 
+    {
+        $Host.UI.RawUI.WindowTitle = "Applying the Data Deduplication Packages."
+        Out-Log -Content "Applying the Data Deduplication Packages." -Level Info
+        Try 
+        {
+            $FileServerCore = @{
+                Path             = $MountFolder
+                PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @FileServerCore)
+            $FileServerLang = @{
+                Path             = $MountFolder
+                PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @FileServerLang)
+            $DedupCore = @{
+                Path             = $MountFolder
+                PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @DedupCore)
+            $DedupLang = @{
+                Path             = $MountFolder
+                PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsPackage @DedupLang)
+        }
+        Catch 
+        {
+            Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+            Exit-Script
+            Break
+        }
+        Try
+        {
+            $Host.UI.RawUI.WindowTitle = "Applying the Data Deduplication Firewall Rules."
+            Out-Log -Content "Applying the Data Deduplication Firewall Rules." -Level Info
+            [void](Mount-OfflineHives)
+            New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -ErrorVariable +ProcessError -ErrorAction Stop
+            New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" -ErrorVariable +ProcessError -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-DCOM-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-SMB-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-DCOM-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-SMB-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorAction Stop
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
+                -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
+                -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
+                -Type String -ErrorVariable +ProcessError -ErrorAction Stop
+            [void](Dismount-OfflineHives)
+        }
+        Catch
+        {
+            Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+            Exit-Script
+            Break
+        }
+        Try
+        {
+            $Host.UI.RawUI.WindowTitle = "Enabling Windows Feature: Dedup-Core"
+            Out-Log -Content "Enabling Windows Feature: Dedup-Core" -Level Info
+            $EnableDedup = @{
+                Path             = $MountFolder
+                FeatureName      = "Dedup-Core"
+                All              = $true
+                LimitAccess      = $true
+                NoRestart        = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Enable-WindowsOptionalFeature @EnableDedup)
+            Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
+        }
+        Catch
+        {
+            Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+            Exit-Script
+            Break
+        }
+    }
+}
+
+If ($DaRT)
+{
+    Clear-Host
+    $Host.UI.RawUI.WindowTitle = "Applying Microsoft DaRT 10."
+    $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
+    If ((Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim) -and (Test-Path -LiteralPath $DaRTPath -Filter DebuggingTools_*.wim))
+    {
+        If ($WimInfo.Build -eq '15063') { $CodeName = "RS2" }
+        ElseIf ($WimInfo.Build -eq '16299') { $CodeName = "RS3" }
+        ElseIf ($WimInfo.Build -eq '17134') { $CodeName = "RS4" }
+        ElseIf ($WimInfo.Build -ge '17730') { $CodeName = "RS5" }
+        Try
+        {
+            If ($BootWim)
+            {
+                $NewBootMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "BootMount"))
+                If ($NewBootMount) { $BootMount = Get-Item -LiteralPath $(Join-Path -Path $ScriptDirectory -ChildPath $NewBootMount) -ErrorVariable +ProcessError -ErrorAction Stop }
+                $MountBootImage = @{
+                    Path             = $BootMount
+                    ImagePath        = $BootWim
+                    Index            = 2
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Mounting the Boot Image." -Level Info
+                [void](Mount-WindowsImage @MountBootImage)
+                $MSDaRT10Boot = @{
+                    ImagePath        = "$DaRTPath\MSDaRT10.wim"
+                    Index            = 1
+                    ApplyPath        = $BootMount
+                    CheckIntegrity   = $true
+                    Verify           = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Boot Image." -Level Info
+                [void](Expand-WindowsImage @MSDaRT10Boot)
+                Start-Sleep 3
+                $DeguggingToolsBoot = @{
+                    ImagePath        = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+                    Index            = 1
+                    ApplyPath        = $BootMount
+                    CheckIntegrity   = $true
+                    Verify           = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Boot Image." -Level Info
+                [void](Expand-WindowsImage @DeguggingToolsBoot)
+                Start-Sleep 3
+                If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll"))
+                {
+                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                }
+                @'
+[LaunchApps]
+%WINDIR%\System32\wpeinit.exe
+%WINDIR%\System32\netstart.exe
+%SYSTEMDRIVE%\setup.exe
+'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                If (Test-Path -Path ("$BootMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$BootMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                $DismountBootImage = @{
+                    Path             = $BootMount
+                    Save             = $true
+                    CheckIntegrity   = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Saving and Dismounting the Boot Image." -Level Info
+                [void](Dismount-WindowsImage @DismountBootImage)
+                Out-Log -Content "Rebuilding the Boot Image." -Level Info
+                $ExportPE = @{
+                    SourceImagePath      = $BootWim
+                    SourceIndex          = 1
+                    DestinationImagePath = "$($WorkFolder)\boot.wim"
+                    CompressionType      = "Maximum"
+                    CheckIntegrity       = $true
+                    ScratchDirectory     = $ScratchFolder
+                    LogPath              = $DISMLog
+                    ErrorVariable        = '+ProcessError'
+                    ErrorAction          = "Stop"
+                }
+                [void](Export-WindowsImage @ExportPE)
+                $ExportSetup = @{
+                    SourceImagePath      = $BootWim
+                    SourceIndex          = 2
+                    DestinationImagePath = "$($WorkFolder)\boot.wim"
+                    CompressionType      = "Maximum"
+                    CheckIntegrity       = $true
+                    ScratchDirectory     = $ScratchFolder
+                    LogPath              = $DISMLog
+                    ErrorVariable        = '+ProcessError'
+                    ErrorAction          = "Stop"
+                }
+                [void](Export-WindowsImage @ExportSetup)
+            }
+            If (Test-Path -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -PathType Leaf)
+            {
+                [void](Invoke-Expression -Command ("ATTRIB -S -H -I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -ErrorAction SilentlyContinue)
+                Copy-Item -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -Destination $ImageFolder -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                $NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "RecoveryMount"))
+                If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath $(Join-Path -Path $ScriptDirectory -ChildPath $NewRecoveryMount) -ErrorVariable +ProcessError -ErrorAction Stop }
+                $MountRecoveryImage = @{
+                    Path             = $RecoveryMount
+                    ImagePath        = "$($ImageFolder)\winre.wim"
+                    Index            = 1
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Mounting the Recovery Image." -Level Info
+                [void](Mount-WindowsImage @MountRecoveryImage)
+                $MSDaRT10Recovery = @{
+                    ImagePath        = "$DaRTPath\MSDaRT10.wim"
+                    Index            = 1
+                    ApplyPath        = $RecoveryMount
+                    CheckIntegrity   = $true
+                    Verify           = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Recovery Image." -Level Info
+                [void](Expand-WindowsImage @MSDaRT10Recovery)
+                Start-Sleep 3
+                $DeguggingToolsRecovery = @{
+                    ImagePath        = "$DaRTPath\DebuggingTools_$($CodeName).wim"
+                    Index            = 1
+                    ApplyPath        = $RecoveryMount
+                    CheckIntegrity   = $true
+                    Verify           = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Recovery Image." -Level Info
+                [void](Expand-WindowsImage @DeguggingToolsRecovery)
+                Start-Sleep 3
+                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll"))
+                {
+                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                }
+                @'
+[LaunchApps]
+%WINDIR%\System32\wpeinit.exe
+%WINDIR%\System32\netstart.exe
+%SYSTEMDRIVE%\sources\recovery\recenv.exe
+'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                If (Test-Path -Path ("$RecoveryMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$RecoveryMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                $DismountRecoveryImage = @{
+                    Path             = $RecoveryMount
+                    Save             = $true
+                    CheckIntegrity   = $true
+                    ScratchDirectory = $ScratchFolder
+                    LogPath          = $DISMLog
+                    ErrorVariable    = '+ProcessError'
+                    ErrorAction      = "Stop"
+                }
+                Out-Log -Content "Saving and Dismounting the Recovery Image." -Level Info
+                [void](Dismount-WindowsImage @DismountRecoveryImage)
+                Out-Log -Content "Rebuilding the Recovery Image." -Level Info
+                $ExportRecovery = @{
+                    SourceImagePath      = "$($ImageFolder)\winre.wim"
+                    SourceIndex          = 1
+                    DestinationImagePath = "$($WorkFolder)\winre.wim"
+                    CompressionType      = "Maximum"
+                    CheckIntegrity       = $true
+                    ScratchDirectory     = $ScratchFolder
+                    LogPath              = $DISMLog
+                    ErrorVariable        = '+ProcessError'
+                    ErrorAction          = "Stop"
+                }
+                [void](Export-WindowsImage @ExportRecovery)
+                Move-Item -Path "$WorkFolder\winre.wim" -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorVariable +ProcessError -ErrorAction Stop
+                [void](Invoke-Expression -Command ("ATTRIB +S +H +I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -ErrorAction SilentlyContinue)
+            }
+        }
+        Catch
+        {
+            Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+            If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
+            {
+                Write-Host "Dismounting and Discarding the Recovery Image." -ForegroundColor Cyan
+                [void](Dismount-WindowsImage -Path $BootMount -Discard)
+            }
+            If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
+            {
+                Write-Host "Dismounting and Discarding the Recovery Image." -ForegroundColor Cyan
+                [void](Dismount-WindowsImage -Path $RecoveryMount -Discard)
+            }
+        }
+        Finally
+        {
+            Clear-Host
+        }
+    }
+}
+
+If ($Drivers)
+{
+    Try
+    {
+        If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf -ErrorAction SilentlyContinue)
+        {
+            $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
+            Out-Log -Content "Injecting Driver Packages." -Level Info
+            $InjectDriverPackages = @{
+                Path             = $MountFolder
+                Driver           = $Drivers
+                Recurse          = $true
+                ForceUnsigned    = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            [void](Add-WindowsDriver @InjectDriverPackages)
+            Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
+        }
+        Else
+        {
+            Out-Log -Content "$($Drivers) contains no valid Driver Packages." -Level Error
+            Start-Sleep 3
+        }
+    }
+    Catch
+    {
+        Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+        Exit-Script
+        Break
+    }
+}
+
+
+If ($NetFx3 -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq "DisabledWithPayloadRemoved")
+{
+    Try
+    {
+        If (($ISOIsExported -eq $true) -and (Get-ChildItem -LiteralPath "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
+        {
+            $EnableNetFx3 = @{
+                FeatureName      = "NetFx3"
+                Path             = $MountFolder
+                All              = $true
+                LimitAccess      = $true
+                LogPath          = $DISMLog
+                NoRestart        = $true
+                ScratchDirectory = $ScratchFolder
+                Source           = "$ISOMedia\sources\sxs"
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
+            Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
+            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
+        }
+        ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -LiteralPath $NetFx3 -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
+        {
+            $EnableNetFx3 = @{
+                FeatureName      = "NetFx3"
+                Path             = $MountFolder
+                All              = $true
+                LimitAccess      = $true
+                LogPath          = $DISMLog
+                NoRestart        = $true
+                ScratchDirectory = $ScratchFolder
+                Source           = $NetFx3
+                ErrorVariable    = '+ProcessError'
+                ErrorAction      = "Stop"
+            }
+            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
+            Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
+            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
+        }
+        Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
+    }
+    Catch
+    {
+        Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
+        Exit-Script
+        Break
     }
 }
 
@@ -1803,455 +2339,39 @@ If ($Registry)
 }
 #endregion Registry Optimizations
 
-If ($Win32Calc -and $WimInfo.Name -notlike "*LTSC")
+If ($WimInfo.Name -notlike "*LTSC")
 {
-    If ($null -eq (Get-ChildItem -Path "$MountFolder\Windows\servicing\Packages" -Filter Microsoft-Windows-win32calc-Package*.mum -ErrorAction SilentlyContinue))
-    {
-        $Host.UI.RawUI.WindowTitle = "Applying the Win32 Calculator Packages."
-        Out-Log -Content "Applying the Win32 Calculator Packages." -Level Info
-        $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
-        If ($WimInfo.Build -ge '17763')
-        {
-            If (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab)
-            {
-                Try
-                {
-                    $CalcBasePackage = @{
-                        Path             = $MountFolder
-                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~~10.0.17763.1.cab"
-                        IgnoreCheck      = $true
-                        ScratchDirectory = $ScratchFolder
-                        LogPath          = $DISMLog
-                        ErrorVariable    = '+ProcessError'
-                        ErrorAction      = "Stop"
-                    }
-                    [void](Add-WindowsPackage @CalcBasePackage)
-                    $CalcLanguagePackage = @{
-                        Path             = $MountFolder
-                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.17763.1.cab"
-                        IgnoreCheck      = $true
-                        ScratchDirectory = $ScratchFolder
-                        LogPath          = $DISMLog
-                        ErrorVariable    = '+ProcessError'
-                        ErrorAction      = "Stop"
-                    }
-                    [void](Add-WindowsPackage @CalcLanguagePackage)
-                }
-                Catch
-                {
-                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-                    Exit-Script
-                    Break
-                }
-                Try
-                {
-                    [void](Mount-OfflineHives)
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\system32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\system32\win32calc.exe,-217" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorVariable +ProcessError -ErrorAction Stop
-                    [void](Dismount-OfflineHives)
-                }
-                Catch
-                {
-                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-                    Exit-Script
-                    Break
-                }
-                Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Windows-win32calc* | Select -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\AppliedWindowsPackages.txt -Append
-            }
-            Else
-            {
-                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
-                Start-Sleep 3
-            }
-        }
-        Else
-        {
-            If (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab)
-            {
-                Try
-                {
-                    Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait
-                    [void](Mount-OfflineHives)
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorVariable +ProcessError -ErrorAction Stop
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorVariable +ProcessError -ErrorAction Stop
-                    [void](Dismount-OfflineHives)
-                    $CalcShell = New-Object -ComObject WScript.Shell -ErrorVariable +ProcessError -ErrorAction Stop
-                    $CalcShortcut = $CalcShell.CreateShortcut("$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk")
-                    $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
-                    $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
-                    $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
-                    $CalcShortcut.Save()
-                    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
-                    $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-                    $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-                    If ((Get-Content -Path $IniFile -ErrorAction SilentlyContinue).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
-                }
-                Catch
-                {
-                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-                    Exit-Script
-                    Break
-                }
-                Try
-                {
-                    $SSDL = @'
-
-D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
-'@
-                    $SSDL.Insert(0, "win32calc.exe") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -ErrorVariable +ProcessError -ErrorAction Stop
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    $SSDL.Insert(0, "win32calc.exe.mui") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force -ErrorAction SilentlyContinue
-                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
-                    @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach {
-                        $ACL = Get-Acl -Path $($_) -ErrorVariable +ProcessError -ErrorAction Stop
-                        $ACL.SetOwner($TrustedInstaller)
-                        $ACL | Set-Acl -Path $($_) -ErrorVariable +ProcessError -ErrorAction Stop
-                    }
-                }
-                Catch
-                {
-                    Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-                    Exit-Script
-                    Break
-                }
-            }
-            Else
-            {
-                Out-Log -Content "Missing the required Win32 Calculator Packages." -Level Error
-                Start-Sleep 3
-            }
-        }
-    }
-    Else
-    {
-        Out-Log -Content "The Win32 Calculator is already installed." -Level Error
-        Start-Sleep 3
-    }
-}
-
-If ($DaRT)
-{
-    Clear-Host
-    $Host.UI.RawUI.WindowTitle = "Applying Microsoft DaRT 10."
-    $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
-    If ((Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim) -and (Test-Path -LiteralPath $DaRTPath -Filter DebuggingTools_*.wim))
-    {
-        If ($WimInfo.Build -eq '15063') { $CodeName = "RS2" }
-        ElseIf ($WimInfo.Build -eq '16299') { $CodeName = "RS3" }
-        ElseIf ($WimInfo.Build -eq '17134') { $CodeName = "RS4" }
-        ElseIf ($WimInfo.Build -ge '17730') { $CodeName = "RS5" }
-        Try
-        {
-            If ($BootWim)
-            {
-                $NewBootMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "BootMount"))
-                If ($NewBootMount) { $BootMount = Get-Item -LiteralPath $(Join-Path -Path $ScriptDirectory -ChildPath $NewBootMount) -ErrorVariable +ProcessError -ErrorAction Stop }
-                $MountBootImage = @{
-                    Path             = $BootMount
-                    ImagePath        = $BootWim
-                    Index            = 2
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Mounting the Boot Image." -Level Info
-                [void](Mount-WindowsImage @MountBootImage)
-                $MSDaRT10Boot = @{
-                    ImagePath        = "$DaRTPath\MSDaRT10.wim"
-                    Index            = 1
-                    ApplyPath        = $BootMount
-                    CheckIntegrity   = $true
-                    Verify           = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Boot Image." -Level Info
-                [void](Expand-WindowsImage @MSDaRT10Boot)
-                Start-Sleep 3
-                $DeguggingToolsBoot = @{
-                    ImagePath        = "$DaRTPath\DebuggingTools_$($CodeName).wim"
-                    Index            = 1
-                    ApplyPath        = $BootMount
-                    CheckIntegrity   = $true
-                    Verify           = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Boot Image." -Level Info
-                [void](Expand-WindowsImage @DeguggingToolsBoot)
-                Start-Sleep 3
-                If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll"))
-                {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                }
-                @'
-[LaunchApps]
-%WINDIR%\System32\wpeinit.exe
-%WINDIR%\System32\netstart.exe
-%SYSTEMDRIVE%\setup.exe
-'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                If (Test-Path -Path ("$BootMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$BootMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
-                $DismountBootImage = @{
-                    Path             = $BootMount
-                    Save             = $true
-                    CheckIntegrity   = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Saving and Dismounting the Boot Image." -Level Info
-                [void](Dismount-WindowsImage @DismountBootImage)
-                Out-Log -Content "Rebuilding the Boot Image." -Level Info
-                $ExportPE = @{
-                    SourceImagePath      = $BootWim
-                    SourceIndex          = 1
-                    DestinationImagePath = "$($WorkFolder)\boot.wim"
-                    CompressionType      = "Maximum"
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorVariable        = '+ProcessError'
-                    ErrorAction          = "Stop"
-                }
-                [void](Export-WindowsImage @ExportPE)
-                $ExportSetup = @{
-                    SourceImagePath      = $BootWim
-                    SourceIndex          = 2
-                    DestinationImagePath = "$($WorkFolder)\boot.wim"
-                    CompressionType      = "Maximum"
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorVariable        = '+ProcessError'
-                    ErrorAction          = "Stop"
-                }
-                [void](Export-WindowsImage @ExportSetup)
-            }
-            If (Test-Path -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -PathType Leaf)
-            {
-                [void](Invoke-Expression -Command ("ATTRIB -S -H -I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -ErrorAction SilentlyContinue)
-                Copy-Item -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -Destination $ImageFolder -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                $NewRecoveryMount = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath "RecoveryMount"))
-                If ($NewRecoveryMount) { $RecoveryMount = Get-Item -LiteralPath $(Join-Path -Path $ScriptDirectory -ChildPath $NewRecoveryMount) -ErrorVariable +ProcessError -ErrorAction Stop }
-                $MountRecoveryImage = @{
-                    Path             = $RecoveryMount
-                    ImagePath        = "$($ImageFolder)\winre.wim"
-                    Index            = 1
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Mounting the Recovery Image." -Level Info
-                [void](Mount-WindowsImage @MountRecoveryImage)
-                $MSDaRT10Recovery = @{
-                    ImagePath        = "$DaRTPath\MSDaRT10.wim"
-                    Index            = 1
-                    ApplyPath        = $RecoveryMount
-                    CheckIntegrity   = $true
-                    Verify           = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Applying the Microsoft DaRT $($CodeName) Base Package to the Recovery Image." -Level Info
-                [void](Expand-WindowsImage @MSDaRT10Recovery)
-                Start-Sleep 3
-                $DeguggingToolsRecovery = @{
-                    ImagePath        = "$DaRTPath\DebuggingTools_$($CodeName).wim"
-                    Index            = 1
-                    ApplyPath        = $RecoveryMount
-                    CheckIntegrity   = $true
-                    Verify           = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Applying Windows 10 $($CodeName) Debugging Tools to the Recovery Image." -Level Info
-                [void](Expand-WindowsImage @DeguggingToolsRecovery)
-                Start-Sleep 3
-                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll"))
-                {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                }
-                @'
-[LaunchApps]
-%WINDIR%\System32\wpeinit.exe
-%WINDIR%\System32\netstart.exe
-%SYSTEMDRIVE%\sources\recovery\recenv.exe
-'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                If (Test-Path -Path ("$RecoveryMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$RecoveryMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
-                $DismountRecoveryImage = @{
-                    Path             = $RecoveryMount
-                    Save             = $true
-                    CheckIntegrity   = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorVariable    = '+ProcessError'
-                    ErrorAction      = "Stop"
-                }
-                Out-Log -Content "Saving and Dismounting the Recovery Image." -Level Info
-                [void](Dismount-WindowsImage @DismountRecoveryImage)
-                Out-Log -Content "Rebuilding the Recovery Image." -Level Info
-                $ExportRecovery = @{
-                    SourceImagePath      = "$($ImageFolder)\winre.wim"
-                    SourceIndex          = 1
-                    DestinationImagePath = "$($WorkFolder)\winre.wim"
-                    CompressionType      = "Maximum"
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorVariable        = '+ProcessError'
-                    ErrorAction          = "Stop"
-                }
-                [void](Export-WindowsImage @ExportRecovery)
-                Move-Item -Path "$WorkFolder\winre.wim" -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                [void](Invoke-Expression -Command ("ATTRIB +S +H +I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -ErrorAction SilentlyContinue)
-            }
-        }
-        Catch
-        {
-            Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-            If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
-            {
-                Write-Host "Dismounting and Discarding the Recovery Image." -ForegroundColor Cyan
-                [void](Dismount-WindowsImage -Path $BootMount -Discard)
-            }
-            If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
-            {
-                Write-Host "Dismounting and Discarding the Recovery Image." -ForegroundColor Cyan
-                [void](Dismount-WindowsImage -Path $RecoveryMount -Discard)
-            }
-        }
-        Finally
-        {
-            Clear-Host
-        }
-    }
-}
-
-If ($Drivers)
-{
-    Try
-    {
-        If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf -ErrorAction SilentlyContinue)
-        {
-            $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
-            Out-Log -Content "Injecting Driver Packages." -Level Info
-            $InjectDriverPackages = @{
-                Path             = $MountFolder
-                Driver           = $Drivers
-                Recurse          = $true
-                ForceUnsigned    = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorVariable    = '+ProcessError'
-                ErrorAction      = "Stop"
-            }
-            [void](Add-WindowsDriver @InjectDriverPackages)
-            Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
-        }
-        Else
-        {
-            Out-Log -Content "$($Drivers) contains no valid Driver Packages." -Level Error
-            Start-Sleep 3
-        }
-    }
-    Catch
-    {
-        Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-        Exit-Script
-        Break
-    }
-}
-
-
-If ($NetFx3 -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq "DisabledWithPayloadRemoved")
-{
-    Try
-    {
-        If (($ISOIsExported -eq $true) -and (Get-ChildItem -LiteralPath "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
-        {
-            $EnableNetFx3 = @{
-                FeatureName      = "NetFx3"
-                Path             = $MountFolder
-                All              = $true
-                LimitAccess      = $true
-                LogPath          = $DISMLog
-                NoRestart        = $true
-                ScratchDirectory = $ScratchFolder
-                Source           = "$ISOMedia\sources\sxs"
-                ErrorVariable    = '+ProcessError'
-                ErrorAction      = "Stop"
-            }
-            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
-            Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
-            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
-        }
-        ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -LiteralPath $NetFx3 -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
-        {
-            $EnableNetFx3 = @{
-                FeatureName      = "NetFx3"
-                Path             = $MountFolder
-                All              = $true
-                LimitAccess      = $true
-                LogPath          = $DISMLog
-                NoRestart        = $true
-                ScratchDirectory = $ScratchFolder
-                Source           = $NetFx3
-                ErrorVariable    = '+ProcessError'
-                ErrorAction      = "Stop"
-            }
-            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
-            Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
-            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
-        }
-        Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
-    }
-    Catch
-    {
-        Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
-        Exit-Script
-        Break
-    }
+	$Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu and Taskbar Layout."
+	Out-Log -Content "Cleaning-up the Start Menu and Taskbar Layout." -Level Info
+	Start-Sleep 3
+	$LayoutFile = "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml"
+	@'
+<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+  <LayoutOptions StartTileGroupCellWidth="6" />
+  <DefaultLayoutOverride>
+    <StartLayoutCollection>
+      <defaultlayout:StartLayout GroupCellWidth="6">
+        <start:Group Name="">
+          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
+          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
+        </start:Group>
+      </defaultlayout:StartLayout>
+    </StartLayoutCollection>
+  </DefaultLayoutOverride>
+</LayoutModificationTemplate>
+'@ | Set-Content -Path $LayoutFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
 If ((Get-ChildItem -LiteralPath $(Join-Path -Path "$PSScriptRoot\Resources\Distribution Share" -ChildPath '$OEM$\$$') -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0)
 {
     $Host.UI.RawUI.WindowTitle = "Applying a Distribution Share."
     Out-Log -Content "Applying a Distribution Share." -Level Info
-    $DistroSharePath = Join-Path -Path "$PSScriptRoot\Resources\Distribution Share" -ChildPath '$OEM$\$$' 
+    $DistroSharePath = Join-Path -Path "$PSScriptRoot\Resources\Distribution Share" -ChildPath '$OEM$\$$'
     Get-ChildItem -LiteralPath $DistroSharePath -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows" -Recurse -Force -ErrorAction SilentlyContinue
     Start-Sleep 3
 }
 
-If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true) 
+If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true)
 {
     $Host.UI.RawUI.WindowTitle = "Updating the Default Hosts File."
     Out-Log -Content "Updating the Default Hosts File." -Level Info
