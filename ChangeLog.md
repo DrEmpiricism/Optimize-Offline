@@ -1,7 +1,6 @@
 # ChangeLog #
 
-## Build 3.1.3.2 (updated on 12-24-2019) ##
+## Build 3.1.3.3 (updated on 12-27-2019) ##
 
-- Changed the optimizations of the registry and Start Menu to process after all packages, features and additional content has been applied or integrated into the image.
-- Incorporated Data Deduplication using the new -Dedup switch. Using the -Dedup switch will apply the Data Deduplication and File Server packages (located in the Resources directory) into the image and enable the "Dedup-Core" Windows Feature.  Full details about Data Deduplication can be found on [Microsoft's Online Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
-- A custom image object is now used to return image data as opposed to variables which.
+- Updated some entries added to the offline registry hives.
+- Some very minor contextual changes to the overall code.

@@ -1,5 +1,11 @@
 # Previous Version Log #
 
+## Build 3.1.3.2 (updated on 12-24-2019) ##
+
+- Changed the optimizations of the registry and Start Menu to process after all packages, features and additional content has been applied or integrated into the image.
+- Incorporated Data Deduplication using the new -Dedup switch. Using the -Dedup switch will apply the Data Deduplication and File Server packages (located in the Resources directory) into the image and enable the "Dedup-Core" Windows Feature.  Full details about Data Deduplication can be found on [Microsoft's Online Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
+- A custom image object is now used to return image data as opposed to variables which.
+
 ## Build 3.1.3.1 (updated on 12-23-2019) ##
 
 - Replaced the LayoutModification.xml with a simpler version that does not include a Taskbar layout and only includes links to the Control Panel and Windows Explorer. Moreover, Optimize-Offline no longer creates the custom UWP Explorer and UEFI Firmware Reboot icons as both can be easily added in a live environment.
@@ -45,14 +51,5 @@
 
 - Added a -Win32Calc switch that will now control whether the traditional Calculator gets applied or not, as opposed to having it automatically apply if the UWP Calculator is found to be removed. This allows full control for those who want either no calculator or both the UWP Calculator and the traditional Calculator.
 - Made a small update to the Win32Calc process.
-
-## Build 3.1.2.7 (11-10-2018) ##
-
-- Updated the Debugging Tools for Windows 10 to version 17763.107
-- There is a new "Whitelist" value that can be used with the -MetroApps parameter. In the Resources directory there is an AppxPackageWhitelist.xml file where one can add Provisioned Appx Packages by their DisplayName.  The removal process will then remove all Provisioned Appx Packages that are NOT whitelisted. This is convenient for those who do not want to remove all Appx Packages nor want to constantly select the same Appx Packages each time they optimize an image.
-- The Win32Calc has been updated with its Feature Package CAB file(s) version 17763.1
-- Registry values have been updated and some new ones added.
-- A handful of processes have been changed around and include additional Try/Catch blocks for error-handling.
-- Made multiple code changes to processes, variables and methods for handling the WIM file.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
