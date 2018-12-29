@@ -38,7 +38,7 @@
 	.PARAMETER Win32Calc
 		Specific to non-Windows 10 Enterprise LTSC 2019 editions only!
 		Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
-
+	
 	.PARAMETER Dedup
 		Integrates the Windows Server Data Deduplication packages into the image.
 	
@@ -46,11 +46,11 @@
 		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.
 	
 	.PARAMETER Drivers
-		The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.
+		Injects driver packages into the image.
 	
 	.PARAMETER NetFx3
-		Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.
-
+		Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
+	
 	.PARAMETER Registry
 		Integrates optimized registry values into the registry hives of the image.
 	
@@ -60,9 +60,9 @@
 		Creates a new bootable Windows Installation Media ISO.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 $true -Drivers "E:\Driver Folder" -ISO
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -Index 3 -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 "D:\Win10 LTSC 2019\sources\sxs" -DaRT
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 -DaRT
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -76,8 +76,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.3.3
-		Last updated:	12/27/2018
+		Version:        3.1.3.4
+		Last updated:	12/29/2018
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -113,11 +113,10 @@ Param
     [switch]$Dedup,
     [Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
     [switch]$DaRT,
-    [Parameter(HelpMessage = 'The full path to a collection of driver packages, or a driver .inf file, to be injected into the image.')]
-    [ValidateScript( { Test-Path $(Resolve-Path -Path $_) })]
-    [string]$Drivers,
-    [Parameter(HelpMessage = 'Either a boolean value of $true or the full path to the .NET Framework 3 payload packages to be applied to the image.')]
-    [string]$NetFx3,
+    [Parameter(HelpMessage = 'Injects driver packages into the image.')]
+    [switch]$Drivers,
+    [Parameter(HelpMessage = 'Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.')]
+    [switch]$NetFx3,
     [Parameter(HelpMessage = 'Integrates optimized registry values into the registry hives of the image.')]
     [switch]$Registry,
     [Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
@@ -1383,7 +1382,7 @@ If ($DaRT)
     If ((Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim) -and (Test-Path -LiteralPath $DaRTPath -Filter DebuggingTools_*.wim))
     {
         If ($WimInfo.Build -eq '17134') { $CodeName = "RS4" }
-        ElseIf ($WimInfo.Build -ge '17730') { $CodeName = "RS5" }
+        ElseIf ($WimInfo.Build -eq '17763') { $CodeName = "RS5" }
         Try
         {
             If ($BootWim)
@@ -1439,7 +1438,7 @@ If ($DaRT)
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
 '@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                If (Test-Path -Path ("$BootMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$BootMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                If (Test-Path -LiteralPath "$BootMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$BootMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountBootImage = @{
                     Path             = $BootMount
                     Save             = $true
@@ -1532,7 +1531,7 @@ If ($DaRT)
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
 '@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorVariable +ProcessError -ErrorAction Stop
-                If (Test-Path -Path ("$RecoveryMount\" + '$Recycle.Bin')) { Remove-Item -Path ("$RecoveryMount\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+                If (Test-Path -LiteralPath "$RecoveryMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$RecoveryMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountRecoveryImage = @{
                     Path             = $RecoveryMount
                     Save             = $true
@@ -1566,7 +1565,7 @@ If ($DaRT)
             Out-Log -Content "$($ProcessError.Exception.Message)" -Level Error
             If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
             {
-                Write-Host "Dismounting and Discarding the Recovery Image." -ForegroundColor Cyan
+                Write-Host "Dismounting and Discarding the Boot Image." -ForegroundColor Cyan
                 [void](Dismount-WindowsImage -Path $BootMount -Discard)
             }
             If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
@@ -1586,13 +1585,14 @@ If ($Drivers)
 {
     Try
     {
-        If (Get-ChildItem -Path $Drivers -Recurse -Include *.inf -ErrorAction SilentlyContinue)
+        $DriverPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Drivers"
+        If (Get-ChildItem -Path $DriverPath -Filter *.inf -Recurse -ErrorAction SilentlyContinue)
         {
             $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
             Out-Log -Content "Injecting Driver Packages." -Level Info
             $InjectDriverPackages = @{
                 Path             = $MountFolder
-                Driver           = $Drivers
+                Driver           = $DriverPath
                 Recurse          = $true
                 ForceUnsigned    = $true
                 ScratchDirectory = $ScratchFolder
@@ -1603,11 +1603,6 @@ If ($Drivers)
             [void](Add-WindowsDriver @InjectDriverPackages)
             Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $WorkFolder\InjectedDriverList.txt
         }
-        Else
-        {
-            Out-Log -Content "$($Drivers) contains no valid Driver Packages." -Level Error
-            Start-Sleep 3
-        }
     }
     Catch
     {
@@ -1617,12 +1612,13 @@ If ($Drivers)
     }
 }
 
-
 If ($NetFx3 -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq "DisabledWithPayloadRemoved")
 {
     Try
     {
-        If (($ISOIsExported -eq $true) -and (Get-ChildItem -LiteralPath "$ISOMedia\sources\sxs" -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
+        If ($WimInfo.Build -eq '17134') { $NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath "Resources\NetFx3\17134" }
+        ElseIf ($WimInfo.Build -eq '17763') { $NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath "Resources\NetFx3\17763" }
+        If (Get-ChildItem -LiteralPath $NetFx3Path -Filter *NetFx3*.cab -ErrorAction SilentlyContinue)
         {
             $EnableNetFx3 = @{
                 FeatureName      = "NetFx3"
@@ -1632,33 +1628,15 @@ If ($NetFx3 -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Net
                 LogPath          = $DISMLog
                 NoRestart        = $true
                 ScratchDirectory = $ScratchFolder
-                Source           = "$ISOMedia\sources\sxs"
+                Source           = $NetFx3Path
                 ErrorVariable    = '+ProcessError'
                 ErrorAction      = "Stop"
             }
-            $Host.UI.RawUI.WindowTitle = "Applying the NetFx3 Payload Packages."
-            Out-Log -Content "Applying the NetFx3 Payload Packages." -Level Info
+            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Packages."
+            Out-Log -Content "Applying the .NET Framework Payload Packages." -Level Info
             [void](Enable-WindowsOptionalFeature @EnableNetFx3)
+            Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
         }
-        ElseIf (($ISOIsExported -ne $true) -and (Get-ChildItem -LiteralPath $NetFx3 -Recurse -Include *netfx3*.cab -ErrorAction SilentlyContinue))
-        {
-            $EnableNetFx3 = @{
-                FeatureName      = "NetFx3"
-                Path             = $MountFolder
-                All              = $true
-                LimitAccess      = $true
-                LogPath          = $DISMLog
-                NoRestart        = $true
-                ScratchDirectory = $ScratchFolder
-                Source           = $NetFx3
-                ErrorVariable    = '+ProcessError'
-                ErrorAction      = "Stop"
-            }
-            $Host.UI.RawUI.WindowTitle = "Applying the .NET Framework Payload Package."
-            Out-Log -Content "Applying the .NET Framework Payload Package." -Level Info
-            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
-        }
-        Get-WindowsOptionalFeature -Path $MountFolder | Select -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
     }
     Catch
     {
@@ -1896,19 +1874,6 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "EnableFeaturedSoftware" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        #****************************************************************
-        Write-Output "Disabling WSUS Automatic Driver Updates." >> "$WorkFolder\Registry-Optimizations.log"
-        #****************************************************************
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Device Metadata" -ErrorVariable +ProcessError -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" -ErrorVariable +ProcessError -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -ErrorVariable +ProcessError -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -ErrorVariable +ProcessError -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Device Metadata" -Name "PreventDeviceMetadataFromNetwork" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" -Name "DenyUnspecified" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontPromptForWindowsUpdate" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontSearchWindowsUpdate" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DriverUpdateWizardWuSearchEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************	
         Write-Output "Disabling Cross-Device Sharing and Shared Experiences." >>  "$WorkFolder\Registry-Optimizations.log"
         #***************************************************************
@@ -2379,7 +2344,7 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Saving and Dismounting the Image."
     Out-Log -Content "Saving and Dismounting the Image." -Level Info
-    If (Test-Path -Path ("$MountFolder\" + '$Recycle.Bin')) { Remove-Item -Path ("$MountFolder\" + '$Recycle.Bin') -Recurse -Force -ErrorAction SilentlyContinue }
+    If (Test-Path -LiteralPath "$MountFolder\`$Recycle.Bin") { Remove-Item -LiteralPath "$MountFolder\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
     $DismountWindowsImage = @{
         Path             = $MountFolder
         Save             = $true

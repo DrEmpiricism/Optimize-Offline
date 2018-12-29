@@ -1,5 +1,10 @@
 # Previous Version Log #
 
+## Build 3.1.3.3 (updated on 12-27-2019) ##
+
+- Updated some entries added to the offline registry hives.
+- Some very minor contextual changes to the overall code.
+
 ## Build 3.1.3.2 (updated on 12-24-2019) ##
 
 - Changed the optimizations of the registry and Start Menu to process after all packages, features and additional content has been applied or integrated into the image.
@@ -46,10 +51,5 @@
 - Corrected a few benign error returns on some property values.
 - Corrected a few missplaced variables within the script and a helper function.
 - Optimized and reduced some process and helper function code.
-
-## Build 3.1.2.8 (11-13-2018) ##
-
-- Added a -Win32Calc switch that will now control whether the traditional Calculator gets applied or not, as opposed to having it automatically apply if the UWP Calculator is found to be removed. This allows full control for those who want either no calculator or both the UWP Calculator and the traditional Calculator.
-- Made a small update to the Win32Calc process.
 
 **Displays the previous 5 version updates of Optimize-Offline.**
