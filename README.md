@@ -70,6 +70,12 @@ For Windows builds 17763 and above, the OEM cabinet packages extracted from Wind
 
 Optimize-Offline can implement the traditional Calculator using the latest Win32Calc.exe, language files and Package Features found in the Windows 10 Enterprise LTSC 2019 edition.
 
+## Data Deduplication ##
+
+> Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
+
+With Optimize-Offline, the Data Deduplication packages and features available for Windows Server 2016 editions can be integrated into the offline image and enabled for use. PowerShell must be used to enable and manage Data Deduplication using its storage cmdlets. This information is readily available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
+
 ## ISO File Strucuture Optimization ##
 
 This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The steps that it takes to optimize the file structure should NOT be changed, as the order they're written are critical to proper file structure optimization for bootup installation.
