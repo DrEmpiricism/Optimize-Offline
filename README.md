@@ -119,6 +119,6 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization.
 Example 1:
-> .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
+- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
 Example 2:
-> .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
+- .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
