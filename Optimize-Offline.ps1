@@ -2526,7 +2526,7 @@ Finally
     }
     Else
     {
-        $ErrorLog = Join-Path -Path $SaveDir -ChildPath ErrorLog.log
+        $ErrorLog = Join-Path -Path $WorkFolder -ChildPath ErrorLog.log
         ForEach ($Process In $ProcessError) { Add-Content -Path $ErrorLog -Value $Process.Exception.Message -Force -ErrorAction SilentlyContinue }
         Write-Warning "$ScriptName completed in [$($Timer.Elapsed.Minutes.ToString())] minutes with [$($ProcessError.Count)] errors."
     }
