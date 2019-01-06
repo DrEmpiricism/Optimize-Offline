@@ -1,6 +1,8 @@
 # ChangeLog #
 
-## Build 3.1.3.4 (updated on 12-29-2019) ##
+## Build 3.1.3.5 (updated on 01-05-2019) ##
 
-- Removed the registry setting that prevented Windows Update from searching for default system drivers. Enabling this setting offline can prevent the online system from detecting multiple OEM drivers during Windows Setup.
-- The old -NetFx3 and -Drivers parameters have been converted to switches and no longer require the paths to the integration packages. Instead, drivers to integrate into the image can be added to the Resources > Drivers folder in Optimize-Offline's root directory. Likewise, the .NET Framework 3 payload packages are now present in the Resources > NetFx3 folder.
+- Updated multiple helper functions and processes
+- Removed registry settings that no longer applied to the most current Windows 10 builds and those that were being applied to both the current user and local machine hives simultaneously.
+- Updated the context menu customization registry settings.
+- Improved variable handling.

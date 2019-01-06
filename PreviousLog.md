@@ -1,17 +1,22 @@
 # Previous Version Log #
 
-## Build 3.1.3.3 (updated on 12-27-2019) ##
+## Build 3.1.3.4 (updated on 12-29-2018) ##
+
+- Removed the registry setting that prevented Windows Update from searching for default system drivers. Enabling this setting offline can prevent the online system from detecting multiple OEM drivers during Windows Setup.
+- The old -NetFx3 and -Drivers parameters have been converted to switches and no longer require the paths to the integration packages. Instead, drivers to integrate into the image can be added to the Resources > Drivers folder in Optimize-Offline's root directory. Likewise, the .NET Framework 3 payload packages are now present in the Resources > NetFx3 folder.
+
+## Build 3.1.3.3 (updated on 12-27-2018) ##
 
 - Updated some entries added to the offline registry hives.
 - Some very minor contextual changes to the overall code.
 
-## Build 3.1.3.2 (updated on 12-24-2019) ##
+## Build 3.1.3.2 (updated on 12-24-2018) ##
 
 - Changed the optimizations of the registry and Start Menu to process after all packages, features and additional content has been applied or integrated into the image.
-- Incorporated Data Deduplication using the new -Dedup switch. Using the -Dedup switch will apply the Data Deduplication and File Server packages (located in the Resources directory) into the image and enable the "Dedup-Core" Windows Feature.  Full details about Data Deduplication can be found on [Microsoft's Online Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
-- A custom image object is now used to return image data as opposed to variables which.
+- Incorporated Data Deduplication using the new -Dedup switch. Using the -Dedup switch will apply the Data Deduplication and File Server packages (located in the Resources directory) into the image and enable the "Dedup-Core" Windows Feature. Full details about Data Deduplication can be found on [Microsoft's Online Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
+- A custom image object is now used to return image data as opposed to variables.
 
-## Build 3.1.3.1 (updated on 12-23-2019) ##
+## Build 3.1.3.1 (updated on 12-23-2018) ##
 
 - Replaced the LayoutModification.xml with a simpler version that does not include a Taskbar layout and only includes links to the Control Panel and Windows Explorer. Moreover, Optimize-Offline no longer creates the custom UWP Explorer and UEFI Firmware Reboot icons as both can be easily added in a live environment.
 - Removed the disabling of the Windows Insider Program in the registry settings.
@@ -26,7 +31,7 @@
 - Windows Store packages have been updated.
 - The Win32Calc packages have been updated.
 
-## Build 3.1.3.0 (updated on 12-14-2019) ##
+## Build 3.1.3.0 (updated on 12-14-2018) ##
 
 - Made multiple changes and removals to registry settings applied, as many of them have changed and are not applicable to older builds. As such, Optimize-Offline no longer supports builds lower than RS4 (17134).
 - The -Registry parameter has been changed to a switch.
@@ -38,7 +43,7 @@
 - Updated the Windows Store Appx Packages.
 - Additional optimization process and code changes.
 
-## Build 3.1.2.9 (updated on 11-29-2019) ##
+## Build 3.1.2.9 (updated on 11-29-2018) ##
 
 - Updated multiple helper functions.
 - Updated Microsoft Store and Dependency Packages.
@@ -52,4 +57,4 @@
 - Corrected a few missplaced variables within the script and a helper function.
 - Optimized and reduced some process and helper function code.
 
-**Displays the previous 5 version updates of Optimize-Offline.**
+**Displays the previous 10 version updates of Optimize-Offline.**
