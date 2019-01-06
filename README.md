@@ -117,8 +117,6 @@ For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Ed
 
 The easist way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and edit the variables to accommodate your optimization requirements. You can enter the full paths to driver locations, the source image, NetFx3 packets, etc. Then simply add or remove the parameters and switches to the line that calls Optimize-Offline. Once finished, simply right click the Start.cmd script and select "Run as Administrator" and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
-The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization.
-Example 1:
-> .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
-Example 2:
-> .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
+The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
+- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
+- .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
