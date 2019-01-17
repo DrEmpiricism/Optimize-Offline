@@ -74,15 +74,15 @@ Optimize-Offline can implement the traditional Calculator using the latest Win32
 
 > Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
 
-With Optimize-Offline, the Data Deduplication packages and features available for Windows Server 2016 editions can be integrated into the offline image and enabled for use. PowerShell must be used to enable and manage Data Deduplication using its storage cmdlets. This information is readily available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
+With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
 
 ## ISO File Strucuture Optimization ##
 
-This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The steps that it takes to optimize the file structure should NOT be changed, as the order they're written are critical to proper file structure optimization for bootup installation.
+This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The order in which files are removed and moved is critical to proper file structure optimization for bootup installation.
 
 ## ISO Remastering and Creation ##
 
-When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO without displaying an error or producing any optimization failures.
+When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO.
 
 Optimize-Offline does this without any end-user input by querying specific registry keys that contain the path to the ADK's installed location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO.
 
@@ -98,13 +98,13 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 **A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
 
-## Microsoft Store side-loading ##
+## Microsoft Store integration ##
 
-For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
+For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
 
-## Microsoft Edge side-loading ##
+## Microsoft Edge integration ##
 
-For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be side-loaded into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state. Be aware, thought, that one of the System Applications that can be removed is "WindowsEdgeDevTools," which is not recommended to remove if you plan to integrate Microsoft Edge.
+For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state.
 
 ## Optimize-Offline best practices ##
 
@@ -118,5 +118,6 @@ For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Ed
 The easist way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and edit the variables to accommodate your optimization requirements. You can enter the full paths to driver locations, the source image, NetFx3 packets, etc. Then simply add or remove the parameters and switches to the line that calls Optimize-Offline. Once finished, simply right click the Start.cmd script and select "Run as Administrator" and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
-- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
+
+- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
 - .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
