@@ -10,13 +10,14 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
 - Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
-- Allows offline removal of default Windows Packages and the disabling of Windows Features.
+- Allows for the offline removal of Provisioned Application Packages, Windows OnDemand Packages and Windows Features.
+- Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store and Microsoft Edge.
 
 ## Script disclaimer ##
 
 - It is the responsibility of the end-user to be aware of what each parameter and switch does.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.
+- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.  The best recourse for errors is to post them - and any log files from the script - in the 'Issues' section.
 
 ## About the -Registry switch ##
 
@@ -115,9 +116,10 @@ For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Ed
 
 ## How to call Optimize-Offline ##
 
-The easist way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and edit the variables to accommodate your optimization requirements. You can enter the full paths to driver locations, the source image, NetFx3 packets, etc. Then simply add or remove the parameters and switches to the line that calls Optimize-Offline. Once finished, simply right click the Start.cmd script and select "Run as Administrator" and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
+The easist way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Start.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
 - .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
 - .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
+- etc.
