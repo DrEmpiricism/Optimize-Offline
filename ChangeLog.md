@@ -6,4 +6,4 @@
 - Improved error reporting and error records' output format.
 - Updated multiple registry values that get set in the offline image hives using the -Registry switch.
 - Improved initializtion and finalization clean-up procedures.
-- Assorted other code changes.
+- Assorted other code and contextual changes.
