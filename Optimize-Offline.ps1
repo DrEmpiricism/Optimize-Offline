@@ -77,7 +77,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.1.3.6
-		Last updated:	01/17/2019
+		Last updated:	01/18/2019
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -146,6 +146,7 @@ Function Out-Log
             ValueFromPipelineByPropertyName = $true)]
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
+	
     Process
     {
         $Timestamp = Get-Date -Format 's'
@@ -172,7 +173,9 @@ Function Out-Log
                     $ErrorRecord.InvocationInfo.ScriptName,
                     $ErrorRecord.InvocationInfo.ScriptLineNumber,
                     $ErrorRecord.InvocationInfo.OffsetInLine
+                    [void]$LogMutex.WaitOne()
                     Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $ExceptionMessage" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                    [void]$LogMutex.ReleaseMutex()
                     Write-Host $ExceptionMessage -ForegroundColor Red
                 }
             }
@@ -185,9 +188,11 @@ Function New-OfflineDirectory
     [CmdletBinding()]
     Param
     (
+        [Parameter(Mandatory = $true)]
         [ValidateSet('Scratch', 'Image', 'Work', 'InstallMount', 'BootMount', 'RecoveryMount', 'Save')]
         [string]$Directory
     )
+	
     If ($Directory.Equals('Scratch'))
     {
         $ScratchDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptDirectory -ChildPath 'ScratchOffline'))
@@ -237,9 +242,11 @@ Function Get-OfflineHives
     [CmdletBinding()]
     Param
     (
+        [Parameter(Mandatory = $true)]
         [ValidateSet('Load', 'Unload', 'Test')]
         [string]$Process
     )
+	
     If ($Process.Equals('Load'))
     {
         @("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"",
@@ -267,10 +274,11 @@ Function New-Container
     [CmdletBinding()]
     Param
     (
+        [Parameter(Mandatory = $true)]
         [string]$Path
     )
 	
-    If (!(Test-Path -LiteralPath $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop) }
+    If (!(Test-Path -LiteralPath $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force) }
 }
 
 Function Exit-Script
@@ -285,7 +293,6 @@ Function Exit-Script
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
     [void](Clear-WindowsCorruptMountPoint)
     [void]($SaveFolder = New-OfflineDirectory -Directory Save)
-    If ($Error.Count -ne 0) { $Error.ToArray() | Out-File -FilePath "$WorkFolder\ErrorLog.log" -Force -ErrorAction SilentlyContinue }
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value "Optimizations finalized at [$(Get-Date -Format 'MM.dd.yyyy HH:mm:ss')]"
@@ -293,7 +300,7 @@ Function Exit-Script
     Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Output ''
     Break
 }
@@ -316,7 +323,7 @@ If (Get-WindowsImage -Mounted)
     $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') -ErrorAction SilentlyContinue
     If ($QueryHives) { $QueryHives | ForEach { [void](Invoke-Expression -Command ('REG UNLOAD $_') -ErrorAction SilentlyContinue) } }
     [void](Dismount-WindowsImage -Path $($MountFolder) -Discard -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void](Clear-WindowsCorruptMountPoint)
     $MountFolder = $null
     Clear-Host
@@ -324,7 +331,7 @@ If (Get-WindowsImage -Mounted)
 
 Try
 {
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     $ScriptDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
     If ($ScriptDirectory) { $ScriptDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ScriptDirectory) -ErrorAction Stop }
     $Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
@@ -524,11 +531,11 @@ Else
     Break
 }
 
-If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
+If ($MetroApps -and $WimInfo.Name -notlike "*LTSC" -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
 {
     Clear-Host
     $Host.UI.RawUI.WindowTitle = "Removing Metro Apps."
-    If ($MetroApps -eq "Select")
+    If ($MetroApps -eq 'Select')
     {
         $SelectedAppxPackages = [System.Collections.ArrayList]@()
         $GetAppx = Get-AppxProvisionedPackage -Path $MountFolder
@@ -559,7 +566,6 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
                     }
                     [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
                 }
-                $MetroAppsComplete = $true
             }
         }
         Catch
@@ -574,7 +580,7 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
             $Int = $null
         }
     }
-    ElseIf ($MetroApps -eq "All")
+    ElseIf ($MetroApps -eq 'All')
     {
         Try
         {
@@ -589,7 +595,6 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
                 }
                 [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
             }
-            $MetroAppsComplete = $true
         }
         Catch
         {
@@ -598,7 +603,7 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
             Break
         }
     }
-    ElseIf ($MetroApps -eq "Whitelist")
+    ElseIf ($MetroApps -eq 'Whitelist')
     {
         $AppxWhitelistPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxPackageWhitelist.xml"
         If (Test-Path -Path $AppxWhitelistPath)
@@ -630,7 +635,6 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
                             [void](Remove-AppxProvisionedPackage @RemoveAppx)
                         }
                     }
-                    $MetroAppsComplete = $true
                 }
                 Catch
                 {
@@ -655,8 +659,8 @@ If ($MetroApps -and $($WimInfo.Name) -notlike "*LTSC" -and (Get-AppxProvisionedP
 
 If ($SystemApps)
 {
-    $RemovedSystemApps = [System.Collections.ArrayList]@()
     Clear-Host
+    $RemovedSystemApps = [System.Collections.ArrayList]@()
     $Host.UI.RawUI.WindowTitle = "Removing System Applications."
     Try
     {
@@ -681,6 +685,8 @@ If ($SystemApps)
                 Start-Sleep 2
             }
         }
+        Get-OfflineHives -Process Unload
+        Clear-Host
     }
     Catch
     {
@@ -688,17 +694,12 @@ If ($SystemApps)
         Exit-Script
         Break
     }
-    Finally
-    {
-        Get-OfflineHives -Process Unload
-        Clear-Host
-    }
 }
 
 If ($Packages)
 {
-    $RemovedWindowsPackages = [System.Collections.ArrayList]@()
     Clear-Host
+    $RemovedWindowsPackages = [System.Collections.ArrayList]@()
     $Host.UI.RawUI.WindowTitle = "Removing Windows Capability Packages."
     Try
     {
@@ -744,20 +745,17 @@ If ($Packages)
     }
 }
 
-If ($MetroAppsComplete -eq $true)
+If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match Microsoft.Wallet).Count.Equals(0) -or (Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match Microsoft.WindowsMaps).Count.Equals(0))
 {
-    If ((Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match Microsoft.Wallet).Count.Equals(0) -or (Get-AppxProvisionedPackage -Path $MountFolder | Where DisplayName -Match Microsoft.WindowsMaps).Count.Equals(0))
-    {
-        $Host.UI.RawUI.WindowTitle = "Disabling Appx Provisioned Package Services."
-        Out-Log -Info "Disabling Appx Provisioned Package Services."
-        Get-OfflineHives -Process Load
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
-        Get-OfflineHives -Process Unload
-    }
+    $Host.UI.RawUI.WindowTitle = "Disabling Appx Provisioned Package Services."
+    Out-Log -Info "Disabling Appx Provisioned Package Services."
+    Get-OfflineHives -Process Load
+    If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
+    Get-OfflineHives -Process Unload
 }
 
-If ($RemovedSystemApps -contains "Microsoft.Windows.SecHealthUI")
+If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
 {
     Try
     {
@@ -851,7 +849,7 @@ If ($DisableDefenderComplete -eq $true -and (Get-WindowsOptionalFeature -Path $M
 
 Try
 {
-    If ($MetroApps -eq "All" -or $RemovedSystemApps -contains "Microsoft.XboxGameCallableUI" -or (Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like *Xbox*).Count -lt 5)
+    If ($MetroApps -eq 'All' -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI' -or (Get-AppxProvisionedPackage -Path $MountFolder | Where PackageName -Like *Xbox*).Count -lt 5)
     {
         $Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
         Out-Log -Info "Disabling Xbox Services and Drivers."
@@ -999,20 +997,20 @@ If ($WindowsStore -and $WimInfo.Name -like "*LTSC")
         Out-Log -Info "Integrating the Microsoft Store Application Packages."
         Try
         {
-            $StoreBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle).FullName
-            $PurchaseBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle).FullName
-            $XboxBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle).FullName
-            $InstallerBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle).FullName
-            $StoreLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml).FullName
-            $PurchaseLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml).FullName
-            $IdentityLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml).FullName
-            $InstallerLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml).FullName
+            $StoreBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -ErrorAction Stop).FullName
+            $PurchaseBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -ErrorAction Stop).FullName
+            $XboxBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -ErrorAction Stop).FullName
+            $InstallerBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -ErrorAction Stop).FullName
+            $StoreLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -ErrorAction Stop).FullName
+            $PurchaseLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -ErrorAction Stop).FullName
+            $IdentityLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -ErrorAction Stop).FullName
+            $InstallerLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -ErrorAction Stop).FullName
             $DepAppx = @()
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx).FullName
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx).FullName
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -ErrorAction Stop).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -ErrorAction Stop).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction Stop).FullName
             Get-OfflineHives -Process Load
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord -ErrorAction Stop
             Get-OfflineHives -Process Unload
             $StorePackage = @{
                 Path                  = $MountFolder
@@ -1045,7 +1043,7 @@ If ($WindowsStore -and $WimInfo.Name -like "*LTSC")
             }
             [void](Add-AppxProvisionedPackage @IdentityPackage)
             $DepAppx = @()
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx).FullName
+            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction Stop).FullName
             $InstallerPackage = @{
                 Path                  = $MountFolder
                 PackagePath           = $InstallerBundle
@@ -1057,7 +1055,7 @@ If ($WindowsStore -and $WimInfo.Name -like "*LTSC")
             }
             [void](Add-AppxProvisionedPackage @InstallerPackage)
             Get-OfflineHives -Process Load
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord
+            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord -ErrorAction SilentlyContinue
             Get-OfflineHives -Process Unload
         }
         Catch
@@ -1201,7 +1199,7 @@ If ($Win32Calc -and $WimInfo.Name -notlike "*LTSC")
             {
                 Try
                 {
-                    Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait
+                    Start-Process -FilePath EXPAND -ArgumentList ("-F:* `"$($Win32CalcPath)\Win32Calc.cab`" `"$MountFolder`"") -WindowStyle Hidden -Wait -ErrorAction Stop
                     Get-OfflineHives -Process Load
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
@@ -1238,11 +1236,11 @@ If ($Win32Calc -and $WimInfo.Name -notlike "*LTSC")
 D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
 '@
                     $SSDL.Insert(0, "win32calc.exe") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -ErrorAction Stop
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
                     $SSDL.Insert(0, "win32calc.exe.mui") | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
-                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\System32\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
+                    Start-Process -FilePath ICACLS -ArgumentList ("`"$MountFolder\Windows\SysWOW64\en-US`" /RESTORE `"$($WorkFolder)\SSDL.ini`" /T /C /Q") -WindowStyle Hidden -Wait -ErrorAction Stop
                     Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force
                     $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
                     @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach {
@@ -1335,27 +1333,27 @@ If ($Dedup)
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-DCOM-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-SMB-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-DCOM-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-SMB-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction SilentlyContinue
+                -Type String -ErrorAction Stop
             Get-OfflineHives -Process Unload
         }
         Catch
@@ -1456,7 +1454,7 @@ If ($DaRT)
                     Save             = $true
                     CheckIntegrity   = $true
                     ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog                
+                    LogPath          = $DISMLog
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Saving and Dismounting the Boot Image."
@@ -1495,7 +1493,7 @@ If ($DaRT)
                     ImagePath        = "$($ImageFolder)\winre.wim"
                     Index            = 1
                     ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog                    
+                    LogPath          = $DISMLog
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Mounting the Recovery Image."
@@ -1844,7 +1842,7 @@ If ($Registry)
         @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
             "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContent-202914Enabled",
             "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
-            "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled", 
+            "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled",
             "SubscribedContent-338381Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled",
             "SubscribedContent-353696Enabled", "SubscribedContent-353698Enabled") | ForEach {
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $_ -Value 0 -Type DWord -ErrorAction SilentlyContinue
@@ -2267,7 +2265,6 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"(Get-Process -Name explorer).Kill()`"" -Type String -ErrorAction SilentlyContinue
         #****************************************************************
-        $SetRegistryComplete = $true
         Get-OfflineHives -Process Unload
     }
     Catch
@@ -2326,9 +2323,9 @@ If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true)
     Out-Log -Info "Updating the Default Hosts File."
     $HostsFile = "$MountFolder\Windows\System32\drivers\etc\hosts"
     $HostsUpdate = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-    Rename-Item -Path $HostsFile -NewName hosts.bak -Force
+    Rename-Item -Path $HostsFile -NewName hosts.bak -Force -ErrorAction SilentlyContinue
     (New-Object System.Net.WebClient).DownloadFile($HostsUpdate, $HostsFile)
-    (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force
+    (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
 If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -2507,7 +2504,6 @@ Catch
 Finally
 {
     $Timer.Stop()
-    If ($Error.Count -ne 0) { $Error.ToArray() | Out-File -FilePath "$WorkFolder\ErrorLog.log" -Force -ErrorAction SilentlyContinue }
     Out-Log -Info "$ScriptName completed in [$($Timer.Elapsed.Minutes.ToString())] minutes with [$($Error.Count)] errors."
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
@@ -2516,7 +2512,7 @@ Finally
     Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void]$RemovedSystemApps.Clear()
     [void](Clear-WindowsCorruptMountPoint)
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
