@@ -5,7 +5,7 @@ REM After setting the SourcePath and SourceBuild variables, run this script as a
 REM The variables carry over to the PowerShell script, as do the switches.
 
 REM Start PowerShell Variables
-SET "SourcePath=X:\PathToImage"
+SET "C:\ESD\install.wim"
 REM End PowerShell Variables
 
 NET SESSION >NUL 2>&1
