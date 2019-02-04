@@ -1,13 +1,6 @@
 # ChangeLog #
 
-## Build 3.1.3.6 (01-17-2019) ##
+## Build 3.1.3.7 (02-04-2019) ##
 
-- Combined and updated multiple helper functions.
-- Improved error reporting and error records' output format.
-- Updated multiple registry values that get set in the offline image hives using the -Registry switch.
-- Improved initializtion and finalization clean-up procedures.
-- Assorted other code and contextual changes.
-
-## Updated on 01-18-2019 ##
-
-- Corrected a mutex synchronization primative the logging function uses.
+- Updated offline registry hive settings and added the inclusion of the Classic Personalization screen.
+- Updated the disabling and removal of default tasks and services for Windows Defender.
