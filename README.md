@@ -21,21 +21,21 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 
 ## List of variables and switches ##
 
--ImagePath = String value to enter the full path to a Windows Installation ISO or an install WIM file.
--Index = Integer value. If using a multi-index image, specify the index of the image to be optimized. The default -Index value is 1.
--MetroApps = String value allowing either "Select," "All," or "Whitelist."
--SystemApps = Switch that allows for the selective removal of System Applications (more information on this can be found below).
--Packages = Switch that allows for the selective removal of Windows Capability Packages.
--Features = Switch that allows for the selective disabling and enabling of Windows Features.
--WindowsStore = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
--MicrosoftEdge = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Edge Browser packages into the image.
--Win32Calc = Switch (NOT applicable to Windows 10 Enterprise LTSC 2019) that integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
--Dedup = Switch that integrates the Windows Server Data Deduplication packages into the image.
--DaRT = Switch that integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
--Drivers = Switch that injects any driver packages added to the "Resources\Drivers" folder into the image.
--NetFx3 = Switch that integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
--Registry = Switch that integrates optimized registry values into the registry hives of the image.
--ISO = Switch (requires the installation of the Windows ADK) that will automatically create a new bootable Windows Installation ISO upon optimization completion.
+- -ImagePath = String value to enter the full path to a Windows Installation ISO or an install WIM file.
+- -Index = Integer value. If using a multi-index image, specify the index of the image to be optimized. The default -Index value is 1.
+- -MetroApps = String value allowing either "Select," "All," or "Whitelist."
+- -SystemApps = Switch that allows for the selective removal of System Applications (more information on this can be found below).
+- -Packages = Switch that allows for the selective removal of Windows Capability Packages.
+- -Features = Switch that allows for the selective disabling and enabling of Windows Features.
+- -WindowsStore = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
+- -MicrosoftEdge = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Edge Browser packages into the image.
+- -Win32Calc = Switch (NOT applicable to Windows 10 Enterprise LTSC 2019) that integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
+- -Dedup = Switch that integrates the Windows Server Data Deduplication packages into the image.
+- -DaRT = Switch that integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
+- -Drivers = Switch that injects any driver packages added to the "Resources\Drivers" folder into the image.
+- -NetFx3 = Switch that integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
+- -Registry = Switch that integrates optimized registry values into the registry hives of the image.
+- -ISO = Switch (requires the installation of the Windows ADK) that will automatically create a new bootable Windows Installation ISO upon optimization completion.
 
 ## About the -Registry switch ##
 
