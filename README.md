@@ -31,7 +31,9 @@ A few of the switch settings:
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system sensor access.
 - Disables error reporting and automatic syncronization.
-- etc.
+- Prevents multiple default Microsoft account requirements.
+- Disables Cortana's intrusiveness during a device setup during the OOBE component pass.
+- Cleans-up the default Context Menu options and integrates custom options.
 
 ## Script process and settings danger ##
 
