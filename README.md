@@ -19,6 +19,24 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.  The best recourse for errors is to post them - and any log files from the script - in the 'Issues' section.
 
+## List of variables and switches ##
+
+-ImagePath = String value to enter the full path to a Windows Installation ISO or an install WIM file.
+-Index = Integer value. If using a multi-index image, specify the index of the image to be optimized. The default -Index value is 1.
+-MetroApps = String value allowing either "Select," "All," or "Whitelist."
+-SystemApps = Switch that allows for the selective removal of System Applications (more information on this can be found below).
+-Packages = Switch that allows for the selective removal of Windows Capability Packages.
+-Features = Switch that allows for the selective disabling and enabling of Windows Features.
+-WindowsStore = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
+-MicrosoftEdge = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Edge Browser packages into the image.
+-Win32Calc = Switch (NOT applicable to Windows 10 Enterprise LTSC 2019) that integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
+-Dedup = Switch that integrates the Windows Server Data Deduplication packages into the image.
+-DaRT = Switch that integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
+-Drivers = Switch that injects any driver packages added to the "Resources\Drivers" folder into the image.
+-NetFx3 = Switch that integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
+-Registry = Switch that integrates optimized registry values into the registry hives of the image.
+-ISO = Switch (requires the installation of the Windows ADK) that will automatically create a new bootable Windows Installation ISO upon optimization completion.
+
 ## About the -Registry switch ##
 
 The -Registry parameter applies an array of entries and values to the image's registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.

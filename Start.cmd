@@ -1,12 +1,11 @@
 @ECHO OFF
 CD /D "%~dp0"
 
-REM After setting the SourcePath and SourceBuild variables, run this script as an administrator to quickly call Optimize-Offline without having to manually do it.
-REM The variables carry over to the PowerShell script, as do the switches.
+REM After setting the appropriate variables and switches, run this script as an administrator to quickly call Optimize-Offline.
+REM A list of all available variables and switches can be found on the main GitHub page.
 
-REM Start PowerShell Variables
+REM Set the Optimize-Offline Source Path variable.
 SET "SourcePath=X:\PathToImage"
-REM End PowerShell Variables
 
 NET SESSION >NUL 2>&1
 IF %ERRORLEVEL% NEQ 0 (
@@ -17,10 +16,7 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "All" -SystemApps -Packages -Registry -Win32Calc -DaRT -Drivers -NetFx3
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Whitelist" -SystemApps -Packages -NetFx3
-    REM PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -SystemApps -Packages -Registry -DaRT -WindowsStore -MicrosoftEdge -ISO
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -Registry -ISO
 )
 PAUSE
 EXIT
