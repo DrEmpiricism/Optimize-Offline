@@ -1,6 +1,7 @@
 # ChangeLog #
 
-## Build 3.1.3.7 (02-04-2019) ##
+## Build 3.1.3.8 (02-15-2019) ##
 
-- Updated offline registry hive settings and added the inclusion of the Classic Personalization screen.
-- Updated the disabling and removal of default tasks and services for Windows Defender.
+- Extremely minor updates and changes to the offline registry hives' settings and values.
+- Updated the Windows Store Appx Package Bundles.
+- Corrected a log mispelling and context.

@@ -76,8 +76,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.1.3.7
-		Last updated:	02/04/2019
+		Version:        3.1.3.8
+		Last updated:	02/15/2019
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -127,7 +127,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.1.3.7'
+$ScriptVersion = '3.1.3.8'
 $ErrorEvent = 'Error event logged. Terminating process'
 #endregion Script Variables
 
@@ -1868,6 +1868,11 @@ If ($Registry)
         New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
+        Write-Output "Disabling Advertising ID for Apps." >> $RegLog
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        #****************************************************************
         Write-Output "Disabling WSUS Advertising and Metadata Collection." >> $RegLog
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -ErrorAction Stop
@@ -1879,16 +1884,26 @@ If ($Registry)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "EnableFeaturedSoftware" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        #****************************************************************
+        Write-Output "Disabling Microsoft Account Requirement." >> $RegLog
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "NoConnectedUser" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************	
         Write-Output "Disabling Cross-Device Sharing and Shared Experiences." >>  $RegLog
         #***************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableCdp" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        Write-Output "Hiding 'Recently Added Apps' on Start Menu." >> $RegLog
+        Write-Output "Hiding 'Recently Added Apps' list from the Start Menu." >> $RegLog
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        #****************************************************************
+        Write-Output "Hiding 'Most Used Apps' list from the Start Menu." >> $RegLog
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoStartMenuMFUprogramsList" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
         Write-Output "Disabling Error Reporting." >> $RegLog
         #****************************************************************
@@ -1899,7 +1914,7 @@ If ($Registry)
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableFirstLogonAnimation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        Write-Output "Disabling Windows Start-up Sound and Boot Animation." >> $RegLog
+        Write-Output "Disabling Windows Start-up Sound." >> $RegLog
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -ErrorAction Stop
@@ -1928,6 +1943,11 @@ If ($Registry)
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates" -ErrorAction Stop
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates" -Name "ShortcutNameTemplate" -Value "%s.lnk" -Type String -ErrorAction SilentlyContinue
+        #****************************************************************
+        Write-Output "Disabling the Shortcut Arrow for Shortcuts." >> $RegLog
+        #****************************************************************
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -ErrorAction Stop
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Name "29" -Value "%SystemRoot%\System32\imageres.dll,-1015" -Type String -ErrorAction SilentlyContinue
         #****************************************************************
         Write-Output "Enabling Explorer opens to This PC." >> $RegLog
         #****************************************************************
@@ -2364,6 +2384,7 @@ Try
     $Host.UI.RawUI.WindowTitle = "Saving and Dismounting the Image."
     Out-Log -Info "Saving and Dismounting the Image."
     If (Test-Path -LiteralPath "$MountFolder\`$Recycle.Bin") { Remove-Item -LiteralPath "$MountFolder\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
+    If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     $DismountWindowsImage = @{
         Path             = $MountFolder
         Save             = $true
