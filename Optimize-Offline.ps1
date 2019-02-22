@@ -610,53 +610,44 @@ If ($MetroApps -and $WimInfo.Name -notlike "*LTSC" -and (Get-AppxProvisionedPack
             Break
         }
     }
-    ElseIf ($MetroApps -eq 'Whitelist')
+    ElseIf ($MetroApps -eq 'Whitelist' -and (Test-Path -Path $WhitelistPath))
     {
-        If (Test-Path -Path $WhitelistPath)
+        [XML]$GetList = Get-Content -Path $WhitelistPath
+        If ($GetList.Appx.DisplayName.Count -gt 0)
         {
-            [XML]$GetList = Get-Content -Path $WhitelistPath
-            If ($GetList.Appx.DisplayName.Count -eq 0)
+            $AppxWhitelist = @()
+            $AppxWhitelist += $GetList.Appx.DisplayName
+            Try
             {
-                Out-Log -Error "The Whitelist is either empty or has improper syntax."
-                Start-Sleep 3
-                Return
-            }
-            Else
-            {
-                $AppxWhitelist = @()
-                $AppxWhitelist += $GetList.Appx.DisplayName
-                Try
-                {
-                    Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
-                        If ($_.DisplayName -notin $AppxWhitelist)
-                        {
-                            Out-Log -Info "Removing Appx Provisioned Package: $($_.DisplayName)"
-                            $RemoveAppx = @{
-                                Path             = $MountFolder
-                                PackageName      = $($_.PackageName)
-                                ScratchDirectory = $ScratchFolder
-                                LogPath          = $DISMLog
-                                ErrorAction      = 'Stop'
-                            }
-                            [void](Remove-AppxProvisionedPackage @RemoveAppx)
+                Get-AppxProvisionedPackage -Path $MountFolder | ForEach {
+                    If ($_.DisplayName -notin $AppxWhitelist)
+                    {
+                        Out-Log -Info "Removing Appx Provisioned Package: $($_.DisplayName)"
+                        $RemoveAppx = @{
+                            Path             = $MountFolder
+                            PackageName      = $($_.PackageName)
+                            ScratchDirectory = $ScratchFolder
+                            LogPath          = $DISMLog
+                            ErrorAction      = 'Stop'
                         }
+                        [void](Remove-AppxProvisionedPackage @RemoveAppx)
                     }
                 }
-                Catch
-                {
-                    Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
-                    Exit-Script
-                    Break
-                }
-                Finally
-                {
-                    $AppxWhitelist = @()
-                }
+            }
+            Catch
+            {
+                Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
+                Exit-Script
+                Break
+            }
+            Finally
+            {
+                $AppxWhitelist = @()
             }
         }
         Else
         {
-            Out-Log -Error "Missing required file: AppxPackageWhitelist.xml"
+            Out-Log -Error "The AppxPackageWhitelist.xml does not contain any valid entries."
             Start-Sleep 3
         }
     }
