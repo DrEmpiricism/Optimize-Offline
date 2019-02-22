@@ -1,5 +1,12 @@
 # Previous Version Log #
 
+## Build 3.1.3.8 (02-17-2019) ##
+
+- Extremely minor updates and changes to the offline registry hives' settings and values.
+- Updated the Windows Store Appx Package Bundles.
+- Corrected a log mispelling and context.
+- On builds RS5+ (17663+) Microsoft updated its ClipBoard history service allowing for cross-device access, which consequently rendered it vulnerable to unintended malware injection. In this very small update, I have added the appropriate registry entries that disables ClipBoard history and its service.
+
 ## Build 3.1.3.7 (02-04-2019) ##
 
 - Updated offline registry hive settings and added the inclusion of the Classic Personalization screen.
