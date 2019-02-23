@@ -19,24 +19,6 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.  The best recourse for errors is to post them - and any log files from the script - in the 'Issues' section.
 
-## List of variables and switches ##
-
-- -ImagePath = String value to enter the full path to a Windows Installation ISO or an install WIM file.
-- -Index = Integer value. If using a multi-index image, specify the index of the image to be optimized. The default -Index value is 1.
-- -MetroApps = String value allowing either "Select," "All," or "Whitelist."
-- -SystemApps = Switch that allows for the selective removal of System Applications (more information on this can be found below).
-- -Packages = Switch that allows for the selective removal of Windows Capability Packages.
-- -Features = Switch that allows for the selective disabling and enabling of Windows Features.
-- -WindowsStore = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
-- -MicrosoftEdge = Switch (ONLY applicable to Windows 10 Enterprise LTSC 2019) that integrates the Microsoft Edge Browser packages into the image.
-- -Win32Calc = Switch (NOT applicable to Windows 10 Enterprise LTSC 2019) that integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
-- -Dedup = Switch that integrates the Windows Server Data Deduplication packages into the image.
-- -DaRT = Switch that integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
-- -Drivers = Switch that injects any driver packages added to the "Resources\Drivers" folder into the image.
-- -NetFx3 = Switch that integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
-- -Registry = Switch that integrates optimized registry values into the registry hives of the image.
-- -ISO = Switch (requires the installation of the Windows ADK) that will automatically create a new bootable Windows Installation ISO upon optimization completion.
-
 ## About the -Registry switch ##
 
 The -Registry parameter applies an array of entries and values to the image's registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
@@ -52,6 +34,7 @@ A few of the switch settings:
 - Prevents multiple default Microsoft account requirements.
 - Disables Cortana's intrusiveness during a device setup during the OOBE component pass.
 - Cleans-up the default Context Menu options and integrates custom options.
+- Increases device security.
 
 ## Script process and settings danger ##
 
@@ -105,7 +88,7 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO.
 
-Optimize-Offline does this without any end-user input by querying specific registry keys that contain the path to the ADK's installed location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO.
+Optimize-Offline does this without any end-user input by querying specific registry keys that contain the path to the ADK's installed location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO. Optimize-Offline queries the registry for the path to the ADK, as opposed to setting a static string for it, because many users install programs on different drives (i.e. SSD users).
 
 Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
 
