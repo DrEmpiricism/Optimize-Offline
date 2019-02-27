@@ -1,6 +1,6 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 builds RS4 to RS5 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1809 64-bit architectures.
 
 ## About Optimize-Offline ##
 
@@ -99,8 +99,6 @@ defaultuser0 is not a real account, however, and is a bug that has been present 
 Conversely, failing to remove the defaultuser0 account immediately after Windows Installation completes can lead to future headaches.  As an example, if you reset Windows with the defaultuser0 ghost account still present, upon the restart of the device, Windows will force you to log into the defaultuser0 account to continue.
 
 In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
-
-**A reboot is recommended after the first bootup of the optimized image in order to complete the DefaultUser0 ghost account removal**.
 
 ## Microsoft Store integration ##
 
