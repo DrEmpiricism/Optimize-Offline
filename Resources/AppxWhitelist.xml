@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Appx>
+  <DisplayName>Microsoft.DesktopAppInstaller</DisplayName>
+  <DisplayName>Microsoft.WindowsStore</DisplayName>
+  <DisplayName>Microsoft.StorePurchaseApp</DisplayName>
+  <DisplayName>Microsoft.XboxIdentityProvider</DisplayName>
+</Appx>
+
+<!--
+Microsoft.BingWeather
+Microsoft.DesktopAppInstaller
+Microsoft.GetHelp
+Microsoft.Getstarted
+Microsoft.HEIFImageExtension
+Microsoft.Messaging
+Microsoft.Microsoft3DViewer
+Microsoft.MicrosoftOfficeHub
+Microsoft.MicrosoftSolitaireCollection
+Microsoft.MicrosoftStickyNotes
+Microsoft.WindowsStore
+Microsoft.Windows.Photos
+Microsoft.MixedReality.Portal
+Microsoft.MSPaint
+Microsoft.Office.OneNote
+Microsoft.OneConnect
+Microsoft.People
+Microsoft.Print3D
+Microsoft.ScreenSketch
+Microsoft.SkypeApp
+Microsoft.StorePurchaseApp
+Microsoft.VP9VideoExtensions
+Microsoft.Wallet
+Microsoft.WebMediaExtensions
+Microsoft.WebpImageExtension
+Microsoft.WindowsAlarms
+Microsoft.WindowsCalculator
+Microsoft.WindowsCamera
+microsoft.windowscommunicationsapps
+Microsoft.WindowsFeedbackHub
+Microsoft.WindowsMaps
+Microsoft.WindowsSoundRecorder
+Microsoft.Xbox.TCUI
+Microsoft.XboxApp
+Microsoft.XboxGameOverlay
+Microsoft.XboxGamingOverlay
+Microsoft.XboxIdentityProvider
+Microsoft.XboxSpeechToTextOverlay
+Microsoft.YourPhone
+Microsoft.ZuneMusic
+Microsoft.ZuneVideo
+-->
