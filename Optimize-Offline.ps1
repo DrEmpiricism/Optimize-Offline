@@ -58,9 +58,9 @@
 		Only applicable when a Windows Installation Media ISO image is used as the source image.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps 'Whitelist' -SystemApps -Packages -Features -Dedup -Registry
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 -DaRT
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "All" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -75,7 +75,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.2.4.0
-		Last updated:	02/28/2019
+		Last updated:	03/02/2019
 		===========================================================================
 #>
 [CmdletBinding()]
@@ -508,7 +508,7 @@ Else
 If ($WimInfo.Name -like "*LTSC")
 {
     $IsLTSC = $true
-    If ($MetroApps) { $MetroApps = $null }
+    If ($MetroApps) { Remove-Variable MetroApps }
     If ($Win32Calc.IsPresent) { $Win32Calc = $false }
 }
 Else
