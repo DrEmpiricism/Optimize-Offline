@@ -816,7 +816,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        If (($IsLTSC -and $MicrosoftEdge.IsPresent) -or (!$IsLTSC -and !$MicrosoftEdge))
+        If ($IsLTSC -and $MicrosoftEdge.IsPresent -or !$IsLTSC -and !$MicrosoftEdge)
         {
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
@@ -1971,7 +1971,7 @@ If ($Registry.IsPresent)
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        (($IsLTSC -and $MicrosoftEdge.IsPresent) -or (!$IsLTSC -and !$MicrosoftEdge))
+        If ($IsLTSC -and $MicrosoftEdge.IsPresent -or !$IsLTSC -and !$MicrosoftEdge)
         {
             #****************************************************************
             Write-Output "Disabling Microsoft Edge Desktop Shortcut Creation." >> $RegLog
