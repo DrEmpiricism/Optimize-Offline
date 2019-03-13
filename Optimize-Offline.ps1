@@ -683,10 +683,10 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     }
 }
 
-If ($MetroApps.GetType().Name -eq 'String' -and (Test-Path -Path $AppAssocListPath)) 
+If (Test-Path -Path $AppAssocListPath)
 {
-    $Host.UI.RawUI.WindowTitle = "Importing Updated App Associations."
-    Out-Log -Info "Importing Updated App Associations."
+    $Host.UI.RawUI.WindowTitle = "Importing Updated Default App Associations."
+    Out-Log -Info "Importing Updated Default App Associations."
     Start-Sleep 3
     $ImportAssoc = ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath)
     Start-Process -FilePath DISM -ArgumentList $ImportAssoc -WindowStyle Hidden -Wait
@@ -816,7 +816,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        If ($IsLTSC -and $MicrosoftEdge.IsPresent -or !$IsLTSC -and !$MicrosoftEdge)
+        If (!$IsLTSC)
         {
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
@@ -1097,33 +1097,54 @@ If ($MicrosoftEdge.IsPresent)
         {
             $Host.UI.RawUI.WindowTitle = "Integrating the Microsoft Edge Browser Application Packages."
             Out-Log -Info "Integrating the Microsoft Edge Browser Application Packages."
+            $EdgeBasePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = 'Stop'
+            }
+            [void](Add-WindowsPackage @EdgeBasePackage)
+            $EdgeLanguagePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = 'Stop'
+            }
+            [void](Add-WindowsPackage @EdgeLanguagePackage)
             Try
             {
-                $EdgeBasePackage = @{
-                    Path             = $MountFolder
-                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
-                    IgnoreCheck      = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorAction      = 'Stop'
-                }
-                [void](Add-WindowsPackage @EdgeBasePackage)
-                $EdgeLanguagePackage = @{
-                    Path             = $MountFolder
-                    PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
-                    IgnoreCheck      = $true
-                    ScratchDirectory = $ScratchFolder
-                    LogPath          = $DISMLog
-                    ErrorAction      = 'Stop'
-                }
-                [void](Add-WindowsPackage @EdgeLanguagePackage)
-                Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Internet-Browser* | Select -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+                $Host.UI.RawUI.WindowTitle = "Applying Microsoft Edge Registry Settings."
+                Out-Log -Info "Applying Microsoft Edge Registry Settings."
+                Get-OfflineHives -Process Load
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction SilentlyContinue
+                New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -ErrorAction SilentlyContinue
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -ErrorAction SilentlyContinue
+                New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -ErrorAction SilentlyContinue
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -ErrorAction SilentlyContinue
+                New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Get-OfflineHives -Process Unload
+                $EdgeIntegrated = $true
             }
             Catch
             {
                 Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
                 Exit-Script
                 Break
+            }
+            Finally
+            {
+                Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Internet-Browser* | Select -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
             }
         }
         Else
@@ -1635,7 +1656,6 @@ If ($Registry.IsPresent)
         $Host.UI.RawUI.WindowTitle = "Applying Registry Hive Settings."
         Out-Log -Info "Applying Optimizations to the Offline Registry Hives."
         $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
-        If ($null -ne (Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Internet-Browser*)) { $EdgeIntegrated = $true }
         Get-OfflineHives -Process Load
         #****************************************************************
         Write-Output "Disabling Cortana and Search Bar Web Connectivity." >> $RegLog
@@ -1711,8 +1731,7 @@ If ($Registry.IsPresent)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -ErrorAction Stop
-        If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 }
-        Else { $TelemetryLevel = 1 }
+        If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
@@ -1971,7 +1990,7 @@ If ($Registry.IsPresent)
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        If ($IsLTSC -and $MicrosoftEdge.IsPresent -or !$IsLTSC -and !$MicrosoftEdge)
+        If (!$IsLTSC -and !$EdgeIntegrated)
         {
             #****************************************************************
             Write-Output "Disabling Microsoft Edge Desktop Shortcut Creation." >> $RegLog
