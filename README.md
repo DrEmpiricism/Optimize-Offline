@@ -36,6 +36,25 @@ A few of the switch settings:
 - Cleans-up the default Context Menu options and integrates custom options.
 - Increases device security.
 
+## About the -Additional switch ##
+
+The -Additional script allows the end-user to add specific content to the image during Optimize-Offline's automated processes instead of having to re-mount the image or use an external Distribution Share.
+Within the '\Resources\Additional' directory are four folders: 'Logo', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being uploaded. This validation is based on Microsoft's deployment guidelines for specific content. For example, only bitmap (.bmp) images will be uploaded in the 'Logo' folder and only image files will be uploaded in the 'Wallpaper' folder. Moreover, only an answer file named 'unattend.xml' will be uploaded in the 'Unattend' folder and any others will be omitted. Conversely, any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their machine can be an array of different container types - files, directories, executables, etc.
+
+All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', scripts are uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
+
+All content can be either folders or directories themselves, or individual files. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory. Optimize-Offline will not just copy all content over haphazardly and create a massive mess of files or completely omit a specific file structure.
+
+## unattend.xml Answer File ##
+
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that begain with Windows Vista.
+
+During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
+
+An unattend.xml answer file can be created using the Windows System Image Manager that is including in the Windows ADK, or use some of the multiple online generators to create one. A word of caution, though, having incorrect or incomplete values in your answer file could prevent Windows from completing its setup or even starting its setup. Moreover, when customizing the disk layouts for installation, make certain you enter the proper drive index numbers, GPT partition sizes and type IDs.
+
+An example of an unattend.xml to boot into audit mode for System Preparation (Sysprep) and one for regular GPT/UEFI setup are included in the 'Unattend' folder.
+
 ## Script process and settings danger ##
 
 None of the automatic processes or settings are dangerous; however one must be careful when selecting what System Applications are removed.
