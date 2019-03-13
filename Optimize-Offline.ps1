@@ -2369,17 +2369,17 @@ Try
     {
         $Host.UI.RawUI.WindowTitle = "Copying Additional Setup Content."
         Out-Log -Info "Copying Additional Setup Content."
-        If (Test-Path -Path "$AdditionalPath\Unattend" -Filter unattend.xml)
+        If (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml")
         {
             New-Container -Path "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
-            Get-ChildItem -Path "$AdditionalPath\Unattend" -Filter unattend.xml -Recurse | Copy-Item -Destination "$MountFolder\Windows\Panther"
+            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther"
         }
         If (Test-Path -Path "$AdditionalPath\Setup\*")
         {
             New-Container -Path "$MountFolder\Windows\Setup\Scripts" -ErrorAction SilentlyContinue
             Get-ChildItem -Path "$AdditionalPath\Setup" -Recurse | Copy-Item -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse
         }
-        If (Test-Path -Path "$AdditionalPath\Wallpaper" -PathType Container)
+        If (Test-Path -Path "$AdditionalPath\Wallpaper\*" -PathType Container)
         {
             Get-ChildItem -Path "$AdditionalPath\Wallpaper" -Directory | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse
         }
@@ -2387,10 +2387,10 @@ Try
         {
             Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper"
         }
-        If (Test-Path -Path "$AdditionalPath\Logo" -Filter *.bmp)
+        If (Test-Path -Path "$AdditionalPath\Logo\*.bmp")
         {
             New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo" -ErrorAction SilentlyContinue
-            Get-ChildItem -Path "$AdditionalPath\Logo" -Filter *.bmp -File | Copy-Item -Destination "$MountFolder\Windows\System32\oobe\info\logo"
+            Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse
         }
     }
 }
