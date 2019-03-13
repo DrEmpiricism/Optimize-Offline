@@ -534,9 +534,6 @@ Else
 Try
 {
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
-    [void]($MountFolder = New-OfflineDirectory -Directory InstallMount)
-    [void]($WorkFolder = New-OfflineDirectory -Directory Work)
-    [void]($ScratchFolder = New-OfflineDirectory -Directory Scratch)
     $DISMLog = Join-Path -Path $WorkFolder -ChildPath DISM.log
     $ScriptLog = Join-Path -Path $WorkFolder -ChildPath Optimize-Offline.log
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
