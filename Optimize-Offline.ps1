@@ -62,8 +62,8 @@
 		All content is copied to those locations specified by Microsoft. If a location does not exist, it will automatically be created.
 	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO -Additional
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry -Additional
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 -DaRT
 	
 	.NOTES
@@ -78,7 +78,7 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.1
+		Version:        3.2.4.2
 		Last updated:	03/13/2019
 		===========================================================================
 #>
@@ -134,7 +134,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.1'
+$ScriptVersion = '3.2.4.2'
 $ErrorEvent = 'Error event logged. Terminating process'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
@@ -554,7 +554,6 @@ Try
         Path             = $MountFolder
         ScratchDirectory = $ScratchFolder
         LogPath          = $DISMLog
-        Optimize         = $true
         ErrorAction      = 'Stop'
     }
     [void](Mount-WindowsImage @MountWindowsImage)
@@ -1440,7 +1439,6 @@ If ($DaRT.IsPresent)
                     Index            = 2
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
-                    Optimize         = $true
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Mounting the Boot Image."
@@ -1471,16 +1469,13 @@ If ($DaRT.IsPresent)
                 Out-Log -Info "Integrating the Windows 10 $($CodeName) Debugging Tools into Windows Setup."
                 [void](Expand-WindowsImage @DeguggingToolsBoot)
                 Start-Sleep 3
-                If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll"))
-                {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force
-                }
+                If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll")) { Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force -ErrorAction Stop }
                 @'
 [LaunchApps]
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
-'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force
+'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Encoding UTF8 -Force -ErrorAction Stop
                 If (Test-Path -LiteralPath "$BootMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$BootMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountBootImage = @{
                     Path             = $BootMount
@@ -1508,7 +1503,6 @@ If ($DaRT.IsPresent)
                     Index            = 1
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
-                    Optimize         = $true
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Mounting the Recovery Image."
@@ -1539,16 +1533,13 @@ If ($DaRT.IsPresent)
                 Out-Log -Info "Integrating the Windows 10 $($CodeName) Debugging Tools into Windows Recovery."
                 [void](Expand-WindowsImage @DeguggingToolsRecovery)
                 Start-Sleep 3
-                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll"))
-                {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force
-                }
+                If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll")) { Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorAction Stop }
                 @'
 [LaunchApps]
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
-'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force
+'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Encoding UTF8 -Force -ErrorAction Stop
                 If (Test-Path -LiteralPath "$RecoveryMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$RecoveryMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountRecoveryImage = @{
                     Path             = $RecoveryMount
@@ -2439,7 +2430,7 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting the Image."
     Out-Log -Info "Rebuilding and Exporting the Image."
-    $ExportInstall = ('/Export-Image /SourceImageFile:"{0}" /SourceIndex:"{1}" /DestinationImageFile:"{2}" /Compress:Max /CheckIntegrity /Quiet' -f $InstallWim, $ImageIndex, "$($WorkFolder)\install.wim")
+    $ExportInstall = ('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Max /CheckIntegrity /Quiet' -f $InstallWim, $ImageIndex, "$($WorkFolder)\install.wim")
     $RunExport = Start-Process -FilePath DISM -ArgumentList $ExportInstall -WindowStyle Hidden -Wait -PassThru
 }
 Catch
