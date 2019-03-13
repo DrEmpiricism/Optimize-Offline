@@ -35,7 +35,7 @@
                 </Scope>
             </SearchScopes>
             <BlockPopups>yes</BlockPopups>
-            <CompanyName>Omnic Tech</CompanyName>
+            <CompanyName>ACME Inc.</CompanyName>
             <DisableAccelerators>true</DisableAccelerators>
             <DisableDataExecutionPrevention>false</DisableDataExecutionPrevention>
             <DisableFirstRunWizard>true</DisableFirstRunWizard>
