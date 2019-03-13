@@ -52,15 +52,19 @@
 	.PARAMETER Registry
 		Integrates optimized registry values into the registry hives of the image.
 	
-    	.PARAMETER ISO
+	.PARAMETER ISO
 		Creates a new bootable Windows Installation Media ISO
 		Requires the installation of the Windows ADK (Assessment and Deployment Kit).
 		Only applicable when a Windows Installation Media ISO image is used as the source image.
 	
+	.PARAMETER Additional
+		Integrates content found in the "Resources/Additional" directory into the image.
+		All content is copied to those locations specified by Microsoft. If a location does not exist, it will automatically be created.
+	
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "All" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
+		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 -DaRT
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -74,55 +78,63 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.0
-		Last updated:	03/02/2019
+		Version:        3.2.4.1
+		Last updated:	03/13/2019
 		===========================================================================
 #>
-[CmdletBinding()]
+[CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
 Param
 (
     [Parameter(Mandatory = $true,
         HelpMessage = 'The full path to a Windows Installation ISO or an install WIM file.')]
     [ValidateScript( {
-            If ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.iso")) { $_ }
-            ElseIf ((Test-Path $(Resolve-Path -Path $_) -PathType Leaf) -and ($_ -like "*.wim")) { $_ }
-            Else { Throw "Invalid image path: $_" }
+            If ((Test-Path $(Resolve-Path -Path $_)) -and ($_ -ilike "*.iso")) { $_ }
+            ElseIf ((Test-Path $(Resolve-Path -Path $_)) -and ($_ -ilike "*.wim")) { $_ }
+            Else { Write-Warning ('Image path is invalid: "{0}"' -f $($_)); Break }
         })]
-    [string]$ImagePath,
+    [String]$ImagePath,
     [Parameter(HelpMessage = 'Determines the method used for the removal of Provisioned Application Packages.')]
     [ValidateSet('Select', 'All', 'Whitelist')]
-    [string]$MetroApps = 'Select',
+    [Alias('Appx')]
+    [String]$MetroApps,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all System Applications for selective removal.')]
-    [switch]$SystemApps,
+    [Switch]$SystemApps,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.')]
-    [switch]$Packages,
+    [Switch]$Packages,
     [Parameter(HelpMessage = 'Populates and outputs a Gridview list of all enabled Windows Optional Features for selective disabling.')]
-    [switch]$Features,
+    [Switch]$Features,
     [Parameter(HelpMessage = 'Integrates the Microsoft Windows Store, and its dependencies, into the image.')]
-    [switch]$WindowsStore,
+    [Alias('Store')]
+    [Switch]$WindowsStore,
     [Parameter(HelpMessage = 'Integrates the Microsoft Edge Browser packages into the image.')]
-    [switch]$MicrosoftEdge,
+    [Alias('Edge')]
+    [Switch]$MicrosoftEdge,
     [Parameter(HelpMessage = 'Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.')]
-    [switch]$Win32Calc,
+    [Alias('Calc')]
+    [Switch]$Win32Calc,
     [Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication packages into the image.')]
-    [switch]$Dedup,
+    [Switch]$Dedup,
     [Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.')]
-    [switch]$DaRT,
+    [Switch]$DaRT,
     [Parameter(HelpMessage = 'Injects driver packages into the image.')]
-    [switch]$Drivers,
+    [Switch]$Drivers,
     [Parameter(HelpMessage = 'Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.')]
-    [switch]$NetFx3,
+    [Switch]$NetFx3,
     [Parameter(HelpMessage = 'Integrates optimized registry values into the registry hives of the image.')]
-    [switch]$Registry,
+    [Alias('Reg')]
+    [Switch]$Registry,
     [Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
-    [switch]$ISO
+    [Switch]$ISO,
+    [Parameter(HelpMessage = 'Integrates content found in the "Resources/Additional" directory into the image.')]
+    [Alias('Add')]
+    [Switch]$Additional
 )
 
 #region Script Variables
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.0'
+$ScriptVersion = '3.2.4.1'
 $ErrorEvent = 'Error event logged. Terminating process'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
@@ -132,6 +144,7 @@ $EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge
 $NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath "Resources\NetFx3"
 $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
 $AppxWhiteListPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxWhiteList.xml"
+$AppAssocListPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\CustomAppAssociations.xml"
 $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
 #endregion Script Variables
 
@@ -352,6 +365,7 @@ Catch
     Break
 }
 
+
 If (([IO.FileInfo]$ImagePath).Extension -eq '.ISO')
 {
     $SourceImage = ([System.IO.Path]::ChangeExtension($ImagePath, ([System.IO.Path]::GetExtension($ImagePath)).ToString().ToLower()))
@@ -397,7 +411,7 @@ If (([IO.FileInfo]$ImagePath).Extension -eq '.ISO')
             Move-Item -Path "$ISOMedia\sources\install.wim" -Destination $ImageFolder -ErrorAction Stop
             Set-ItemProperty -LiteralPath "$ImageFolder\install.wim" -Name IsReadOnly -Value $false -ErrorAction Stop
             $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
-            If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and ($DaRT))
+            If ((Test-Path -Path "$ISOMedia\sources\boot.wim") -and $DaRT.IsPresent)
             {
                 Move-Item -Path "$ISOMedia\sources\boot.wim" -Destination $ImageFolder -ErrorAction Stop
                 Set-ItemProperty -LiteralPath "$ImageFolder\boot.wim" -Name IsReadOnly -Value $false -ErrorAction Stop
@@ -520,6 +534,9 @@ Else
 Try
 {
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
+    [void]($MountFolder = New-OfflineDirectory -Directory InstallMount)
+    [void]($WorkFolder = New-OfflineDirectory -Directory Work)
+    [void]($ScratchFolder = New-OfflineDirectory -Directory Scratch)
     $DISMLog = Join-Path -Path $WorkFolder -ChildPath DISM.log
     $ScriptLog = Join-Path -Path $WorkFolder -ChildPath Optimize-Offline.log
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
@@ -540,6 +557,7 @@ Try
         Path             = $MountFolder
         ScratchDirectory = $ScratchFolder
         LogPath          = $DISMLog
+        Optimize         = $true
         ErrorAction      = 'Stop'
     }
     [void](Mount-WindowsImage @MountWindowsImage)
@@ -663,6 +681,15 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
             Break
         }
     }
+}
+
+If ($MetroApps.GetType().Name -eq 'String' -and (Test-Path -Path $AppAssocListPath)) 
+{
+    $Host.UI.RawUI.WindowTitle = "Importing Updated App Associations."
+    Out-Log -Info "Importing Updated App Associations."
+    Start-Sleep 3
+    $ImportAssoc = ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath)
+    Start-Process -FilePath DISM -ArgumentList $ImportAssoc -WindowStyle Hidden -Wait
 }
 
 If ($SystemApps.IsPresent)
@@ -986,18 +1013,18 @@ If ($WindowsStore.IsPresent)
         Out-Log -Info "Integrating the Microsoft Store Application Packages."
         Try
         {
-            $StoreBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle).FullName
-            $PurchaseBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle).FullName
-            $XboxBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle).FullName
-            $InstallerBundle = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle).FullName
-            $StoreLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml).FullName
-            $PurchaseLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml).FullName
-            $IdentityLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml).FullName
-            $InstallerLicense = (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml).FullName
+            $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
             $DepAppx = @()
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx).FullName
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx).FullName
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx).FullName
+            $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
+            $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
             Get-OfflineHives -Process Load
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord -ErrorAction Stop
             Get-OfflineHives -Process Unload
@@ -1032,7 +1059,7 @@ If ($WindowsStore.IsPresent)
             }
             [void](Add-AppxProvisionedPackage @IdentityPackage)
             $DepAppx = @()
-            $DepAppx += (Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx).FullName
+            $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction SilentlyContinue | Select -ExpandProperty FullName
             $InstallerPackage = @{
                 Path                  = $MountFolder
                 PackagePath           = $InstallerBundle
@@ -1395,6 +1422,7 @@ If ($DaRT.IsPresent)
                     Index            = 2
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
+                    Optimize         = $true
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Mounting the Boot Image."
@@ -1427,14 +1455,14 @@ If ($DaRT.IsPresent)
                 Start-Sleep 3
                 If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll"))
                 {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force -ErrorAction Stop
+                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force
                 }
                 @'
 [LaunchApps]
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
-'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
+'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force
                 If (Test-Path -LiteralPath "$BootMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$BootMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountBootImage = @{
                     Path             = $BootMount
@@ -1447,33 +1475,14 @@ If ($DaRT.IsPresent)
                 Out-Log -Info "Saving and Dismounting the Boot Image."
                 [void](Dismount-WindowsImage @DismountBootImage)
                 Out-Log -Info "Rebuilding the Boot Image."
-                $ExportPE = @{
-                    SourceImagePath      = $BootWim
-                    SourceIndex          = 1
-                    DestinationImagePath = "$($WorkFolder)\boot.wim"
-                    CompressionType      = 'Maximum'
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorAction          = 'Stop'
-                }
-                [void](Export-WindowsImage @ExportPE)
-                $ExportSetup = @{
-                    SourceImagePath      = $BootWim
-                    SourceIndex          = 2
-                    DestinationImagePath = "$($WorkFolder)\boot.wim"
-                    CompressionType      = 'Maximum'
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorAction          = 'Stop'
-                }
-                [void](Export-WindowsImage @ExportSetup)
+                $ExportBoot = ('/Export-Image /SourceImageFile:"{0}" /All /DestinationImageFile:"{1}" /Compress:Max /CheckIntegrity /Quiet' -f "$($ImageFolder)\boot.wim", "$($WorkFolder)\boot.wim")
+                Start-Process -FilePath DISM -ArgumentList $ExportBoot -WindowStyle Hidden -Wait
             }
             If (Test-Path -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -PathType Leaf)
             {
-                Start-Process -FilePath ATTRIB -ArgumentList ("-S -H -I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -WindowStyle Hidden -Wait
-                Copy-Item -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -Destination $ImageFolder -Force -ErrorAction Stop
+                $RemAttrib = ('-S -H -I "{0}"' -f "$MountFolder\Windows\System32\Recovery\winre.wim")
+                Start-Process -FilePath ATTRIB -ArgumentList $RemAttrib -WindowStyle Hidden -Wait
+                Copy-Item -Path "$MountFolder\Windows\System32\Recovery\winre.wim" -Destination $ImageFolder -Force
                 [void]($RecoveryMount = New-OfflineDirectory -Directory RecoveryMount)
                 $MountRecoveryImage = @{
                     Path             = $RecoveryMount
@@ -1481,6 +1490,7 @@ If ($DaRT.IsPresent)
                     Index            = 1
                     ScratchDirectory = $ScratchFolder
                     LogPath          = $DISMLog
+                    Optimize         = $true
                     ErrorAction      = 'Stop'
                 }
                 Out-Log -Info "Mounting the Recovery Image."
@@ -1513,14 +1523,14 @@ If ($DaRT.IsPresent)
                 Start-Sleep 3
                 If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll"))
                 {
-                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force -ErrorAction Stop
+                    Copy-Item -Path "$MountFolder\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force
                 }
                 @'
 [LaunchApps]
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
-'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
+'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force
                 If (Test-Path -LiteralPath "$RecoveryMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$RecoveryMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountRecoveryImage = @{
                     Path             = $RecoveryMount
@@ -1533,33 +1543,18 @@ If ($DaRT.IsPresent)
                 Out-Log -Info "Saving and Dismounting the Recovery Image."
                 [void](Dismount-WindowsImage @DismountRecoveryImage)
                 Out-Log -Info "Rebuilding the Recovery Image."
-                $ExportRecovery = @{
-                    SourceImagePath      = "$($ImageFolder)\winre.wim"
-                    SourceIndex          = 1
-                    DestinationImagePath = "$($WorkFolder)\winre.wim"
-                    CompressionType      = 'Maximum'
-                    CheckIntegrity       = $true
-                    ScratchDirectory     = $ScratchFolder
-                    LogPath              = $DISMLog
-                    ErrorAction          = 'Stop'
-                }
-                [void](Export-WindowsImage @ExportRecovery)
-                Move-Item -Path "$WorkFolder\winre.wim" -Destination "$MountFolder\Windows\System32\Recovery" -Force -ErrorAction Stop
-                Start-Process -FilePath ATTRIB -ArgumentList ("+S +H +I `"$MountFolder\Windows\System32\Recovery\winre.wim`"") -WindowStyle Hidden -Wait
+                $ExportRecovery = ('/Export-Image /SourceImageFile:"{0}" /All /DestinationImageFile:"{1}" /Compress:Max /CheckIntegrity /Quiet' -f "$($ImageFolder)\winre.wim", "$($WorkFolder)\winre.wim")
+                Start-Process -FilePath DISM -ArgumentList $ExportRecovery -WindowStyle Hidden -Wait
+                Move-Item -Path "$WorkFolder\winre.wim" -Destination "$MountFolder\Windows\System32\Recovery" -Force
+                $AddAttrib = ('+S +H +I "{0}"' -f "$MountFolder\Windows\System32\Recovery\winre.wim")
+                Start-Process -FilePath ATTRIB -ArgumentList $AddAttrib -WindowStyle Hidden -Wait
             }
         }
         Catch
         {
             Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
-            If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
-            {
-                Out-Log -Info "Dismounting and Discarding the Boot Image."
-                [void](Dismount-WindowsImage -Path $BootMount -Discard)
-            }
-            If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
-            {
-                Out-Log -Info "Dismounting and Discarding the Recovery Image."
-                [void](Dismount-WindowsImage -Path $RecoveryMount -Discard)
+            @($BootMount, $RecoveryMount) | ForEach {
+                [void](Dismount-WindowsImage -Path $($_) -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
             }
         }
         Finally
@@ -1715,7 +1710,7 @@ If ($Registry.IsPresent)
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -ErrorAction Stop
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -ErrorAction Stop
-        If ($IsLTSC) { $TelemetryLevel = 0 }
+        If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 }
         Else { $TelemetryLevel = 1 }
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
@@ -1792,7 +1787,7 @@ If ($Registry.IsPresent)
                 Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
             }
         }
-        If ($RemovedSystemApps -contains "Microsoft.BioEnrollment")
+        If ($RemovedSystemApps -contains 'Microsoft.BioEnrollment')
         {
             #****************************************************************
             Write-Output "Disabling Biometric and Microsoft Hello Service." >> $RegLog
@@ -1975,14 +1970,14 @@ If ($Registry.IsPresent)
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        If (!$IsLTSC)
+        If ($null -ne (Get-WindowsPackage -Path $MountFolder | Where PackageName -Like *Internet-Browser*))
         {
             #****************************************************************
             Write-Output "Disabling Microsoft Edge Desktop Shortcut Creation." >> $RegLog
             #****************************************************************
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -ErrorAction Stop
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            #****************************************************************	
+            #****************************************************************
             Write-Output "Disabling Microsoft Edge Pre-Launching at Start-up." >> $RegLog
             #****************************************************************
             New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -ErrorAction Stop
@@ -2179,22 +2174,6 @@ If ($Registry.IsPresent)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\.NETFramework" -Name "OnlyUseLatestCLR" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\.NETFramework" -Name "OnlyUseLatestCLR" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         #****************************************************************
-        Write-Output "Enabling the Fraunhofer IIS MPEG Layer-3 (MP3) Codec." >> $RegLog
-        #****************************************************************
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc")
-        {
-            Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction SilentlyContinue
-            Remove-Item -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Force -ErrorAction SilentlyContinue
-        }
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Drivers32" -ErrorAction Stop
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Drivers32" -ErrorAction Stop
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Name "%SystemRoot%\System32\l3codecp.acm" -Value "Fraunhofer IIS MPEG Layer-3 Codec (Professional)" -Type String -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Drivers32" -Name "msacm.l3acm" -Value "%SystemRoot%\System32\l3codecp.acm" -Type String -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\drivers.desc" -Name "%SystemRoot%\System32\l3codecp.acm" -Value "Fraunhofer IIS MPEG Layer-3 Codec (Professional)" -Type String -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Drivers32" -Name "msacm.l3acm" -Value "%SystemRoot%\System32\l3codecp.acm" -Type String -ErrorAction SilentlyContinue
-        #****************************************************************
         Write-Output "Increasing Icon Cache Size." >> $RegLog
         #****************************************************************
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Value 8192 -Type DWord -ErrorAction SilentlyContinue
@@ -2317,7 +2296,7 @@ Try
     $Host.UI.RawUI.WindowTitle = "Cleaning-up the Start Menu Layout."
     Out-Log -Info "Cleaning-up the Start Menu Layout."
     $UWPLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Explorer UWP.lnk"
-    $UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+    $UWPShell = New-Object -ComObject WScript.Shell
     $UWPShortcut = $UWPShell.CreateShortcut($UWPLnk)
     $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
     $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
@@ -2340,7 +2319,7 @@ Try
     </StartLayoutCollection>
   </DefaultLayoutOverride>
 </LayoutModificationTemplate>
-'@ | Set-Content -Path $LayoutFile -Encoding UTF8 -Force -ErrorAction Stop
+'@ | Set-Content -Path $LayoutFile -Encoding UTF8 -Force
 }
 Catch
 {
@@ -2364,20 +2343,44 @@ If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true)
     (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
-If (((Get-ChildItem -Path $AdditionalPath -Recurse -ErrorAction SilentlyContinue) | Measure-Object).Count -gt 0)
+Try
 {
-    $Host.UI.RawUI.WindowTitle = "Copying Additional Setup Content."
-    Out-Log -Info "Copying Additional Setup Content."
-    If (Get-ChildItem -Path $AdditionalPath -Filter unattend.xml -Recurse -ErrorAction SilentlyContinue)
+    If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory | Measure-Object).Count -gt 0)
     {
-        New-Container -Path "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
-        Get-ChildItem -Path $AdditionalPath -Filter unattend.xml -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Panther" -Force -ErrorAction SilentlyContinue
+        $Host.UI.RawUI.WindowTitle = "Copying Additional Setup Content."
+        Out-Log -Info "Copying Additional Setup Content."
+        If (Test-Path -Path "$AdditionalPath\Unattend" -Filter unattend.xml)
+        {
+            New-Container -Path "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
+            Get-ChildItem -Path "$AdditionalPath\Unattend" -Filter unattend.xml -Recurse | Copy-Item -Destination "$MountFolder\Windows\Panther"
+        }
+        If (Test-Path -Path "$AdditionalPath\Setup\*")
+        {
+            New-Container -Path "$MountFolder\Windows\Setup\Scripts" -ErrorAction SilentlyContinue
+            Get-ChildItem -Path "$AdditionalPath\Setup" -Recurse | Copy-Item -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse
+        }
+        If (Test-Path -Path "$AdditionalPath\Wallpaper" -PathType Container)
+        {
+            Get-ChildItem -Path "$AdditionalPath\Wallpaper" -Directory | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse
+        }
+        If (Test-Path -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif)
+        {
+            Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper"
+        }
+        If (Test-Path -Path "$AdditionalPath\Logo" -Filter *.bmp)
+        {
+            New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo" -ErrorAction SilentlyContinue
+            Get-ChildItem -Path "$AdditionalPath\Logo" -Filter *.bmp -File | Copy-Item -Destination "$MountFolder\Windows\System32\oobe\info\logo"
+        }
     }
-    If (Get-ChildItem -Path $AdditionalPath -Exclude ReadMe.txt, unattend.xml -Recurse -ErrorAction SilentlyContinue)
-    {
-        New-Container -Path "$MountFolder\Windows\Setup\Scripts" -ErrorAction SilentlyContinue
-        Get-ChildItem -Path $AdditionalPath -Exclude ReadMe.txt, unattend.xml -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse -Force -ErrorAction SilentlyContinue
-    }
+}
+Catch
+{
+    Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
+    If (Test-Path -Path "$MountFolder\Windows\Panther") { Remove-Item -Path "$MountFolder\Windows\Panther" -Recurse -Force -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\Setup\Scripts") { Remove-Item -Path "$MountFolder\Windows\Setup\Scripts" -Recurse -Force -ErrorAction SilentlyContinue }
+    If (Test-Path -Path "$MountFolder\Windows\System32\oobe\info\logo") { Remove-Item -Path "$MountFolder\Windows\System32\oobe\info" -Recurse -Force -ErrorAction SilentlyContinue }
+    Start-Sleep 3
 }
 
 If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -2419,23 +2422,14 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting the Image."
     Out-Log -Info "Rebuilding and Exporting the Image."
-    $ExportInstall = @{
-        SourceImagePath      = $InstallWim
-        SourceIndex          = $ImageIndex
-        DestinationImagePath = "$($WorkFolder)\install.wim"
-        CompressionType      = 'Maximum'
-        CheckIntegrity       = $true
-        ScratchDirectory     = $ScratchFolder
-        LogPath              = $DISMLog
-        ErrorAction          = 'Stop'
-    }
-    [void](Export-WindowsImage @ExportInstall)
+    $ExportInstall = ('/Export-Image /SourceImageFile:"{0}" /All /DestinationImageFile:"{1}" /Compress:Max /CheckIntegrity /Quiet' -f $InstallWim, "$($WorkFolder)\install.wim")
+    $RunExport = Start-Process -FilePath DISM -ArgumentList $ExportInstall -WindowStyle Hidden -Wait -PassThru
 }
 Catch
 {
-    Out-Log -Error $ErrorEvent -ErrorRecord $Error[0]
-    Exit-Script
-    Break
+    Out-Log -Error ('Rebuild and export failed with error code "{0}"' -f $($RunExport.ExitCode))
+    If (Test-Path -Path "$($WorkFolder)\install.wim") { Remove-Item -Path "$($WorkFolder)\install.wim" -Force -ErrorAction SilentlyContinue }
+    Move-Item -Path $InstallWim -Destination $WorkFolder -Force -ErrorAction SilentlyContinue
 }
 
 If ($ISOIsExported)
@@ -2515,12 +2509,12 @@ If ($ISOIsExported)
             $ISOLabel = $($WimInfo.Name)
             $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
             $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
-            $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"${ISOLabel}`"", "`"${ISOMedia}`"", "`"${ISOPath}`"")
+            $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"$($ISOLabel)`"", "`"$($ISOMedia)`"", "`"$($ISOPath)`"")
             Try
             {
                 $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
                 Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-                $Run = Start-Process -FilePath "$($OSCDIMG)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
+                $Run = Start-Process -FilePath "$($OSCDIMG)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
                 $ISOIsCreated = $true
             }
             Catch
