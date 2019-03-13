@@ -2442,7 +2442,7 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting the Image."
     Out-Log -Info "Rebuilding and Exporting the Image."
-    $ExportInstall = ('/Export-Image /SourceImageFile:"{0}" /All /DestinationImageFile:"{1}" /Compress:Max /CheckIntegrity /Quiet' -f $InstallWim, "$($WorkFolder)\install.wim")
+    $ExportInstall = ('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Max /CheckIntegrity /Quiet' -f $InstallWim, $ImageIndex, "$($WorkFolder)\install.wim")
     $RunExport = Start-Process -FilePath DISM -ArgumentList $ExportInstall -WindowStyle Hidden -Wait -PassThru
 }
 Catch
