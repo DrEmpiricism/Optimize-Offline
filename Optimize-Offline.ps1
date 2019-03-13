@@ -1475,7 +1475,7 @@ If ($DaRT.IsPresent)
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
-'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Encoding UTF8 -Force -ErrorAction Stop
+'@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
                 If (Test-Path -LiteralPath "$BootMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$BootMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountBootImage = @{
                     Path             = $BootMount
@@ -1539,7 +1539,7 @@ If ($DaRT.IsPresent)
 %WINDIR%\System32\wpeinit.exe
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
-'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Encoding UTF8 -Force -ErrorAction Stop
+'@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force -ErrorAction Stop
                 If (Test-Path -LiteralPath "$RecoveryMount\`$Recycle.Bin") { Remove-Item -LiteralPath "$RecoveryMount\`$Recycle.Bin" -Recurse -Force -ErrorAction SilentlyContinue }
                 $DismountRecoveryImage = @{
                     Path             = $RecoveryMount
