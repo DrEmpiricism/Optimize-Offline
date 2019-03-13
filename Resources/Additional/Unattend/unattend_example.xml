@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="specialize">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <InputLocale>en-US</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UserLocale>en-US</UserLocale>
+        </component>
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
+            <TimeZone>Eastern Standard Time</TimeZone>
+            <Themes>
+                <DesktopBackground>%WINDIR%\Web\Wallpaper\Windows 10 HD\DefaultHD.jpg</DesktopBackground>
+                <DefaultThemesOff>false</DefaultThemesOff>
+                <ThemeName>Windows 10 HD</ThemeName>
+                <UWPAppsUseLightTheme>false</UWPAppsUseLightTheme>
+                <WindowColor>0xc44c4a48</WindowColor>
+            </Themes>
+            <OEMInformation>
+                <Logo>%WINDIR%\System32\oobe\info\logo\WIN10_BADGE.bmp</Logo>
+                <HelpCustomized>false</HelpCustomized>
+            </OEMInformation>
+            <ComputerName>TEST-VM</ComputerName>
+        </component>
+        <component name="Microsoft-Windows-IE-InternetExplorer" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <SearchScopes>
+                <Scope wcm:action="add">
+                    <FaviconURL>http://www.google.com/favicon.ico</FaviconURL>
+                    <ScopeDefault>true</ScopeDefault>
+                    <ScopeDisplayName>Google</ScopeDisplayName>
+                    <ScopeKey>Search1</ScopeKey>
+                    <ScopeUrl>http://www.google.com/search?q={searchTerms}&amp;amp;amp;amp;sourceid=ie7&amp;amp;amp;amp;rls=com.microsoft:{language}:{referrer:source}&amp;amp;amp;amp;ie={inputEncoding?}&amp;amp;amp;amp;oe={outputEncoding?}</ScopeUrl>
+                    <SuggestionsURL>http://clients5.google.com/complete/search?q={searchTerms}&amp;amp;amp;client=ie8&amp;amp;amp;mw={ie:maxWidth}&amp;amp;amp;sh={ie:sectionHeight}&amp;amp;amp;rh={ie:rowHeight}&amp;amp;amp;inputencoding={inputEncoding}&amp;amp;amp;outputencoding={outputEncoding}</SuggestionsURL>
+                </Scope>
+            </SearchScopes>
+            <BlockPopups>yes</BlockPopups>
+            <CompanyName>Omnic Tech</CompanyName>
+            <DisableAccelerators>true</DisableAccelerators>
+            <DisableDataExecutionPrevention>false</DisableDataExecutionPrevention>
+            <DisableFirstRunWizard>true</DisableFirstRunWizard>
+            <DisableOOBAccelerators>true</DisableOOBAccelerators>
+            <Home_Page>http://www.google.com</Home_Page>
+            <IntranetCompatibilityMode>false</IntranetCompatibilityMode>
+        </component>
+    </settings>
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <InputLocale>en-US</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UserLocale>en-US</UserLocale>
+        </component>
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <OOBE>
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+                <UnattendEnableRetailDemo>false</UnattendEnableRetailDemo>
+                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+                <ProtectYourPC>3</ProtectYourPC>
+                <HideEULAPage>true</HideEULAPage>
+            </OOBE>
+            <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
+            <TimeZone>Eastern Standard Time</TimeZone>
+            <Themes>
+                <DefaultThemesOff>false</DefaultThemesOff>
+                <DesktopBackground>%WINDIR%\Web\Wallpaper\Windows 10 HD\DefaultHD.jpg</DesktopBackground>
+                <ThemeName>Windows 10 HD</ThemeName>
+                <UWPAppsUseLightTheme>false</UWPAppsUseLightTheme>
+                <WindowColor>0xc44c4a48</WindowColor>
+            </Themes>
+            <OEMInformation>
+                <HelpCustomized>false</HelpCustomized>
+                <Logo>%WINDIR%\System32\oobe\info\logo\WIN10_BADGE.bmp</Logo>
+            </OEMInformation>
+        </component>
+    </settings>
+    <settings pass="windowsPE">
+        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <ComplianceCheck>
+                <DisplayReport>OnError</DisplayReport>
+            </ComplianceCheck>
+            <Diagnostics>
+                <OptIn>false</OptIn>
+            </Diagnostics>
+            <DiskConfiguration>
+                <WillShowUI>OnError</WillShowUI>
+                <Disk wcm:action="add">
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Size>100</Size>
+                            <Type>EFI</Type>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>2</Order>
+                            <Type>MSR</Type>
+                            <Size>128</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>3</Order>
+                            <Type>Primary</Type>
+                            <Size>450</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Extend>true</Extend>
+                            <Order>4</Order>
+                            <Type>Primary</Type>
+                        </CreatePartition>
+                    </CreatePartitions>
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Format>FAT32</Format>
+                            <Label>System</Label>
+                            <Order>1</Order>
+                            <PartitionID>1</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>2</Order>
+                            <PartitionID>2</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Format>NTFS</Format>
+                            <Label>WinRE</Label>
+                            <Order>3</Order>
+                            <PartitionID>3</PartitionID>
+                            <TypeID>de94bba4-06d1-4d40-a16a-bfd50179d6ac</TypeID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Format>NTFS</Format>
+                            <Label>WinOS</Label>
+                            <Letter>C</Letter>
+                            <Order>4</Order>
+                            <PartitionID>4</PartitionID>
+                        </ModifyPartition>
+                    </ModifyPartitions>
+                    <DiskID>0</DiskID>
+                    <WillWipeDisk>true</WillWipeDisk>
+                </Disk>
+            </DiskConfiguration>
+            <ImageInstall>
+                <OSImage>
+                    <InstallFrom>
+                        <MetaData wcm:action="add">
+                            <Key>/IMAGE/NAME</Key>
+                            <Value>Windows 10 Pro for Workstations</Value>
+                        </MetaData>
+                    </InstallFrom>
+                    <InstallTo>
+                        <DiskID>0</DiskID>
+                        <PartitionID>4</PartitionID>
+                    </InstallTo>
+                    <InstallToAvailablePartition>false</InstallToAvailablePartition>
+                    <WillShowUI>OnError</WillShowUI>
+                </OSImage>
+            </ImageInstall>
+            <UserData>
+                <ProductKey>
+                    <Key>XXXXX-XXXXX-XXXXX-XXXXX-XXXXX</Key>
+                    <WillShowUI>OnError</WillShowUI>
+                </ProductKey>
+                <AcceptEula>true</AcceptEula>
+                <Organization>ACME Inc.</Organization>
+                <FullName>Anon Tester</FullName>
+            </UserData>
+            <EnableFirewall>true</EnableFirewall>
+            <EnableNetwork>true</EnableNetwork>
+        </component>
+    </settings>
+</unattend>
