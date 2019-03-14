@@ -11,30 +11,34 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
 - Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
 - Allows for the offline removal of Provisioned Application Packages, Windows OnDemand Packages and Windows Features.
-- Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store and Microsoft Edge.
+- Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Setup content, Data Deduplication and more.
 
 ## Script disclaimer ##
 
 - It is the responsibility of the end-user to be aware of what each parameter and switch does.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.  The best recourse for errors is to post them - and any log files from the script - in the 'Issues' section.
+- Help will not be given to users who attempt to optimize unsupported builds.
 
 ## About the -Registry switch ##
 
-The -Registry parameter applies an array of entries and values to the image's registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
-The script only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported.
-A few of the switch settings:
+The -Registry switch applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
+The script only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Conversely, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
+
+A short list of some of the optimizations include:
 
 - Completely disables Cortana without removing the default search feature.
 - Disables a significant amount of telemetry, logging, tracking, monitoring and background feedback submission.
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
-- Disables non-explicit application and system sensor access.
+- Disables non-explicit application and system location sensor access.
 - Disables error reporting and automatic syncronization.
 - Prevents multiple default Microsoft account requirements.
 - Disables Cortana's intrusiveness during a device setup during the OOBE component pass.
+- Disables the automatic creation of tabs and icons for Microsoft Edge.
+- Disables intrusive Microsoft feedback and notification queries.
+- Disables cross-device pairing without the use of a PIN or password.
 - Cleans-up the default Context Menu options and integrates custom options.
-- Increases device security.
 
 ## About the -Additional switch ##
 
@@ -44,6 +48,8 @@ Within the '\Resources\Additional' directory are four folders: 'Logo', 'Setup', 
 All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', scripts are uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
 
 All content can be either folders or directories themselves, or individual files. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory. Optimize-Offline will not just copy all content over haphazardly and create a massive mess of files or completely omit a specific file structure.
+
+**Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
 
 ## unattend.xml Answer File ##
 
@@ -140,6 +146,5 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT
+- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional
 - .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
-- etc.
