@@ -1,5 +1,15 @@
 # Previous Version Log #
 
+## Build 3.2.4.1 (03-13-2019) ##
+
+- Improved and expanded the Additional directory's structure (located in '\Resources\Additional') and can now be enabled using the new -Additional switch.
+- Changed the method used to rebuild and export WIM files to legacy DISM as it is significantly faster than PowerShell's DISM cmdlet.
+- Expanded, modified and removed legacy code and replaced it with updated code.
+- Added a check for regular Windows 10 Enterprise for various telemetry features to the already current Window 10 Enterprise LTSC 2019 checks.
+- Added shorter alias' for certain switches (i.e. -Calc can be used in place of -Win32Calc; -Store can be used in place of -WindowsStore, etc.) You can view all of them in Optimize-Offline's information header.
+- A custom Default Apps Association file is automatically imported - '\Resources\CustomAppAssociations.xml'
+- Additional registry value and code changes.
+
 ## Build 3.2.4.0 (02-27-2019) ##
 
 - Optimize-Offline now checks if the install.wim contains more than one Windows 10 Edition (multi-index). If it does, a gridview list will output allowing for the selection of the Windows 10 Edition to optimize. Likewise, the -Index parameter has been removed and is no longer required when calling Optimize-Offline.
