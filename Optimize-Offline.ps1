@@ -77,8 +77,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.4
-		Last updated:	03/23/2019
+		Version:        3.2.4.5
+		Last updated:	03/26/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -133,7 +133,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.4'
+$ScriptVersion = '3.2.4.5'
 $ErrorEvent = 'Error event logged. Terminating process'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
@@ -209,53 +209,55 @@ Function New-OfflineDirectory
         [string]$Directory
     )
 	
-    If ($Directory.Equals('Scratch'))
+    Switch ($Directory)
     {
-        $ScratchDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ScratchOffline'))
-        $ScratchDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ScratchDirectory) -Force -ErrorAction SilentlyContinue
-        $ScratchDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('Image'))
-    {
-        $ImageDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ImageOffline'))
-        $ImageDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ImageDirectory) -Force -ErrorAction SilentlyContinue
-        $ImageDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('Work'))
-    {
-        $WorkDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'WorkOffline'))
-        $WorkDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $WorkDirectory) -Force -ErrorAction SilentlyContinue
-        $WorkDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('InstallMount'))
-    {
-        $InstallMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountInstallOffline'))
-        $InstallMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $InstallMountDirectory) -Force -ErrorAction SilentlyContinue
-        $InstallMountDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('BootMount'))
-    {
-        $BootMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountBootOffline'))
-        $BootMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $BootMountDirectory) -Force -ErrorAction SilentlyContinue
-        $BootMountDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('RecoveryMount'))
-    {
-        $RecoveryMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountRecoveryOffline'))
-        $RecoveryMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $RecoveryMountDirectory) -Force -ErrorAction SilentlyContinue
-        $RecoveryMountDirectory.FullName
-    }
-    ElseIf ($Directory.Equals('Save'))
-    {
-        $SaveDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
-        $SaveDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
-        $SaveDirectory.FullName
+        'Scratch'
+        {
+            $ScratchDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ScratchOffline'))
+            $ScratchDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ScratchDirectory) -Force -ErrorAction SilentlyContinue
+            $ScratchDirectory.FullName
+        }
+        'Image'
+        {
+            $ImageDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ImageOffline'))
+            $ImageDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ImageDirectory) -Force -ErrorAction SilentlyContinue
+            $ImageDirectory.FullName
+        }
+        'Work'
+        {
+            $WorkDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'WorkOffline'))
+            $WorkDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $WorkDirectory) -Force -ErrorAction SilentlyContinue
+            $WorkDirectory.FullName
+        }
+        'InstallMount'
+        {
+            $InstallMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountInstallOffline'))
+            $InstallMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $InstallMountDirectory) -Force -ErrorAction SilentlyContinue
+            $InstallMountDirectory.FullName
+        }
+        'BootMount'
+        {
+            $BootMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountBootOffline'))
+            $BootMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $BootMountDirectory) -Force -ErrorAction SilentlyContinue
+            $BootMountDirectory.FullName
+        }
+        'RecoveryMount'
+        {
+            $RecoveryMountDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountRecoveryOffline'))
+            $RecoveryMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $RecoveryMountDirectory) -Force -ErrorAction SilentlyContinue
+            $RecoveryMountDirectory.FullName
+        }
+        'Save'
+        {
+            $SaveDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
+            $SaveDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
+            $SaveDirectory.FullName
+        }
     }
 }
 
 Function Get-OfflineHives
 {
-    [CmdletBinding()]
     Param
     (
         [Parameter(Mandatory = $true)]
@@ -263,24 +265,24 @@ Function Get-OfflineHives
         [string]$Process
     )
 	
-    If ($Process.Equals('Load'))
+    Switch ($Process)
     {
-        @("LOAD HKLM\WIM_HKLM_SOFTWARE `"$MountFolder\Windows\System32\config\software`"", "LOAD HKLM\WIM_HKLM_SYSTEM `"$MountFolder\Windows\System32\config\system`"", "LOAD HKLM\WIM_HKCU `"$MountFolder\Users\Default\NTUSER.DAT`"") | ForEach { 
-            Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait 
+        'Load'
+        {
+            @(('LOAD HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"),
+                ('LOAD HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"),
+                ('LOAD HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT")) | ForEach { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait }
         }
-    }
-    ElseIf ($Process.Equals('Unload'))
-    {
-        [System.GC]::Collect()
-        @('UNLOAD HKLM\WIM_HKLM_SOFTWARE', 'UNLOAD HKLM\WIM_HKLM_SYSTEM', 'UNLOAD HKLM\WIM_HKCU') | ForEach { 
-            Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait 
+        'Unload'
+        {
+            [System.GC]::Collect()
+            @('UNLOAD HKLM\WIM_HKLM_SOFTWARE', 'UNLOAD HKLM\WIM_HKLM_SYSTEM', 'UNLOAD HKLM\WIM_HKCU') | ForEach { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait }
         }
-    }
-    ElseIf ($Process.Equals('Test'))
-    {
-        @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach { 
-            If (Test-Path -Path $($_)) { $HivesLoaded = $true } } 
-        If ($HivesLoaded) { Return $HivesLoaded }
+        'Test'
+        {
+            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach { If (Test-Path -Path $($_)) { $HivesLoaded = $true } }
+            If ($HivesLoaded) { Return $HivesLoaded }
+        }
     }
 }
 
@@ -315,7 +317,7 @@ Function Exit-Script
     If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    Add-Content -Path $ScriptLog -Value "Optimizations finalized at [$(Get-Date -Format 'MM.dd.yyyy HH:mm:ss')]"
+    Add-Content -Path $ScriptLog -Value "Optimizations failed at [$(Get-Date -Format 'MM.dd.yyyy HH:mm:ss')]"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
     If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
@@ -344,7 +346,7 @@ If (Get-WindowsImage -Mounted)
     Write-Host "Performing clean-up of current mount path." -ForegroundColor Cyan
     $MountFolder = (Get-WindowsImage -Mounted).MountPath
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
-    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR WIM_') -ErrorAction SilentlyContinue
+    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR WIM') -ErrorAction SilentlyContinue
     If ($QueryHives) { $QueryHives | ForEach { Start-Process -FilePath REG -ArgumentList ('UNLOAD "{0}"' -f $($_)) -WindowStyle Hidden -Wait } }
     [void](Dismount-WindowsImage -Path $($MountFolder) -Discard -ErrorAction SilentlyContinue)
     [void](Clear-WindowsCorruptMountPoint)
@@ -395,7 +397,7 @@ If ($ImagePath.Extension -eq '.ISO')
                 $ISOExport = $ISOMedia + $Item.FullName.Replace($ISOMount, $null)
                 Copy-Item -Path $($Item.FullName) -Destination $ISOExport -ErrorAction Stop 
             }
-            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse | Move-Item -Destination $ImageFolder
+            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse | Copy-Item -Destination $ImageFolder -ErrorAction Stop
             $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim | Select -ExpandProperty FullName
             $BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select -ExpandProperty FullName
             @($InstallWim, $BootWim) | ForEach { Set-ItemProperty -Path $($_) -Name IsReadOnly -Value $false }
@@ -422,10 +424,19 @@ ElseIf ($ImagePath.Extension -eq '.WIM')
     }
     Else
     {
-        Write-Host ('Copying WIM from "{0}"' -f $($ImagePath.DirectoryName)) -ForegroundColor Cyan
-        Copy-Item -Path $($ImagePath.FullName) -Destination $ImageFolder
-        $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim | Select -ExpandProperty FullName
-        Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false
+        Try
+        {
+            Write-Host ('Copying WIM from "{0}"' -f $($ImagePath.DirectoryName)) -ForegroundColor Cyan
+            Copy-Item -Path $($ImagePath.FullName) -Destination $ImageFolder -ErrorAction Stop
+            $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim | Select -ExpandProperty FullName
+            Set-ItemProperty -LiteralPath $InstallWim -Name IsReadOnly -Value $false
+        }
+        Catch
+        {
+            Write-Warning ('Unable to copy WIM from "{0}"' -f $($ImagePath.DirectoryName))
+            Remove-Item -Path $ParentDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            Break
+        }
     }
 }
 
@@ -1166,13 +1177,13 @@ If ($Win32Calc.IsPresent)
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -ErrorAction Stop
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
                     Get-OfflineHives -Process Unload
                 }
                 Catch
@@ -1199,9 +1210,9 @@ If ($Win32Calc.IsPresent)
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -ErrorAction Stop
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -ErrorAction Stop
                     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction Stop
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
                     Get-OfflineHives -Process Unload
                     $CalcLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk"
                     $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
@@ -1236,7 +1247,7 @@ D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;
                     $SSDL.Insert(0, 'win32calc.exe.mui') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
                     Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f "$($MountFolder)\Windows\System32\en-US", "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait
                     Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f "$($MountFolder)\Windows\SysWOW64\en-US", "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait
-                    Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force
+                    Remove-Item -Path "$($WorkFolder)\SSDL.ini" -Force -ErrorAction SilentlyContinue
                     $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')).Translate([System.Security.Principal.NTAccount]))
                     @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach {
                         $ACL = Get-Acl -Path $($_)
@@ -1329,27 +1340,27 @@ If ($Dedup.IsPresent)
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-DCOM-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-SMB-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-DCOM-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-SMB-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" `
                 -Name "FileServer-ServerManager-Winmgmt-TCP-In" `
                 -Value "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" `
-                -Type String -ErrorAction Stop
+                -Type String -ErrorAction SilentlyContinue
             Get-OfflineHives -Process Unload
         }
         Catch
@@ -2332,7 +2343,7 @@ Try
     </StartLayoutCollection>
   </DefaultLayoutOverride>
 </LayoutModificationTemplate>
-'@ | Set-Content -Path $LayoutFile -Encoding UTF8 -Force
+'@ | Out-File -FilePath $LayoutFile -Encoding UTF8 -Force -ErrorAction Stop
 }
 Catch
 {
@@ -2351,9 +2362,9 @@ If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true)
     Out-Log -Info "Updating the Default Hosts File."
     $HostsFile = "$MountFolder\Windows\System32\drivers\etc\hosts"
     $HostsUpdate = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-    Rename-Item -Path $HostsFile -NewName hosts.bak -Force
+    Rename-Item -Path $HostsFile -NewName hosts.bak -Force -ErrorAction SilentlyContinue
     (New-Object System.Net.WebClient).DownloadFile($HostsUpdate, $HostsFile)
-    (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force
+    (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 }
 
 Try
@@ -2365,22 +2376,22 @@ Try
         If (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml")
         {
             "$MountFolder\Windows\Panther" | New-Container
-            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -ErrorAction Stop
+            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -Force -ErrorAction Stop
         }
         If (Test-Path -Path "$AdditionalPath\Setup\*")
         {
             "$MountFolder\Windows\Setup\Scripts" | New-Container
-            Get-ChildItem -Path "$AdditionalPath\Setup" -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse -ErrorAction Stop
+            Get-ChildItem -Path "$AdditionalPath\Setup" -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Setup\Scripts" -Recurse -Force -ErrorAction Stop
         }
         If (Test-Path -Path "$AdditionalPath\Wallpaper\*")
         {
-            Get-ChildItem -Path "$AdditionalPath\Wallpaper" -Directory -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -ErrorAction Stop
-            Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -ErrorAction Stop
+            Get-ChildItem -Path "$AdditionalPath\Wallpaper" -Directory -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -Recurse -Force -ErrorAction Stop
+            Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File -ErrorAction SilentlyContinue | Copy-Item -Destination "$MountFolder\Windows\Web\Wallpaper" -Force -ErrorAction Stop
         }
         If (Test-Path -Path "$AdditionalPath\Logo\*.bmp")
         {
             "$MountFolder\Windows\System32\oobe\info\logo" | New-Container
-            Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -ErrorAction Stop
+            Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse  -Force -ErrorAction Stop
         }
     }
 }
@@ -2524,17 +2535,15 @@ If ($ISOMedia)
             Get-ItemProperty -LiteralPath $($_) -Name KitsRoot10 -ErrorAction Ignore | Select -ExpandProperty KitsRoot10 | Where { $($_) }
         }
         $OSCDIMG = Join-Path -Path $ADK_ROOT -ChildPath ('Assessment and Deployment Kit' + '\' + 'Deployment Tools' + '\' + $Env:PROCESSOR_ARCHITECTURE + '\' + 'Oscdimg')
-        $OSCDIMG = Join-Path -Path $OSCDIMG -ChildPath oscdimg.exe
-        If (Test-Path -Path $OSCDIMG)
+        If (Test-Path -Path "$($OSCDIMG)\oscdimg.exe")
         {
-            $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
-            $ISOLabel = $($WimInfo.Name)
             $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
             $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
-            $OscdimgArgs = @("-bootdata:${BootData}", '-u2', '-udfver102', "-l`"${ISOLabel}`"", "`"${ISOMedia}`"", "`"${ISOPath}`"")
+            $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
+            $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
             $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
             Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-            $RunOscdimg = Start-Process -FilePath $OSCDIMG -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
+            $RunOscdimg = Start-Process -FilePath "$($OSCDIMG)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
             If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
             Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
         }
