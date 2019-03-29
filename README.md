@@ -53,7 +53,7 @@ All content can be either folders or directories themselves, or individual files
 
 ## unattend.xml Answer File ##
 
-When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that begain with Windows Vista.
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista.
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
