@@ -688,7 +688,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     }
 }
 
-If ($null -ne $RemovedAppxPackages -and (Test-Path -Path $AppAssocListPath))
+If ($IsLTSC -or $null -ne $RemovedAppxPackages -and (Test-Path -Path $AppAssocListPath))
 {
     $DefaultAppAssociations = Join-Path -Path $WorkFolder -ChildPath DefaultAppAssociations.xml
     $RunExport = Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Export-DefaultAppAssociations:"{1}"' -f $MountFolder, $DefaultAppAssociations) -WindowStyle Hidden -Wait -PassThru
