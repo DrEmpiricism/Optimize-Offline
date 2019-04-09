@@ -697,7 +697,7 @@ If ($null -ne $RemovedAppxPackages -and (Test-Path -Path $AppAssocListPath))
         $Host.UI.RawUI.WindowTitle = "Updating Default App Associations."
         Out-Log -Info "Updating Default App Associations."
         $RunImport = Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait -PassThru
-        If ($RunImport -ne 0)
+        If ($RunImport.ExitCode -ne 0)
         {
             Out-Log -Error "Failed to Update Default App Associations."
             Start-Sleep 3
