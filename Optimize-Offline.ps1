@@ -688,21 +688,13 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     }
 }
 
-If ($IsLTSC -or $null -ne $RemovedAppxPackages -and (Test-Path -Path $AppAssocListPath))
+If ($RemovedAppxPackages -or $IsLTSC -and (Test-Path -Path $AppAssocListPath))
 {
+    $Host.UI.RawUI.WindowTitle = "Updating Default App Associations."
+    Out-Log -Info "Updating Default App Associations."
     $DefaultAppAssociations = Join-Path -Path $WorkFolder -ChildPath DefaultAppAssociations.xml
-    $RunExport = Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Export-DefaultAppAssociations:"{1}"' -f $MountFolder, $DefaultAppAssociations) -WindowStyle Hidden -Wait -PassThru
-    If ($RunExport.ExitCode -eq 0)
-    {
-        $Host.UI.RawUI.WindowTitle = "Updating Default App Associations."
-        Out-Log -Info "Updating Default App Associations."
-        $RunImport = Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait -PassThru
-        If ($RunImport.ExitCode -ne 0)
-        {
-            Out-Log -Error "Failed to Update Default App Associations."
-            Start-Sleep 3
-        }
-    }
+    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Export-DefaultAppAssociations:"{1}"' -f $MountFolder, $DefaultAppAssociations) -WindowStyle Hidden -Wait
+    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait
 }
 
 If ($SystemApps.IsPresent)
