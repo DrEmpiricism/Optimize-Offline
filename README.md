@@ -32,12 +32,10 @@ A short list of some of the optimizations include:
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system location sensor access.
-- Disables error reporting and automatic syncronization.
-- Prevents multiple default Microsoft account requirements.
-- Disables Cortana's intrusiveness during a device setup during the OOBE component pass.
+- Disables background error reporting and automatic syncronization to Microsoft.
+- Disables Cortana's intrusiveness during the OOBE component pass.
 - Disables the automatic creation of tabs and icons for Microsoft Edge.
 - Disables intrusive Microsoft feedback and notification queries.
-- Disables cross-device pairing without the use of a PIN or password.
 - Cleans-up the default Context Menu options and integrates custom options.
 
 ## About the -Additional switch ##
@@ -77,7 +75,7 @@ This method is safer than force removing the System Application using its compon
 
 This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, MicrosoftEdgeDevelopmentTools, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used (see below). Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
 
-**ShellExperienceHost should never be removed**.
+**ShellExperienceHost should never be removed**
 
 ## Provisioned Application Packages (Metro Apps) removal ##
 
