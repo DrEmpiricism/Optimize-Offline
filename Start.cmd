@@ -2,7 +2,7 @@
 CD /D "%~dp0"
 
 REM After setting the appropriate variables and switches, run this script as an administrator to quickly call Optimize-Offline.
-REM A list of all available variables and switches can be found on the main GitHub page.
+REM A list of all available variables and switches can be found on Optimize-Offline's GitHub Repository.
 
 REM Set the Optimize-Offline Source Path variable.
 SET "SourcePath=X:\PathToImage"
@@ -16,7 +16,7 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Running as Administrator.
     TIMEOUT /T 2 >NUL
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -Registry -Additional -ISO
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Optimize-Offline.ps1 -ImagePath "%SourcePath%" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -Registry -NetFx3 -Additional -ISO
 )
 PAUSE
 EXIT
