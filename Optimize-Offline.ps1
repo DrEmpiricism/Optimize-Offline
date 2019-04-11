@@ -77,8 +77,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.6
-		Last updated:	04/09/2019
+		Version:        3.2.4.7
+		Last updated:	04/11/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -133,7 +133,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.6'
+$ScriptVersion = '3.2.4.7'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -142,7 +142,7 @@ $EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge
 $NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath "Resources\NetFx3"
 $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
 $AppxWhiteListPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxWhiteList.xml"
-$AppAssocListPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\CustomAppAssociations.xml"
+$CustomAppAssocPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\CustomAppAssociations.xml"
 $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
 #endregion Script Variables
 
@@ -216,8 +216,8 @@ Function Exit-Script
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log, *.xml -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath (Join-Path -Path $SaveFolder -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest -ErrorAction SilentlyContinue)
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Host ('Any logs can be viewed in "{0}"' -f $SaveFolder)
     Start-Sleep 5
     Exit
@@ -373,14 +373,16 @@ Function Remove-Container
 
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
-    Write-Warning "Elevation is required to process optimizations. Relaunch $ScriptName as an administrator."; Break
+    Write-Warning "Elevation is required to process optimizations. Relaunch $ScriptName as an administrator."
+    Break
 }
 Else
 {
     $OSCaption = Get-WmiObject Win32_OperatingSystem | Select-Object -ExpandProperty Caption
     If (($OSCaption -notlike "Microsoft Windows 10*") -and ($OSCaption -notlike "Microsoft Windows Server 2016*"))
     {
-        Write-Warning "Offline optimizations of Windows 10 should be performed in a Windows 10 or Windows Server 2016 environment."; Break
+        Write-Warning "Offline optimizations of Windows 10 should be performed in a Windows 10 or Windows Server 2016 environment."
+        Break
     }
 }
 
@@ -403,7 +405,7 @@ Try
     $Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
-    If ($ParentDirectory) { $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force }
+    If ($ParentDirectory) { $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force -ErrorAction Stop }
     [void]($MountFolder = New-OfflineDirectory -Directory InstallMount)
     [void]($ImageFolder = New-OfflineDirectory -Directory Image)
     [void]($WorkFolder = New-OfflineDirectory -Directory Work)
@@ -413,8 +415,7 @@ Try
 }
 Catch
 {
-    Write-Error $($_.Exception.Message)
-    $ParentDirectory | Remove-Container
+    Write-Warning "Faled to create temporary directory structure. Ensure $ScriptName has a writeable root path."
     $ParentDirectory | Remove-Container
     Break
 }
@@ -440,7 +441,7 @@ If ($ImagePath.Extension -eq '.ISO')
             ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
             {
                 $ISOExport = $ISOMedia + $Item.FullName.Replace($ISOMount, $null)
-                Copy-Item -Path $($Item.FullName) -Destination $ISOExport -ErrorAction Stop 
+                Copy-Item -Path $($Item.FullName) -Destination $ISOExport -ErrorAction Stop
             }
             Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $ImageFolder -ErrorAction Stop
             $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim -ErrorAction Stop | Select-Object -ExpandProperty FullName
@@ -633,8 +634,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                         [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
                         [void]$RemovedAppxPackages.Add($_.Split('_')[0])
                     }
-                }
-                Break
+                }; Break
             }
             'All'
             {
@@ -649,8 +649,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                     }
                     [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
                     [void]$RemovedAppxPackages.Add($_.DisplayName)
-                }
-                Break
+                }; Break
             }
             'Whitelist'
             {
@@ -672,8 +671,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                             [void]$RemovedAppxPackages.Add($_.DisplayName)
                         }
                     }
-                }
-                Break
+                }; Break
             }
         }
     }
@@ -688,13 +686,11 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     }
 }
 
-If ($RemovedAppxPackages -or $IsLTSC -and (Test-Path -Path $AppAssocListPath))
+If ($MetroApps -or $IsLTSC -and (Test-Path -Path $CustomAppAssocPath))
 {
     $Host.UI.RawUI.WindowTitle = "Updating Default App Associations."
     Out-Log -Info "Updating Default App Associations."
-    $DefaultAppAssociations = Join-Path -Path $WorkFolder -ChildPath DefaultAppAssociations.xml
-    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Export-DefaultAppAssociations:"{1}"' -f $MountFolder, $DefaultAppAssociations) -WindowStyle Hidden -Wait
-    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait
+    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $CustomAppAssocPath) -WindowStyle Hidden -Wait
 }
 
 If ($SystemApps.IsPresent)
@@ -792,8 +788,9 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray"
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows Security Health\State"
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
@@ -814,6 +811,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray" -Name "HideSystray" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value "hide:windowsdefender" -Type String -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "SmartScreenEnabled" -Value "Off" -Type String -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String -ErrorAction SilentlyContinue
@@ -1722,8 +1720,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling System Telemetry and Data Collecting." >> $RegLog
     #****************************************************************
-    If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 }
-    Else { $TelemetryLevel = 1 }
+    If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection"
@@ -1849,11 +1846,11 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling System Advertisements and Windows Spotlight." >> $RegLog
     #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection"
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableSoftLanding" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableThirdPartySuggestions" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "DoNotShowFeedbackNotifications" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableSoftLanding" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableThirdPartySuggestions" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "DoNotShowFeedbackNotifications" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling Toast Notifications." >> $RegLog
     #****************************************************************
@@ -1869,14 +1866,12 @@ If ($Registry.IsPresent)
     Write-Output "Disabling Automatic Download of Content, Ads and Suggestions." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-    @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
-        "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContent-202914Enabled",
-        "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
-        "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled",
-        "SubscribedContent-338381Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled",
-        "SubscribedContent-353696Enabled", "SubscribedContent-353698Enabled") | ForEach-Object {
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $_ -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    }
+    @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RemediationRequired",
+        "RotatingLockScreenEnabled", "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
+        "SubscribedContent-202914Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled",
+        "SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled",
+        "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled",
+        "SubscribedContent-338393Enabled", "SubscribedContent-353698Enabled") | ForEach-Object { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $($_) -Value 0 -Type DWord -ErrorAction SilentlyContinue }
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent"
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
@@ -1898,13 +1893,13 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling Advertising ID for Apps." >> $RegLog
     #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo"
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo"
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling WSUS Advertising and Metadata Collection." >> $RegLog
     #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling WSUS Featured Ads, Auto-Update and Auto-Reboot." >> $RegLog
     #****************************************************************
@@ -1913,18 +1908,14 @@ If ($Registry.IsPresent)
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Disabling Microsoft Account Sign-in Assistant." >> $RegLog
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "NoConnectedUser" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************
     If (!$IsLTSC -or $WimInfo.Name -notlike "*Enterprise*")
     {
         #****************************************************************
         Write-Output "Disabling Microsoft OneDrive Automatic Setup and Startup." >> $RegLog
         #****************************************************************
         Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction SilentlyContinue
-        @("HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}", "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") | ForEach-Object { Remove-Container -Path $($_) }
+        @("HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}", 
+            "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") | ForEach-Object { Remove-Container -Path $($_) }
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive"
@@ -2146,16 +2137,11 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Removing 'Share' and 'Give Access To' from the Context Menu." >> $RegLog
     #****************************************************************
-    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\CopyHookHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\UserLibraryFolder\shellex\ContextMenuHandlers\Sharing") | ForEach-Object { Remove-Container -Path $($_) }
+    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\CopyHookHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\UserLibraryFolder\shellex\ContextMenuHandlers\Sharing") | ForEach-Object { Remove-Container -Path $($_) }
     #****************************************************************
     Write-Output "Removing 'Cast To Device' from the Context Menu." >> $RegLog
     #****************************************************************
@@ -2381,7 +2367,7 @@ Try
         If (Test-Path -Path "$AdditionalPath\Logo\*.bmp")
         {
             "$MountFolder\Windows\System32\oobe\info\logo" | New-Container
-            Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse  -Force -ErrorAction Stop
+            Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -Force -ErrorAction Stop
         }
     }
 }
@@ -2557,9 +2543,9 @@ Finally
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value "Optimizations finalized at [$(Get-Date -Format 'MM.dd.yyyy HH:mm:ss')]"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    Remove-Item -Path $DISMLog -Force -ErrorAction SilentlyContinue
-    If (Test-Path -Path "$Env:SystemRoot\Logs\DISM\dism.log") { Remove-Item -Path "$Env:SystemRoot\Logs\DISM\dism.log" -Force -ErrorAction SilentlyContinue }
-    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log, *.xml -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
+    Remove-Container -Path $DISMLog
+    Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
+    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath (Join-Path -Path $SaveFolder -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest -ErrorAction SilentlyContinue)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void](Clear-WindowsCorruptMountPoint)
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
