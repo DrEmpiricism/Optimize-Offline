@@ -10,14 +10,16 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
 - Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
 - Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
-- Allows for the offline removal of Provisioned Application Packages, Windows OnDemand Packages and Windows Features.
+- Allows offline removal of Provisioned Application Packages, System Applications and Windows OnDemand Packages.
+- Allows offline disabling and offline enabling of Windows Features.
 - Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Setup content, Data Deduplication and more.
+- All optimization processes are done silently and properly with proper error-handling.
 
 ## Script disclaimer ##
 
-- It is the responsibility of the end-user to be aware of what each parameter and switch does.
+- It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script may warn of an error during the optimization process that did not occur before or stop the optimization process entirely.  The best recourse for errors is to post them - and any log files from the script - in the 'Issues' section.
+- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before. The best recourse for errors is to post them - and any log files - in the 'Issues' section of this repository.
 - Help will not be given to users who attempt to optimize unsupported builds.
 
 ## About the -Registry switch ##
