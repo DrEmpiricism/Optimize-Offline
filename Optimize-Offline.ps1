@@ -9,7 +9,7 @@
 		Primary focus' are the removal of unnecessary bloat, enhanced privacy, cleaner aesthetics, increased performance and a significantly better user experience.
 	
 	.PARAMETER ImagePath
-		The full path to a Windows Installation ISO or an install WIM file.
+		The full path to a Windows Installation ISO or install.wim file.
 	
 	.PARAMETER MetroApps
 		Select = Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal.
@@ -26,28 +26,29 @@
 		Populates and outputs both a Gridview list of all enabled Windows Optional Features for selective disabling followed by all disabled Windows Optional Features for selective enabling.
 	
 	.PARAMETER WindowsStore
-		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
+		Applicable for the Windows 10 Enterprise LTSC 2019 edition.
 	
 	.PARAMETER MicrosoftEdge
-		Specific to Windows 10 Enterprise LTSC 2019 only!
 		Integrates the Microsoft Edge Browser packages into the image.
+		Applicable for the Windows 10 Enterprise LTSC 2019 edition.
 	
 	.PARAMETER Win32Calc
-		Specific to non-Windows 10 Enterprise LTSC 2019 editions only!
 		Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
+		NOT applicable for the Windows 10 Enterprise LTSC 2019.
 	
 	.PARAMETER Dedup
 		Integrates the Windows Server Data Deduplication packages into the image.
 	
 	.PARAMETER DaRT
-		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools to Windows Setup and Windows Recovery.
+		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
 	
 	.PARAMETER Drivers
 		Injects driver packages into the image.
 	
 	.PARAMETER NetFx3
 		Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 Windows Feature.
+		Applicable when a Windows Installation Media ISO image is used as the source image.
 	
 	.PARAMETER Registry
 		Integrates optimized registry values into the registry hives of the image.
@@ -58,12 +59,12 @@
 	.PARAMETER ISO
 		Creates a new bootable Windows Installation Media ISO
 		Requires the installation of the Windows ADK (Assessment and Deployment Kit).
-		Only applicable when a Windows Installation Media ISO image is used as the source image.
+		Applicable when a Windows Installation Media ISO image is used as the source image.
 	
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -NetFx3 -Drivers -ISO
 		.\Optimize-Offline.ps1 -ImagePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry -Additional
-		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -NetFx3 -DaRT
+		.\Optimize-Offline.ps1 -ImagePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -DaRT
 	
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
@@ -77,8 +78,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.7
-		Last updated:	04/11/2019
+		Version:        3.2.4.8
+		Last updated:	04/20/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -133,13 +134,12 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.7'
+$ScriptVersion = '3.2.4.8'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
 $DriverPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Drivers"
 $EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge"
-$NetFx3Path = Join-Path -Path $PSScriptRoot -ChildPath "Resources\NetFx3"
 $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
 $AppxWhiteListPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\AppxWhiteList.xml"
 $CustomAppAssocPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\CustomAppAssociations.xml"
@@ -208,7 +208,6 @@ Function Exit-Script
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
     [void](Clear-WindowsCorruptMountPoint)
-    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
     If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
@@ -216,11 +215,12 @@ Function Exit-Script
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath (Join-Path -Path $SaveFolder -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host ('Any logs can be viewed in "{0}"' -f $SaveFolder)
+    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
+    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host ('All logs saved to: "{0}"' -f "$($SaveFolder)\OptimizeLogs.zip")
     Start-Sleep 5
-    Exit
+    (Get-Process -Id $PID -ErrorAction SilentlyContinue).Kill()
 }
 
 Function New-OfflineDirectory
@@ -297,33 +297,27 @@ Function Get-OfflineHives
         [string]$Process
     )
 	
-    Try
+    Switch ($Process)
     {
-        Switch ($Process)
+        'Load'
         {
-            'Load'
-            {
-                @(('LOAD HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"),
-                    ('LOAD HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"),
-                    ('LOAD HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait -ErrorAction Stop }; Break
-            }
-            'Unload'
-            {
-                [System.GC]::Collect()
-                @('UNLOAD HKLM\WIM_HKLM_SOFTWARE', 'UNLOAD HKLM\WIM_HKLM_SYSTEM', 'UNLOAD HKLM\WIM_HKCU') | ForEach-Object { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait -ErrorAction Stop }; Break
-            }
-            'Test'
-            {
-                @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach-Object { If (Test-Path -Path $($_)) { $HivesLoaded = $true } }
-                If ($HivesLoaded) { Return $HivesLoaded }; Break
-            }
+            @(('LOAD HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"),
+                ('LOAD HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"),
+                ('LOAD HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait }
+            Break
         }
-    }
-    Catch
-    {
-        Out-Log -Error ('Failed to run registy process: {0}' -f $Process)
-        Exit-Script
-        Break
+        'Unload'
+        {
+            [System.GC]::Collect()
+            @('UNLOAD HKLM\WIM_HKLM_SOFTWARE', 'UNLOAD HKLM\WIM_HKLM_SYSTEM', 'UNLOAD HKLM\WIM_HKCU') | ForEach-Object { Start-Process -FilePath REG -ArgumentList $($_) -WindowStyle Hidden -Wait }
+            Break
+        }
+        'Test'
+        {
+            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach-Object { If (Test-Path -Path $($_)) { $HivesLoaded = $true } }
+            If ($HivesLoaded) { Return $HivesLoaded }
+            Break
+        }
     }
 }
 
@@ -340,16 +334,7 @@ Function New-Container
 	
     Process
     {
-        Try
-        {
-            If (!(Test-Path -LiteralPath $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop) }
-        }
-        Catch
-        {
-            Out-Log ('Failed to create new container: "{0}"' -f $Path)
-            Exit-Script
-            Break
-        }
+        If (!(Test-Path -LiteralPath $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction SilentlyContinue) }
     }
 }
 
@@ -390,33 +375,31 @@ If (Get-WindowsImage -Mounted)
 {
     $Host.UI.RawUI.WindowTitle = "Performing clean-up of current mount path."
     Write-Host "Performing clean-up of current mount path." -ForegroundColor Cyan
-    $MountFolder = (Get-WindowsImage -Mounted).MountPath
+    $MountPath = (Get-WindowsImage -Mounted).MountPath
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
-    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR WIM') -ErrorAction SilentlyContinue
-    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD "{0}"' -f $($_)) -WindowStyle Hidden -Wait } }
-    [void](Dismount-WindowsImage -Path $($MountFolder) -Discard -ErrorAction SilentlyContinue)
+    [void](Dismount-WindowsImage -Path $MountPath -Discard -ErrorAction SilentlyContinue)
     [void](Clear-WindowsCorruptMountPoint)
-    $MountFolder = $null
+    $MountPath = $null
     Clear-Host
 }
 
 Try
 {
     $Host.UI.RawUI.WindowTitle = "Preparing image for optimizations."
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Set-Location -Path $PSScriptRoot
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
-    If ($ParentDirectory) { $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force -ErrorAction Stop }
+    $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force -ErrorAction SilentlyContinue
     [void]($MountFolder = New-OfflineDirectory -Directory InstallMount)
     [void]($ImageFolder = New-OfflineDirectory -Directory Image)
     [void]($WorkFolder = New-OfflineDirectory -Directory Work)
     [void]($ScratchFolder = New-OfflineDirectory -Directory Scratch)
-    $Timer = New-Object System.Diagnostics.Stopwatch -ErrorAction Stop
-    $Timer.Start()
+    $Timer = New-Object System.Diagnostics.Stopwatch
 }
 Catch
 {
-    Write-Warning "Faled to create temporary directory structure. Ensure $ScriptName has a writeable root path."
-    $ParentDirectory | Remove-Container
+    Write-Warning $($_.Exception.Message)
+    If ($ParentDirectory) { $ParentDirectory | Remove-Container }
     Break
 }
 
@@ -485,6 +468,9 @@ ElseIf ($ImagePath.Extension -eq '.WIM')
         }
     }
 }
+
+If ($NetFx3.IsPresent -and $ISOMedia) { $NetFx3Path = Join-Path -Path $ISOMedia -ChildPath 'sources\sxs' }
+Else { $NetFx3 = $false }
 
 If ((Get-WindowsImage -ImagePath $InstallWim).ImageIndex -gt 1)
 {
@@ -567,9 +553,8 @@ Try
     Add-Content -Path $ScriptLog -Value "Optimizing image: `"$($WimInfo.Name)`""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value ""
-    $Error.Clear()
     Out-Log -Info "Supported Image Build: [$($WimInfo.Build)]"
-    Start-Sleep 3
+    $Timer.Start(); Start-Sleep 3; $Error.Clear()
     Out-Log -Info "Mounting $($WimInfo.Name)"
     $MountWindowsImage = @{
         ImagePath        = $InstallWim
@@ -634,7 +619,8 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                         [void](Remove-AppxProvisionedPackage @RemoveSelectAppx)
                         [void]$RemovedAppxPackages.Add($_.Split('_')[0])
                     }
-                }; Break
+                }
+                Break
             }
             'All'
             {
@@ -649,7 +635,8 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                     }
                     [void](Remove-AppxProvisionedPackage @RemoveAllAppx)
                     [void]$RemovedAppxPackages.Add($_.DisplayName)
-                }; Break
+                }
+                Break
             }
             'Whitelist'
             {
@@ -671,7 +658,8 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
                             [void]$RemovedAppxPackages.Add($_.DisplayName)
                         }
                     }
-                }; Break
+                }
+                Break
             }
         }
     }
@@ -780,6 +768,12 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         $Host.UI.RawUI.WindowTitle = "Removing Windows Defender Remnants."
         Out-Log -Info "Disabling Windows Defender Services, Drivers and SmartScreen Integration."
         Get-OfflineHives -Process Load
+        @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object {
+            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
+        }
+        Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -Force -ErrorAction SilentlyContinue
+        Remove-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger"
+        Remove-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection"
@@ -795,7 +789,6 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
         New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
-        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord -ErrorAction SilentlyContinue
@@ -823,97 +816,63 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter"
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         }
-        If ($WimInfo.Build -eq '17763')
+        If ($WimInfo.Build -ge '17763')
         {
             New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen"
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControlEnabled" -Value 1 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControl" -Value "Anywhere" -Type String -ErrorAction SilentlyContinue
         }
-        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -ErrorAction SilentlyContinue) -match "Enabled")
-        {
-            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -Force -ErrorAction SilentlyContinue
-        }
-        If ((Get-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue) -match "SecurityHealth")
-        {
-            Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -Force -ErrorAction SilentlyContinue
-        }
-        @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object {
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)")
-            {
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
-            }
-        }
-        Remove-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger"
-        @("HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger", "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger") | ForEach-Object { Remove-Container -Path $($_) }
         Get-OfflineHives -Process Unload
+        If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Windows-Defender-Default-Definitions).State -eq 'Enabled')
+        {
+            Out-Log -Info "Disabling Windows Feature: Windows-Defender-Default-Definitions"
+            [void](Disable-WindowsOptionalFeature -Path $MountFolder -FeatureName Windows-Defender-Default-Definitions -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
+        }
     }
     Catch
     {
-        Out-Log -Error "Failed to Disable Windows Defender Services, Drivers and SmartScreen Integration."
+        Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions"
         Exit-Script
     }
-    If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName Windows-Defender-Default-Definitions).State -eq 'Enabled')
-    {
-        Try
-        {
-            Out-Log -Info "Disabling Windows Feature: Windows-Defender-Default-Definitions"
-            $DisableDefenderFeature = @{
-                Path             = $MountFolder
-                FeatureName      = 'Windows-Defender-Default-Definitions'
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Disable-WindowsOptionalFeature @DisableDefenderFeature)
-        }
-        Catch
-        {
-            Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions"
-            Exit-Script
-        }
-    }
 }
 
-Try
+If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI')
 {
-    If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI')
-    {
-        $Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
-        Out-Log -Info "Disabling Xbox Services and Drivers."
-        Get-OfflineHives -Process Load
-        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR"
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR"
-        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar"
-        New-Container -Path "HKLM:\WIM_HKCU\System\GameConfigStore"
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord -ErrorAction SilentlyContinue
-        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord -ErrorAction SilentlyContinue
-        @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object {
-            If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)")
-            {
-                Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
-            }
-        }
-        Get-OfflineHives -Process Unload
+    $Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
+    Out-Log -Info "Disabling Xbox Services and Drivers."
+    Get-OfflineHives -Process Load
+    @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object {
+        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
     }
-}
-Catch
-{
-    Out-Log -Error "Failed to Disable Xbox Services and Drivers."
-    Exit-Script
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR"
+    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar"
+    New-Container -Path "HKLM:\WIM_HKCU\System\GameConfigStore"
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord -ErrorAction SilentlyContinue
+    Get-OfflineHives -Process Unload
 }
 
-If (Get-WindowsOptionalFeature -Path $MountFolder | Where-Object FeatureName -Like *SMB1* | Where-Object State -EQ Enabled)
+If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName *SMB1*).State -eq 'Enabled')
 {
-    $Host.UI.RawUI.WindowTitle = "Disabling the SMBv1 Protocol Windows Feature."
-    Out-Log -Info "Disabling the SMBv1 Protocol Windows Feature."
-    [void](Get-WindowsOptionalFeature -Path $MountFolder | Where-Object FeatureName -Like *SMB1* | Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
+    Try
+    {
+        $Host.UI.RawUI.WindowTitle = "Disabling the SMBv1 Protocol Windows Feature."
+        Out-Log -Info "Disabling the SMBv1 Protocol Windows Feature."
+        [void](Get-WindowsOptionalFeature -Path $MountFolder | Where-Object FeatureName -Like *SMB1* | Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
+    }
+    Catch
+    {
+        Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature."
+        Exit-Script
+    }
 }
 
 If ($Features.IsPresent)
@@ -1005,20 +964,20 @@ If ($WindowsStore.IsPresent -and (Test-Path -LiteralPath $StoreAppPath -Filter M
     Out-Log -Info "Integrating the Microsoft Store Application Packages."
     Try
     {
-        $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle | Select-Object -ExpandProperty FullName
+        $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle | Select-Object -ExpandProperty FullName
+        $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle | Select-Object -ExpandProperty FullName
+        $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle | Select-Object -ExpandProperty FullName
+        $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml | Select-Object -ExpandProperty FullName
+        $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml | Select-Object -ExpandProperty FullName
+        $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml | Select-Object -ExpandProperty FullName
+        $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml | Select-Object -ExpandProperty FullName
         $DepAppx = @()
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx | Select-Object -ExpandProperty FullName
         Get-OfflineHives -Process Load
-        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord -ErrorAction Stop
         Get-OfflineHives -Process Unload
         $StorePackage = @{
             Path                  = $MountFolder
@@ -1051,7 +1010,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -LiteralPath $StoreAppPath -Filter M
         }
         [void](Add-AppxProvisionedPackage @IdentityPackage)
         $DepAppx = @()
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx | Select-Object -ExpandProperty FullName
         $InstallerPackage = @{
             Path                  = $MountFolder
             PackagePath           = $InstallerBundle
@@ -1074,9 +1033,9 @@ If ($WindowsStore.IsPresent -and (Test-Path -LiteralPath $StoreAppPath -Filter M
     }
 }
 
-If ($MicrosoftEdge.IsPresent -and (Test-Path -LiteralPath $EdgeAppPath -Filter Microsoft-Windows-Internet-Browser-Package*.cab))
+If ($MicrosoftEdge.IsPresent -and (Test-Path -LiteralPath $EdgeAppPath -Filter Microsoft-Windows-Internet-Browser-Package*.cab) -and $null -eq (Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Internet-Browser*))
 {
-    If ($null -eq (Get-ChildItem -Path "$MountFolder\Windows\servicing\Packages" -Filter Microsoft-Windows-Internet-Browser-Package*.mum))
+    Try
     {
         $Host.UI.RawUI.WindowTitle = "Integrating the Microsoft Edge Browser Application Packages."
         Out-Log -Info "Integrating the Microsoft Edge Browser Application Packages."
@@ -1098,286 +1057,250 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -LiteralPath $EdgeAppPath -Filter M
             ErrorAction      = 'Stop'
         }
         [void](Add-WindowsPackage @EdgeLanguagePackage)
+        Get-OfflineHives -Process Load
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main"
+        New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader"
+        New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader"
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+        If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
+        {
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter"
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        }
+        Get-OfflineHives -Process Unload
+        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Internet-Browser* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+        $EdgeIntegrated = $true
+    }
+    Catch
+    {
+        Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages."
+        Exit-Script
+    }
+}
+
+If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *win32calc*))
+{
+    $Host.UI.RawUI.WindowTitle = "Integrating the Win32 Calculator Packages."
+    Out-Log -Info "Integrating the Win32 Calculator Packages."
+    If ($WimInfo.Build -eq '17763' -and (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab))
+    {
         Try
         {
-            $Host.UI.RawUI.WindowTitle = "Applying Microsoft Edge Browser Registry Settings."
-            Out-Log -Info "Applying Microsoft Edge Registry Settings."
+            $CalcBasePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = 'Stop'
+            }
+            [void](Add-WindowsPackage @CalcBasePackage)
+            $CalcLanguagePackage = @{
+                Path             = $MountFolder
+                PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+                IgnoreCheck      = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = 'Stop'
+            }
+            [void](Add-WindowsPackage @CalcLanguagePackage)
             Get-OfflineHives -Process Load
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
-            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main"
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main"
-            New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader"
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader"
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter"
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
             Get-OfflineHives -Process Unload
-            $EdgeIntegrated = $true
+            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
         }
         Catch
         {
-            Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages."
+            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
+            Exit-Script
+        }
+    }
+    ElseIf ($WimInfo.Build -lt '17763' -and (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab))
+    {
+        Try
+        {
+            Start-Process -FilePath EXPAND -ArgumentList ('-F:* "{0}" "{1}"' -f "$($Win32CalcPath)\Win32Calc.cab", $MountFolder) -WindowStyle Hidden -Wait -ErrorAction Stop
+            Get-OfflineHives -Process Load
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command"
+            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18"
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+            Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+            Get-OfflineHives -Process Unload
+            $CalcLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk"
+            $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+            $CalcShortcut = $CalcShell.CreateShortcut($CalcLnk)
+            $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+            $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+            $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+            $CalcShortcut.Save()
+            $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+            $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
+            If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
+            $SSDL = @'
+
+D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
+'@
+            $SSDL.Insert(0, 'win32calc.exe') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
+            @("$($MountFolder)\Windows\System32", "$($MountFolder)\Windows\SysWOW64") | ForEach-Object {
+                Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
+            }
+            $SSDL.Insert(0, 'win32calc.exe.mui') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
+            @("$($MountFolder)\Windows\System32\en-US", "$($MountFolder)\Windows\SysWOW64\en-US") | ForEach-Object {
+                Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
+            }
+            $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464') -ErrorAction Stop).Translate([System.Security.Principal.NTAccount]))
+            @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach-Object {
+                $ACL = Get-Acl -Path $($_) -ErrorAction Stop
+                $ACL.SetOwner($TrustedInstaller)
+                $ACL | Set-Acl -Path $($_) -ErrorAction Stop
+            }
+        }
+        Catch
+        {
+            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
             Exit-Script
         }
         Finally
         {
-            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Internet-Browser* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
-        }
-    }
-    Else
-    {
-        Out-Log -Error "The Microsoft Edge Browser is already installed."
-        Start-Sleep 3
-    }
-}
-
-If ($Win32Calc.IsPresent)
-{
-    If ($null -eq (Get-ChildItem -Path "$MountFolder\Windows\servicing\Packages" -Filter Microsoft-Windows-win32calc-Package*.mum))
-    {
-        $Host.UI.RawUI.WindowTitle = "Integrating the Win32 Calculator Packages."
-        Out-Log -Info "Integrating the Win32 Calculator Packages."
-        If ($WimInfo.Build -eq '17763')
-        {
-            If (Test-Path -LiteralPath $Win32CalcPath -Filter Microsoft-Windows-win32calc-Package*.cab)
-            {
-                Try
-                {
-                    $CalcBasePackage = @{
-                        Path             = $MountFolder
-                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
-                        IgnoreCheck      = $true
-                        ScratchDirectory = $ScratchFolder
-                        LogPath          = $DISMLog
-                        ErrorAction      = 'Stop'
-                    }
-                    [void](Add-WindowsPackage @CalcBasePackage)
-                    $CalcLanguagePackage = @{
-                        Path             = $MountFolder
-                        PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
-                        IgnoreCheck      = $true
-                        ScratchDirectory = $ScratchFolder
-                        LogPath          = $DISMLog
-                        ErrorAction      = 'Stop'
-                    }
-                    [void](Add-WindowsPackage @CalcLanguagePackage)
-                    Get-OfflineHives -Process Load
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
-                    Get-OfflineHives -Process Unload
-                    Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
-                }
-                Catch
-                {
-                    Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
-                    Exit-Script
-                }
-            }
-        }
-        Else
-        {
-            If (Test-Path -LiteralPath $Win32CalcPath -Filter Win32Calc.cab)
-            {
-                Try
-                {
-                    Start-Process -FilePath EXPAND -ArgumentList ('-F:* "{0}" "{1}"' -f "$($Win32CalcPath)\Win32Calc.cab", $MountFolder) -WindowStyle Hidden -Wait -ErrorAction Stop
-                    Get-OfflineHives -Process Load
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command"
-                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18"
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-                    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-                    Get-OfflineHives -Process Unload
-                    $CalcLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk"
-                    $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-                    $CalcShortcut = $CalcShell.CreateShortcut($CalcLnk)
-                    $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
-                    $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
-                    $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
-                    $CalcShortcut.Save()
-                    $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-                    $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-                    If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
-                }
-                Catch
-                {
-                    Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
-                    Exit-Script
-                }
-                Finally
-                {
-                    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
-                }
-                Try
-                {
-                    $SSDL = @'
-
-D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
-'@
-                    $SSDL.Insert(0, 'win32calc.exe') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force
-                    @("$($MountFolder)\Windows\System32", "$($MountFolder)\Windows\SysWOW64") | ForEach-Object {
-                        Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
-                    }
-                    $SSDL.Insert(0, 'win32calc.exe.mui') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force
-                    @("$($MountFolder)\Windows\System32\en-US", "$($MountFolder)\Windows\SysWOW64\en-US") | ForEach-Object {
-                        Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
-                    }
-                    Remove-Container -Path "$($WorkFolder)\SSDL.ini"
-                    $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464') -ErrorAction Stop).Translate([System.Security.Principal.NTAccount]))
-                    @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach-Object {
-                        $ACL = Get-Acl -Path $($_) -ErrorAction Stop
-                        $ACL.SetOwner($TrustedInstaller)
-                        $ACL | Set-Acl -Path $($_) -ErrorAction Stop
-                    }
-                }
-                Catch
-                {
-                    Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
-                    Exit-Script
-                }
-            }
+            [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
         }
     }
 }
 
-If ($Dedup.IsPresent)
+If ($Dedup.IsPresent -and (Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-FileServer-ServerCore-Package*.cab) -and (Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-Dedup-Package*.cab) -and $null -eq (Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-Dedup*) -and $null -eq (Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-FileServer-ServerCore*))
 {
-    If ((Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-FileServer-ServerCore-Package*.cab) -and (Test-Path -LiteralPath $DedupPath -Filter Microsoft-Windows-Dedup-Package*.cab))
+    $Host.UI.RawUI.WindowTitle = "Integrating the Data Deduplication Packages."
+    Out-Log -Info "Integrating the Data Deduplication Packages."
+    Try
     {
-        $Host.UI.RawUI.WindowTitle = "Integrating the Data Deduplication Packages."
-        Out-Log -Info "Integrating the Data Deduplication Packages."
-        Try
-        {
-            $FileServerCore = @{
-                Path             = $MountFolder
-                PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
-                IgnoreCheck      = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Add-WindowsPackage @FileServerCore)
-            $FileServerLang = @{
-                Path             = $MountFolder
-                PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
-                IgnoreCheck      = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Add-WindowsPackage @FileServerLang)
-            $DedupCore = @{
-                Path             = $MountFolder
-                PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
-                IgnoreCheck      = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Add-WindowsPackage @DedupCore)
-            $DedupLang = @{
-                Path             = $MountFolder
-                PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
-                IgnoreCheck      = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Add-WindowsPackage @DedupLang)
-            $EnableDedup = @{
-                Path             = $MountFolder
-                FeatureName      = "Dedup-Core"
-                All              = $true
-                LimitAccess      = $true
-                NoRestart        = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Enable-WindowsOptionalFeature @EnableDedup)
-            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-FileServer* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
-            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-Dedup* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
-            Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
-            $DedupPackagesIntegrated = $true
+        $FileServerCore = @{
+            Path             = $MountFolder
+            PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+            IgnoreCheck      = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
         }
-        Catch
-        {
-            Out-Log -Error "Failed to Integrate the Data Deduplication Packages."
-            Exit-Script
+        [void](Add-WindowsPackage @FileServerCore)
+        $FileServerLang = @{
+            Path             = $MountFolder
+            PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+            IgnoreCheck      = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
         }
+        [void](Add-WindowsPackage @FileServerLang)
+        $DedupCore = @{
+            Path             = $MountFolder
+            PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~~10.0.$($WimInfo.Build).1.cab"
+            IgnoreCheck      = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
+        }
+        [void](Add-WindowsPackage @DedupCore)
+        $DedupLang = @{
+            Path             = $MountFolder
+            PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($WimInfo.Architecture)~$($WimInfo.Language)~10.0.$($WimInfo.Build).1.cab"
+            IgnoreCheck      = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
+        }
+        [void](Add-WindowsPackage @DedupLang)
+        $EnableDedup = @{
+            Path             = $MountFolder
+            FeatureName      = "Dedup-Core"
+            All              = $true
+            LimitAccess      = $true
+            NoRestart        = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
+        }
+        [void](Enable-WindowsOptionalFeature @EnableDedup)
+        Get-OfflineHives -Process Load
+        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
+        New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-DCOM-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-SMB-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-Winmgmt-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-DCOM-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-SMB-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        $FirewallRule = @{
+            LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
+            Name        = "FileServer-ServerManager-Winmgmt-TCP-In"
+            Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
+            Type        = 'String'
+            ErrorAction = 'SilentlyContinue'
+        }
+        Set-ItemProperty @FirewallRule
+        Get-OfflineHives -Process Unload
+        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-FileServer-ServerCore* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-Dedup* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
     }
-}
-
-If ($DedupPackagesIntegrated -eq $true)
-{
-    Get-OfflineHives -Process Load
-    New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
-    New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-DCOM-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
+    Catch
+    {
+        Out-Log -Error "Failed to Integrate the Data Deduplication Packages."
+        Exit-Script
     }
-    Set-ItemProperty @FirewallRule
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-SMB-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
-    }
-    Set-ItemProperty @FirewallRule
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-Winmgmt-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
-    }
-    Set-ItemProperty @FirewallRule
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-DCOM-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%SystemRoot%\\System32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
-    }
-    Set-ItemProperty @FirewallRule
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-SMB-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
-    }
-    Set-ItemProperty @FirewallRule
-    $FirewallRule = @{
-        LiteralPath = "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
-        Name        = "FileServer-ServerManager-Winmgmt-TCP-In"
-        Value       = "v2.22|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%SystemRoot%\\System32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|"
-        Type        = 'String'
-        ErrorAction = 'SilentlyContinue'
-    }
-    Set-ItemProperty @FirewallRule
-    Get-OfflineHives -Process Unload
 }
 
 If ($DaRT.IsPresent -and (Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim) -and (Test-Path -LiteralPath $DaRTPath -Filter DebuggingTools_*.wim))
@@ -1560,64 +1483,56 @@ If ($DaRT.IsPresent -and (Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim)
     Clear-Host
 }
 
-If ($Drivers.IsPresent)
+If ($Drivers.IsPresent -and (Get-ChildItem -LiteralPath $DriverPath -Filter *.inf -Recurse))
 {
-    If (Get-ChildItem -Path $DriverPath -Filter *.inf -Recurse)
+    Try
     {
-        Try
-        {
-            $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
-            Out-Log -Info "Injecting Driver Packages."
-            $InjectDriverPackages = @{
-                Path             = $MountFolder
-                Driver           = $DriverPath
-                Recurse          = $true
-                ForceUnsigned    = $true
-                ScratchDirectory = $ScratchFolder
-                LogPath          = $DISMLog
-                ErrorAction      = 'Stop'
-            }
-            [void](Add-WindowsDriver @InjectDriverPackages)
-            Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $WorkFolder\InjectedDrivers.txt -ErrorAction SilentlyContinue
+        $Host.UI.RawUI.WindowTitle = "Injecting Driver Packages."
+        Out-Log -Info "Injecting Driver Packages."
+        $InjectDriverPackages = @{
+            Path             = $MountFolder
+            Driver           = $DriverPath
+            Recurse          = $true
+            ForceUnsigned    = $true
+            ScratchDirectory = $ScratchFolder
+            LogPath          = $DISMLog
+            ErrorAction      = 'Stop'
         }
-        Catch
-        {
-            Out-Log -Error "Failed to Inject Driver Packages."
-            Exit-Script
-        }
+        [void](Add-WindowsDriver @InjectDriverPackages)
+        Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $WorkFolder\InjectedDrivers.txt -ErrorAction SilentlyContinue
+    }
+    Catch
+    {
+        Out-Log -Error "Failed to Inject Driver Packages."
+        Exit-Script
     }
 }
 
-If ($NetFx3.IsPresent -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq 'DisabledWithPayloadRemoved')
+If ($NetFx3.IsPresent -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq 'DisabledWithPayloadRemoved' -and (Test-Path -LiteralPath $NetFx3Path -Filter *NetFx3*.cab))
 {
-    If ($WimInfo.Build -eq '17134') { $NetFx3Path = Join-Path -Path $NetFx3Path -ChildPath '17134' }
-    ElseIf ($WimInfo.Build -eq '17763') { $NetFx3Path = Join-Path -Path $NetFx3Path -ChildPath '17763' }
-    If (Get-ChildItem -LiteralPath $NetFx3Path -Filter *NetFx3*.cab)
+    Try
     {
-        Try
-        {
-            $EnableNetFx3 = @{
-                FeatureName      = "NetFx3"
-                Path             = $MountFolder
-                All              = $true
-                LimitAccess      = $true
-                LogPath          = $DISMLog
-                NoRestart        = $true
-                ScratchDirectory = $ScratchFolder
-                Source           = $NetFx3Path
-                ErrorAction      = 'Stop'
-            }
-            $Host.UI.RawUI.WindowTitle = "Enabling Windows Feature: NetFx3"
-            Out-Log -Info "Enabling Windows Feature: NetFx3"
-            [void](Enable-WindowsOptionalFeature @EnableNetFx3)
-            Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
-            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-NetFx3* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+        $EnableNetFx3 = @{
+            FeatureName      = "NetFx3"
+            Path             = $MountFolder
+            All              = $true
+            LimitAccess      = $true
+            LogPath          = $DISMLog
+            NoRestart        = $true
+            ScratchDirectory = $ScratchFolder
+            Source           = $NetFx3Path
+            ErrorAction      = 'Stop'
         }
-        Catch
-        {
-            Out-Log -Error "Failed to Enable Windows Feature: NetFx3"
-            Exit-Script
-        }
+        $Host.UI.RawUI.WindowTitle = "Enabling Windows Feature: NetFx3"
+        Out-Log -Info "Enabling Windows Feature: NetFx3"
+        [void](Enable-WindowsOptionalFeature @EnableNetFx3)
+        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-NetFx3* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
+        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Out-File -FilePath $WorkFolder\WindowsFeatures.txt -Force -ErrorAction SilentlyContinue
+    }
+    Catch
+    {
+        Out-Log -Error "Failed to Enable Windows Feature: NetFx3"
+        Exit-Script
     }
 }
 
@@ -1720,7 +1635,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling System Telemetry and Data Collecting." >> $RegLog
     #****************************************************************
-    If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
+    If ($IsLTSC -or $WimInfo.Name -like "*Enterprise*" -or $WimInfo.Name -like "*Education*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection"
@@ -1754,7 +1669,7 @@ If ($Registry.IsPresent)
     {
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     }
-    If ($WimInfo.Build -eq '17763')
+    If ($WimInfo.Build -ge '17763')
     {
         #****************************************************************
         Write-Output "Disabling Clipboard History and Service." >> $RegLog
@@ -1914,8 +1829,8 @@ If ($Registry.IsPresent)
         Write-Output "Disabling Microsoft OneDrive Automatic Setup and Startup." >> $RegLog
         #****************************************************************
         Remove-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Force -ErrorAction SilentlyContinue
-        @("HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}", 
-            "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}") | ForEach-Object { Remove-Container -Path $($_) }
+        Remove-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
+        Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\OneDrive"
@@ -2174,11 +2089,6 @@ If ($Registry.IsPresent)
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}\PropertyBag" -Name "ThisPCPolicy" -Value "Hide" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Disabling Automatic Sound Reduction." >> $RegLog
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Multimedia\Audio"
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 3 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************
     Write-Output "Enabling Windows to use latest .NET Framework." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\.NETFramework"
@@ -2391,8 +2301,8 @@ Else
 
 Try
 {
-    $Host.UI.RawUI.WindowTitle = "Saving and Dismounting the Image."
-    Out-Log -Info "Saving and Dismounting the Image."
+    $Host.UI.RawUI.WindowTitle = "Saving and Dismounting $($WimInfo.Name)"
+    Out-Log -Info "Saving and Dismounting $($WimInfo.Name)"
     Remove-Container -Path ("$MountFolder\" + '$Recycle.Bin')
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     $DismountWindowsImage = @{
@@ -2404,17 +2314,18 @@ Try
         ErrorAction      = 'Stop'
     }
     [void](Dismount-WindowsImage @DismountWindowsImage)
+    [void](Clear-WindowsCorruptMountPoint)
 }
 Catch
 {
-    Out-Log -Error "Failed to Save and Dismount the Image."
+    Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)"
     Exit-Script
 }
 
 Try
 {
-    $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting the Image."
-    Out-Log -Info "Rebuilding and Exporting the Image."
+    $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting $($WimInfo.Name)"
+    Out-Log -Info "Rebuilding and Exporting $($WimInfo.Name)"
     $ExportInstall = @{
         SourceImagePath      = $InstallWim
         SourceIndex          = $ImageIndex
@@ -2431,7 +2342,7 @@ Try
 }
 Catch
 {
-    Out-Log -Error "Failed to Rebuild and Export the Image."
+    Out-Log -Error "Failed to Rebuild and Export $($WimInfo.Name)"
     Exit-Script
 }
 
@@ -2545,9 +2456,8 @@ Finally
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath (Join-Path -Path $SaveFolder -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    [void](Clear-WindowsCorruptMountPoint)
+    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
 }
 # SIG # Begin signature block
