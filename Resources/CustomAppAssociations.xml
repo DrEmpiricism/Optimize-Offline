@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <DefaultAssociations>
-  <Association Identifier=".3gp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
   <Association Identifier=".3g2" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
-  <Association Identifier=".3gpp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
+  <Association Identifier=".3gp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
   <Association Identifier=".3gp2" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
+  <Association Identifier=".3gpp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
   <Association Identifier=".aac" ProgId="WMP11.AssocFile.AAC" ApplicationName="Windows Media Player" />
   <Association Identifier=".avi" ProgId="WMP11.AssocFile.AVI" ApplicationName="Windows Media Player" />
   <Association Identifier=".adt" ProgId="WMP11.AssocFile.ADTS" ApplicationName="Windows Media Player" />
