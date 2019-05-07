@@ -1,1 +1,0 @@
-When the -Drivers switch is used with Optimize-Offline, any driver(s) herein will be integrated into the image.
