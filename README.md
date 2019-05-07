@@ -43,13 +43,17 @@ A short list of some of the optimizations include:
 ## About the -Additional switch ##
 
 The -Additional script allows the end-user to add specific content to the image during Optimize-Offline's automated processes instead of having to re-mount the image or use an external Distribution Share.
-Within the '\Resources\Additional' directory are four folders: 'Logo', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being uploaded. This validation is based on Microsoft's deployment guidelines for specific content. For example, only bitmap (.bmp) images will be uploaded in the 'Logo' folder and only image files will be uploaded in the 'Wallpaper' folder. Moreover, only an answer file named 'unattend.xml' will be uploaded in the 'Unattend' folder and any others will be omitted. Conversely, any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their machine can be an array of different container types - files, directories, executables, etc.
+Within the '\Resources\Additional' directory are five folders: 'Drivers', 'Logo', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being uploaded. Aside from the Drivers folder, content validation is based on Microsoft's deployment guidelines. For example, only bitmap (.bmp) images will be uploaded in the 'Logo' folder and only image files will be uploaded in the 'Wallpaper' folder. Moreover, only an answer file named 'unattend.xml' will be uploaded in the 'Unattend' folder and any others will be omitted. Conversely, any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their machine can be an array of different container types - files, directories, executables, etc.
 
 All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', scripts are uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
 
 All content can be either folders or directories themselves, or individual files. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory. Optimize-Offline will not just copy all content over haphazardly and create a massive mess of files or completely omit a specific file structure.
 
 **Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
+
+## Driver integration ##
+
+Any driver or driver package to be integrated into the offline image must be placed in the '\Resources\Additional\Drivers' folder when using the -Additional switch. Either single .inf files or full driver package directories are supported.
 
 ## unattend.xml Answer File ##
 
@@ -146,5 +150,5 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -ImagePath "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional
-- .\Optimize-Offline.ps1 -ImagePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -NetFx3 -Drivers -ISO
+- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional
+- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Drivers -ISO
