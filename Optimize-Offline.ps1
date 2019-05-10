@@ -2276,7 +2276,6 @@ Try
     {
         Start-Process -FilePath DISM -ArgumentList @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$($ImageFolder)\install.esd") -WindowStyle Hidden -Wait -ErrorAction Stop
         Remove-Container -Path $InstallWim
-        $ImageFiles = @('install.esd', 'boot.wim')
     }
     Else
     {
@@ -2293,7 +2292,6 @@ Try
         [void](Export-WindowsImage @ExportInstall)
         Remove-Container -Path $InstallWim
         Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim -Force -ErrorAction Stop
-        $ImageFiles = @('install.wim', 'boot.wim')
     }
 }
 Catch
@@ -2366,7 +2364,8 @@ If ($ISOMedia)
     If (Test-Path -Path "$ISOMedia\setup.exe") { Move-Item -Path "$ISOMedia\setup.exe" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\lang.ini") { Move-Item -Path "$ISOMedia\lang.ini" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
+    If ($CompressionType -eq 'Solid') { Get-ChildItem -Path $ImageFolder -Include install.esd, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue }
+    Else { Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue }
     If ($ISO.IsPresent)
     {
         $ADK_ROOT = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
@@ -2398,7 +2397,11 @@ Try
     Else
     {
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
-        Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
+        Else
+        {
+            If ($CompressionType -eq 'Solid') { Get-ChildItem -Path $ImageFolder -Include install.esd, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
+            Else { Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
+        }
     }
 }
 Finally
