@@ -72,7 +72,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.2.4.9
-		Last updated:	05/07/2019
+		Last updated:	05/09/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -543,7 +543,7 @@ Try
 }
 Catch
 {
-    Out-Log -Error ('Failed to Mount {0}' -f $($WimInfo.Name))
+    Out-Log -Error ('Failed to Mount {0}' -f $($WimInfo.Name)) -ErrorRecord $Error[0]
     Exit-Script
 }
 
@@ -637,7 +637,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     }
     Catch
     {
-        Out-Log -Error "Failed to Remove Appx Provisioned Packages."
+        Out-Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
         Exit-Script
     }
     Finally
@@ -682,7 +682,7 @@ If ($SystemApps.IsPresent)
     }
     Catch
     {
-        Out-Log -Error "Failed to Remove System Applications."
+        Out-Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
         Exit-Script
     }
     Finally
@@ -728,7 +728,7 @@ If ($Packages.IsPresent)
     }
     Catch
     {
-        Out-Log -Error "Failed to Remove Windows Capability Packages."
+        Out-Log -Error "Failed to Remove Windows Capability Packages." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -803,7 +803,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
     }
     Catch
     {
-        Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions"
+        Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -842,7 +842,7 @@ If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName *SMB1*).State -e
     }
     Catch
     {
-        Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature."
+        Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -885,7 +885,7 @@ If ($Features.IsPresent)
     }
     Catch
     {
-        Out-Log -Error "Failed to Disable Windows Features."
+        Out-Log -Error "Failed to Disable Windows Features." -ErrorRecord $Error[0]
         Exit-Script
     }
     Try
@@ -925,7 +925,7 @@ If ($Features.IsPresent)
     }
     Catch
     {
-        Out-Log -Error "Failed to Enable Windows Features."
+        Out-Log -Error "Failed to Enable Windows Features." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -1001,7 +1001,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -LiteralPath $StoreAppPath -Filter M
     }
     Catch
     {
-        Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages."
+        Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -1053,7 +1053,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -LiteralPath $EdgeAppPath -Filter M
     }
     Catch
     {
-        Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages."
+        Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -1102,7 +1102,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
         }
         Catch
         {
-            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
+            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
             Exit-Script
         }
     }
@@ -1150,7 +1150,7 @@ D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;
         }
         Catch
         {
-            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages."
+            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
             Exit-Script
         }
         Finally
@@ -1271,7 +1271,7 @@ If ($Dedup.IsPresent -and (Test-Path -LiteralPath $DedupPath -Filter Microsoft-W
     }
     Catch
     {
-        Out-Log -Error "Failed to Integrate the Data Deduplication Packages."
+        Out-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
         Exit-Script
     }
 }
@@ -1369,7 +1369,7 @@ If ($DaRT.IsPresent -and (Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim)
     }
     Catch
     {
-        Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Setup."
+        Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Setup." -ErrorRecord $Error[0]
         If (Test-Path -Path $BootMount) { [void](Dismount-WindowsImage -Path $BootMount -Discard -ErrorAction SilentlyContinue); Remove-Container -Path $BootMount }
         Exit-Script
     }
@@ -1449,7 +1449,7 @@ If ($DaRT.IsPresent -and (Test-Path -LiteralPath $DaRTPath -Filter MSDaRT10.wim)
     }
     Catch
     {
-        Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Recovery."
+        Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Recovery." -ErrorRecord $Error[0]
         If (Test-Path -Path $RecoveryMount) { [void](Dismount-WindowsImage -Path $RecoveryMount -Discard -ErrorAction SilentlyContinue); Remove-Container -Path $RecoveryMount }
         Exit-Script
     }
@@ -1485,8 +1485,8 @@ If ($Registry.IsPresent)
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "AllowSearchToUseLocation" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "DisableWebSearch" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Name "AcceptedPrivacyPolicy" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Name "HarvestContacts" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Personalization\Settings" -Name "AcceptedPrivacyPolicy" -Value 0 -Type DWord -ErrorAction SilentlyContinue
@@ -1586,6 +1586,7 @@ If ($Registry.IsPresent)
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
     If (Test-Path -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration") { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord -ErrorAction SilentlyContinue }
+    #****************************************************************
     If ($WimInfo.Build -ge '17763')
     {
         #****************************************************************
@@ -1667,7 +1668,6 @@ If ($Registry.IsPresent)
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DontUsePowerShellOnWinX" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackDocs" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling System Advertisements and Windows Spotlight." >> $RegLog
@@ -1781,7 +1781,7 @@ If ($Registry.IsPresent)
         Set-ItemProperty -LiteralPath "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" -Name "OneDrive" -Value ([Byte[]](0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)) -Type Binary -ErrorAction SilentlyContinue
         Remove-Container -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk"
     }
-    If ($WimInfo.Build -eq '18362')
+    If ($WimInfo.Build -gt '17763')
     {
         #****************************************************************
         Write-Output "Disabling Reserved Storage." >> $RegLog
@@ -1957,7 +1957,7 @@ If ($Registry.IsPresent)
     #****************************************************************	
     Write-Output "Removing 'Edit with Paint 3D and 3D Print' from the Context Menu." >> $RegLog
     #****************************************************************
-    @('.3mf', '.bmp', '.fbx', '.gif', '.jfif', '.jpe', '.jpeg', '.jpg', '.png', '.tif', '.tiff') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\Shell\3D Edit" }
+    @('.3mf', '.bmp', '.fbx', '.gif', '.jfif', '.jpe', '.jpeg', '.jpg', '.png', '.tif', '.tiff') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\shell\3D Edit" }
     @('.3ds', '.3mf', '.dae', '.dxf', '.obj', '.ply', '.stl', '.wrl') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\shell\3D Print" }
     #****************************************************************
     Write-Output "Restoring Windows Photo Viewer." >> $RegLog
@@ -2132,14 +2132,16 @@ Try
     $UWPShortcut.Save()
     $LayoutFile = "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml"
     @'
-<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
   <LayoutOptions StartTileGroupCellWidth="6" />
   <DefaultLayoutOverride>
     <StartLayoutCollection>
       <defaultlayout:StartLayout GroupCellWidth="6">
         <start:Group Name="">
-          <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
-          <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Explorer UWP.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
+          <start:DesktopApplicationTile Size="1x1" Column="1" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="2" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
+          <start:DesktopApplicationTile Size="1x1" Column="3" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
         </start:Group>
       </defaultlayout:StartLayout>
     </StartLayoutCollection>
@@ -2149,7 +2151,7 @@ Try
 }
 Catch
 {
-    Out-Log -Error "Failed to Clean-up the Start Menu Layout."
+    Out-Log -Error "Failed to Clean-up the Start Menu Layout." -ErrorRecord $Error[0]
     Start-Sleep 3
 }
 Finally
@@ -2198,7 +2200,7 @@ If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory |
     }
     Catch
     {
-        Out-Log -Error "Failed to copy all additional file content."
+        Out-Log -Error "Failed to copy all additional file content." -ErrorRecord $Error[0]
         @("$MountFolder\Windows\Panther", "$MountFolder\Windows\Setup\Scripts", "$MountFolder\Windows\System32\oobe\info\logo") | ForEach-Object { Remove-Container -Path $($_) }
         Start-Sleep 3
     }
@@ -2222,7 +2224,7 @@ If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory |
         }
         Catch
         {
-            Out-Log -Error "Failed to Inject Driver Packages."
+            Out-Log -Error "Failed to Inject Driver Packages." -ErrorRecord $Error[0]
             Exit-Script
         }
     }
@@ -2255,34 +2257,48 @@ Try
     }
     [void](Dismount-WindowsImage @DismountWindowsImage)
     [void](Clear-WindowsCorruptMountPoint)
+    Clear-Host
 }
 Catch
 {
-    Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)"
+    Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)" -ErrorRecord $Error[0]
     Exit-Script
 }
 
 Try
 {
-    $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting $($WimInfo.Name)"
-    Out-Log -Info "Rebuilding and Exporting $($WimInfo.Name)"
-    $ExportInstall = @{
-        SourceImagePath      = $InstallWim
-        SourceIndex          = $ImageIndex
-        DestinationImagePath = "$($ImageFolder)\tmp_install.wim"
-        CompressionType      = 'Maximum'
-        CheckIntegrity       = $true
-        ScratchDirectory     = $ScratchFolder
-        LogPath              = $DISMLog
-        ErrorAction          = 'Stop'
+    $CompressionList = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($_) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single
+    $CompressionType = $CompressionList | Select-Object -ExpandProperty Compression
+    If (!$CompressionType) { $CompressionType = 'Fast' }
+    $Host.UI.RawUI.WindowTitle = "Exporting $($WimInfo.Name) using $($CompressionType) compression."
+    Out-Log -Info "Exporting $($WimInfo.Name) using $($CompressionType) compression."
+    If ($CompressionType -eq 'Solid')
+    {
+        Start-Process -FilePath DISM -ArgumentList @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$($ImageFolder)\install.esd") -WindowStyle Hidden -Wait -ErrorAction Stop
+        Remove-Container -Path $InstallWim
+        $ImageFiles = @('install.esd', 'boot.wim')
     }
-    [void](Export-WindowsImage @ExportInstall)
-    Remove-Container -Path $InstallWim
-    Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim -Force -ErrorAction Stop
+    Else
+    {
+        $ExportInstall = @{
+            SourceImagePath      = $InstallWim
+            SourceIndex          = $ImageIndex
+            DestinationImagePath = "$($ImageFolder)\tmp_install.wim"
+            CompressionType      = $CompressionType
+            CheckIntegrity       = $true
+            ScratchDirectory     = $ScratchFolder
+            LogPath              = $DISMLog
+            ErrorAction          = 'Stop'
+        }
+        [void](Export-WindowsImage @ExportInstall)
+        Remove-Container -Path $InstallWim
+        Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim -Force -ErrorAction Stop
+        $ImageFiles = @('install.wim', 'boot.wim')
+    }
 }
 Catch
 {
-    Out-Log -Error "Failed to Rebuild and Export $($WimInfo.Name)"
+    Out-Log -Error "Failed to Export $($WimInfo.Name)" -ErrorRecord $Error[0]
     Exit-Script
 }
 
@@ -2350,7 +2366,7 @@ If ($ISOMedia)
     If (Test-Path -Path "$ISOMedia\setup.exe") { Move-Item -Path "$ISOMedia\setup.exe" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\lang.ini") { Move-Item -Path "$ISOMedia\lang.ini" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
         $ADK_ROOT = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
@@ -2382,7 +2398,7 @@ Try
     Else
     {
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
-        Else { Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
+        Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
     }
 }
 Finally
