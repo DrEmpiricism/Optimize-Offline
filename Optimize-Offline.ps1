@@ -71,7 +71,7 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.4.9
+		Version:        3.2.5.0
 		Last updated:	05/09/2019
 		===========================================================================
 #>
@@ -123,7 +123,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.4.9'
+$ScriptVersion = '3.2.5.0'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -193,9 +193,9 @@ Function Exit-Script
 	
     $Host.UI.RawUI.WindowTitle = "Cleaning-up and terminating $ScriptName."
     Out-Log -Info "Cleaning-up and terminating $ScriptName."
+    Get-Process -Name Dism -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
-    [void](Clear-WindowsCorruptMountPoint)
     If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
@@ -206,6 +206,7 @@ Function Exit-Script
     [void]($SaveFolder = New-OfflineDirectory -Directory Save)
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Container
+    [void](Clear-WindowsCorruptMountPoint)
     Write-Host ('All logs saved to: "{0}"' -f "$($SaveFolder)\OptimizeLogs.zip")
     Start-Sleep 5
     (Get-Process -Id $PID -ErrorAction SilentlyContinue).Kill()
@@ -404,7 +405,7 @@ If ($SourcePath.Extension -eq '.ISO')
                 $ISOExport = $ISOMedia + $Item.FullName.Replace($ISOMount, $null)
                 Copy-Item -Path $($Item.FullName) -Destination $ISOExport -ErrorAction Stop
             }
-            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $ImageFolder -ErrorAction Stop
+            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $ImageFolder -ErrorAction Stop
             $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim -ErrorAction Stop | Select-Object -ExpandProperty FullName
             $BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
             @($InstallWim, $BootWim) | ForEach-Object { Set-ItemProperty -Path $($_) -Name IsReadOnly -Value $false -ErrorAction Stop }
@@ -449,8 +450,12 @@ ElseIf ($SourcePath.Extension -eq '.WIM')
 
 If ((Get-WindowsImage -ImagePath $InstallWim).ImageIndex -gt 1)
 {
-    $EditionList = Get-WindowsImage -ImagePath $InstallWim | Select-Object -Property @{ Label = 'Index'; Expression = { ($_.ImageIndex) } }, @{ Label = 'Name'; Expression = { ($_.ImageName) } }, @{ Label = 'Size (GB)'; Expression = { '{0:N2}' -f ($_.ImageSize / 1GB) } } | Out-GridView -Title "Select Windows 10 Edition." -OutputMode Single
-    $ImageIndex = $EditionList.Index
+    Do
+    {
+        $EditionList = Get-WindowsImage -ImagePath $InstallWim | Select-Object -Property @{ Label = 'Index'; Expression = { ($_.ImageIndex) } }, @{ Label = 'Name'; Expression = { ($_.ImageName) } }, @{ Label = 'Size (GB)'; Expression = { '{0:N2}' -f ($_.ImageSize / 1GB) } } | Out-GridView -Title "Select Windows 10 Edition." -OutputMode Single
+        $ImageIndex = $EditionList.Index
+    }
+    While ($EditionList.Length -eq 0)
 }
 Else { $ImageIndex = 1 }
 
@@ -503,7 +508,7 @@ Else
     Break
 }
 
-If ($WimInfo.Name -like "*LTSC")
+If ($WimInfo.Name -like "*LTSC*")
 {
     $IsLTSC = $true
     If ($MetroApps) { Remove-Variable MetroApps }
@@ -656,10 +661,10 @@ If ((Test-Path -LiteralPath $AppAssocListPath) -and $RemovedAppxPackages.Count -
 If ($SystemApps.IsPresent)
 {
     Clear-Host
-    $RemovedSystemApps = [System.Collections.ArrayList]@()
     $Host.UI.RawUI.WindowTitle = "Removing System Applications."
     Write-Warning "Do NOT remove any System Application if you are unsure of its impact on a live installation."
     Start-Sleep 5
+    $RemovedSystemApps = [System.Collections.ArrayList]@()
     Get-OfflineHives -Process Load
     $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
     $PackageList = (Get-ChildItem -Path $InboxAppsKey -ErrorAction SilentlyContinue).Name.Split('\').Where{ $_ -like "Microsoft.*" }
@@ -997,7 +1002,6 @@ If ($WindowsStore.IsPresent -and (Test-Path -LiteralPath $StoreAppPath -Filter M
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Get-OfflineHives -Process Unload
         Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -ExpandProperty PackageName | Out-File -FilePath $WorkFolder\IntegratedPackages.txt -Append -ErrorAction SilentlyContinue
-        $StoreIntegrated = $true
     }
     Catch
     {
@@ -2159,18 +2163,6 @@ Finally
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($UWPShell)
 }
 
-If ((Test-Connection $Env:COMPUTERNAME -Quiet) -eq $true)
-{
-    $Host.UI.RawUI.WindowTitle = "Updating the Default Hosts File."
-    Out-Log -Info "Updating the Default Hosts File."
-    $HostsFile = "$MountFolder\Windows\System32\drivers\etc\hosts"
-    $HostsUpdate = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-    Rename-Item -Path $HostsFile -NewName hosts.bak -Force -ErrorAction SilentlyContinue
-    (New-Object System.Net.WebClient).DownloadFile($HostsUpdate, $HostsFile)
-    (Get-Content -Path $HostsFile) | Set-Content -Path $HostsFile -Encoding UTF8 -Force -ErrorAction SilentlyContinue
-}
-
-
 If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory | Measure-Object).Count -gt 0)
 {
     Try
@@ -2256,7 +2248,7 @@ Try
         ErrorAction      = 'Stop'
     }
     [void](Dismount-WindowsImage @DismountWindowsImage)
-    [void](Clear-WindowsCorruptMountPoint)
+    Remove-Container -Path $MountFolder
     Clear-Host
 }
 Catch
@@ -2265,17 +2257,21 @@ Catch
     Exit-Script
 }
 
-Try
+Do
 {
     $CompressionList = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($_) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single
     $CompressionType = $CompressionList | Select-Object -ExpandProperty Compression
-    If (!$CompressionType) { $CompressionType = 'Fast' }
+}
+While ($CompressionList.Length -eq 0)
+
+Try
+{
     $Host.UI.RawUI.WindowTitle = "Exporting $($WimInfo.Name) using $($CompressionType) compression."
     Out-Log -Info "Exporting $($WimInfo.Name) using $($CompressionType) compression."
     If ($CompressionType -eq 'Solid')
     {
-        Start-Process -FilePath DISM -ArgumentList @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$($ImageFolder)\install.esd") -WindowStyle Hidden -Wait -ErrorAction Stop
-        Remove-Container -Path $InstallWim
+        $ExportInstall = Start-Process -FilePath DISM -ArgumentList @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$($ImageFolder)\install.esd") -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
+        If ($ExportInstall.ExitCode -eq 0) { Remove-Container -Path $InstallWim; $ImageFiles = @('install.esd', 'boot.wim') }
     }
     Else
     {
@@ -2291,7 +2287,8 @@ Try
         }
         [void](Export-WindowsImage @ExportInstall)
         Remove-Container -Path $InstallWim
-        Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim -Force -ErrorAction Stop
+        Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim
+        $ImageFiles = @('install.wim', 'boot.wim')
     }
 }
 Catch
@@ -2364,8 +2361,7 @@ If ($ISOMedia)
     If (Test-Path -Path "$ISOMedia\setup.exe") { Move-Item -Path "$ISOMedia\setup.exe" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\lang.ini") { Move-Item -Path "$ISOMedia\lang.ini" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
     If (Test-Path -Path "$ISOMedia\pid.txt") { Move-Item -Path "$ISOMedia\pid.txt" -Destination "$ISOMedia\sources" -Force -ErrorAction SilentlyContinue }
-    If ($CompressionType -eq 'Solid') { Get-ChildItem -Path $ImageFolder -Include install.esd, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue }
-    Else { Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue }
+    Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
         $ADK_ROOT = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
@@ -2393,15 +2389,11 @@ Try
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Out-Log -Info "Finalizing Optimizations."
     [void]($SaveFolder = New-OfflineDirectory -Directory Save)
-    If ($ISOIsCreated) { Move-Item -Path $ISOPath -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
+    If ($ISOIsCreated) { Move-Item -Path $ISOPath -Destination $SaveFolder -ErrorAction SilentlyContinue }
     Else
     {
-        If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
-        Else
-        {
-            If ($CompressionType -eq 'Solid') { Get-ChildItem -Path $ImageFolder -Include install.esd, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
-            Else { Get-ChildItem -Path $ImageFolder -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue }
-        }
+        If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -ErrorAction SilentlyContinue }
+        Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -ErrorAction SilentlyContinue }
     }
 }
 Finally
@@ -2417,6 +2409,7 @@ Finally
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Container
+    [void](Clear-WindowsCorruptMountPoint)
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
 }
 # SIG # Begin signature block
