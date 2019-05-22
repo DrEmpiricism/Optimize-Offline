@@ -109,6 +109,18 @@ Optimize-Offline can implement the traditional Calculator using the latest Win32
 
 With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
 
+## Microsoft Store integration ##
+
+For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
+
+## Microsoft Edge integration ##
+
+For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state.
+
+## Solid image compression ##
+
+Solid image compression uses the undocumented LZMS compression format to concatenated all file data within a regular WIM file into a solid WIM archive (ESD file). By doing this, a 4GB WIM file is able to be compressed to a size under 2GB or less. However, as with other forms of high-ratio compression, LZMS compression can take quite a while to complete and should NOT be selected as the final image compression type if the end-user is impatient or requires the optimized image quickly.
+
 ## ISO File Strucuture Optimization ##
 
 This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The order in which files are removed and moved is critical to proper file structure optimization for bootup installation.
@@ -128,14 +140,6 @@ defaultuser0 is not a real account, however, and is a bug that has been present 
 Conversely, failing to remove the defaultuser0 account immediately after Windows Installation completes can lead to future headaches.  As an example, if you reset Windows with the defaultuser0 ghost account still present, upon the restart of the device, Windows will force you to log into the defaultuser0 account to continue.
 
 In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
-
-## Microsoft Store integration ##
-
-For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
-
-## Microsoft Edge integration ##
-
-For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state.
 
 ## Optimize-Offline best practices ##
 
