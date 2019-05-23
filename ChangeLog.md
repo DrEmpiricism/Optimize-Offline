@@ -1,8 +1,10 @@
 # ChangeLog #
 
-## Build 3.2.5.0 (05-11-2019) ##
+## Build 3.2.5.1 (05-22-2019) ##
 
-- Fixed an issue where both the install.wim and install.esd were copied to the Windows Installation media if 'Solid' compression was used.
-- Removed the automatic update of the default host file.
-- Updated the Windows 10 Debugging Tools WIM files.
-- Additional code optimizations.
+- Multiple code and process optimizations.
+- Updated registry settings for the disabling of Windows Defender services and drivers.
+- Updated registry settings for the disabling of Xbox services and drivers.
+- Added additional telemetry disabling registry settings.
+- Added a registry setting that enables long file paths.
+- Updated the Microsoft DaRT 10 Tools and Debugging Tools for Windows WIM files.
