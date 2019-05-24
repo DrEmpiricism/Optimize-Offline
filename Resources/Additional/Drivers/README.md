@@ -1,1 +1,1 @@
-Any driver .inf file(s) or full driver package folders added herein will be integrated into the image when the -Additional switch it used.
+Any driver .inf file(s) or full driver package folders added herein will be integrated into the image when the -Additional switch is used.
