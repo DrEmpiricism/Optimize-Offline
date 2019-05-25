@@ -1,6 +1,6 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1809 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1903 64-bit architectures.
 
 ## About Optimize-Offline ##
 
