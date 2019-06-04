@@ -71,8 +71,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.5.2
-		Last updated:	05/25/2019
+		Version:        3.2.5.3
+		Last updated:	06/04/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -123,7 +123,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.5.2'
+$ScriptVersion = '3.2.5.3'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -331,6 +331,27 @@ Function Remove-Container
     Process
     {
         ForEach ($Item In $Path) { If (Test-Path -LiteralPath $Item) { Remove-Item -LiteralPath $Item -Recurse -Force -ErrorAction SilentlyContinue } }
+    }
+}
+
+Function Get-Oscdimg
+{
+    [CmdletBinding()]
+    Param ()
+	
+    $ADKRoot = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
+        Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction Ignore | Select-Object -ExpandProperty KitsRoot10 | Where-Object { $($_) }
+    }
+    $OscdimgPath = Join-Path -Path $ADKRoot -ChildPath "Assessment and Deployment Kit\Deployment Tools\$Env:PROCESSOR_ARCHITECTURE\Oscdimg\oscdimg.exe"
+    If (Test-Path -Path $OscdimgPath) { Return $OscdimgPath }
+    Else
+    {
+        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
+        $ObjForm = New-Object -TypeName System.Windows.Forms.OpenFileDialog
+        $ObjForm.Title = "Select the Oscdimg executable for ISO creation."
+        $ObjForm.InitialDirectory = [System.IO.Directory]::GetCurrentDirectory()
+        $ObjForm.Filter = "oscdimg.exe|oscdimg.exe|All files|*.*"
+        If ($ObjForm.ShowDialog() -eq 'OK') { If ($ObjForm.CheckFileExists -eq $true) { Return $ObjForm.FileName } }
     }
 }
 #endregion Helper Functions
@@ -1587,6 +1608,9 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\AppV\CEIP"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\TabletPC"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform"
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput"
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe"
@@ -1603,6 +1627,9 @@ If ($Registry.IsPresent)
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisableUAR" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\AppV\CEIP" -Name "CEIPEnable" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" -Name "CEIPEnable" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\TabletPC" -Name "PreventHandwritingDataSharing" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform" -Name "NoGenTicket" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput" -Name "AllowLinguisticDataCollection" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe" -Name "Debugger" -Value "%windir%\System32\taskkill.exe" -Type String -ErrorAction SilentlyContinue
@@ -1611,13 +1638,21 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling System Location Sensors." >> $RegLog
     #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String -ErrorAction SilentlyContinue
     If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration") { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord -ErrorAction SilentlyContinue }
+    #****************************************************************
+    Write-Output "Disabling Websites Accessing Language Lists." >> $RegLog
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKCU\Control Panel\International\User Profile"
+    Set-ItemProperty -Path "HKLM:\WIM_HKCU\Control Panel\International\User Profile" -Name "HttpAcceptLanguageOptOut" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     If ($WimInfo.Build -ge '17763')
     {
@@ -1674,9 +1709,9 @@ If ($Registry.IsPresent)
         #****************************************************************
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics"
         New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\Credential Provider"
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\Credential Provider" -Name "Domain Accounts" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue }
     }
     If ($RemovedSystemApps -contains 'Microsoft.Windows.SecureAssessmentBrowser')
     {
@@ -1701,6 +1736,13 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DontUsePowerShellOnWinX" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackDocs" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    #****************************************************************	
+    Write-Output "Disabling Activity History." >> $RegLog
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling System Advertisements and Windows Spotlight." >> $RegLog
     #****************************************************************
@@ -1813,6 +1855,16 @@ If ($Registry.IsPresent)
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" -Name "OneDrive" -Value ([Byte[]](0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)) -Type Binary -ErrorAction SilentlyContinue
         Remove-Container -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk"
     }
+    #****************************************************************	
+    Write-Output "Disabling Storage Sense." >> $RegLog
+    #****************************************************************
+    Remove-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
+    #****************************************************************	
+    Write-Output "Disabling Modern UI Swap File." >> $RegLog
+    #****************************************************************
+    New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management"
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management" -Name "SwapfileControl" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    #****************************************************************
     If ($WimInfo.Build -eq '18362')
     {
         #****************************************************************
@@ -2388,23 +2440,16 @@ If ($ISOMedia)
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
-        $ADK_ROOT = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
-            Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction Ignore | Select-Object -ExpandProperty KitsRoot10 | Where-Object { $($_) }
-        }
-        $OSCDIMG = Join-Path -Path $ADK_ROOT -ChildPath ('Assessment and Deployment Kit' + '\' + 'Deployment Tools' + '\' + $Env:PROCESSOR_ARCHITECTURE + '\' + 'Oscdimg')
-        If (Test-Path -Path "$($OSCDIMG)\oscdimg.exe")
-        {
-            $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
-            $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
-            $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
-            $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
-            $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
-            Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-            $RunOscdimg = Start-Process -FilePath "$($OSCDIMG)\oscdimg.exe" -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
-            If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
-            Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
-        }
-        Else { Out-Log -Error "Oscdimg premastering tool not found. Skipping ISO creation." }
+        $Oscdimg = Get-Oscdimg
+        $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
+        $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
+        $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
+        $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
+        $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
+        Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
+        $RunOscdimg = Start-Process -FilePath $OSCDIMG -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
+        If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
+        Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
     }
 }
 
