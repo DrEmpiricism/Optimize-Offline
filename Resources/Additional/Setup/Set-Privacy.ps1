@@ -55,7 +55,7 @@ Function Set-Privacy
     Disable-ComputerRestore -Drive $Env:SystemDrive -ErrorAction SilentlyContinue
     Start-Process -FilePath VSSADMIN -ArgumentList ('Delete Shadows /For:$Env:SystemDrive /Quiet') -WindowStyle Hidden -Wait
 
-    # Stops the DNSCache and removes leftover DiagTrack and Windows Defender logs.
+    # Removes leftover DiagTrack and Windows Defender logs.
     Remove-Item -Path "$Env:ProgramData\Microsoft\Diagnosis\ETLLogs\AutoLogger\AutoLogger-Diagtrack-Listener.etl" -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$Env:ProgramData\Microsoft\Diagnosis\ETLLogs\*" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$Env:ProgramData\Microsoft\Diagnosis\*.rbs" -Recurse -Force -ErrorAction SilentlyContinue
