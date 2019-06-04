@@ -8,7 +8,7 @@ IF %ERRORLEVEL% NEQ 0 (
     PAUSE
     EXIT
 ) ELSE (
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Set-Privacy.ps1
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Set-Privacy.ps1 -Argument > "%~dp0Set-Privacy.txt" 2>&1
     DEL /F /Q "%~dp0Set-Privacy.ps1" >NUL 2>&1
     DEL /F /Q "%~f0" >NUL 2>&1
 )
