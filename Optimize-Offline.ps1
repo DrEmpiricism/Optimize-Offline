@@ -2447,7 +2447,7 @@ If ($ISOMedia)
         $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
         $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
         Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-        $RunOscdimg = Start-Process -FilePath $OSCDIMG -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
+        $RunOscdimg = Start-Process -FilePath $Oscdimg -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
         If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
         Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
     }
