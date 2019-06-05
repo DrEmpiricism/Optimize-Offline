@@ -1,0 +1,1 @@
+Any setup files, scripts or content added herein will be integrated into the image when the -Additional switch is used.

@@ -1,6 +1,6 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1809 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1903 64-bit architectures.
 
 ## About Optimize-Offline ##
 
@@ -127,9 +127,9 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 ## ISO Remastering and Creation ##
 
-When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed but only if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system, Optimize-Offline will simply bypass the creation of the ISO.
+When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system and the -ISO switch was used, a Windows Dialog Form will display allowing the end-user to select the oscdimg.exe premastering tool Optimize-Offline will use to create the bootable ISO.
 
-Optimize-Offline does this without any end-user input by querying specific registry keys that contain the path to the ADK's installed location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO. Optimize-Offline queries the registry for the path to the ADK, as opposed to setting a static string for it, because many users install programs on different drives (i.e. SSD users).
+Optimize-Offline queries specific registry keys that contain the path to the ADK's installed root location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO. Optimize-Offline queries the registry for the path to the ADK, as opposed to setting a static string for it, because many users install programs on different drives (i.e. SSD users). Likewise, these are the same registry keys various Microsoft software also queries when tools from the ADK are required, for example in the creation of the Windows 10 DaRT bootable media.
 
 Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
 
