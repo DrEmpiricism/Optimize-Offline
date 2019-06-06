@@ -4,66 +4,66 @@
 <#
 	.SYNOPSIS
 		Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 builds 1803-to-1903 64-bit architectures.
-	
+
 	.DESCRIPTION
 		Primary focus' are the removal of unnecessary bloat, enhanced privacy, cleaner aesthetics, increased performance and a significantly better user experience.
-	
+
 	.PARAMETER SourcePath
 		The full path to a Windows Installation ISO or install.wim file.
-	
+
 	.PARAMETER MetroApps
 		Select = Populates and outputs a Gridview list of all Provisioned Application Packages for selective removal.
 		All = Automatically removes all Provisioned Application Packages found in the image.
 		Whitelist = Automatically removes all Provisioned Application Packages NOT found in the AppxWhiteList.xml file.
-	
+
 	.PARAMETER SystemApps
 		Populates and outputs a Gridview list of all System Applications for selective removal.
-	
+
 	.PARAMETER Packages
 		Populates and outputs a Gridview list of all installed Windows Capability Packages for selective removal.
-	
+
 	.PARAMETER Features
 		Populates and outputs both a Gridview list of all enabled Windows Optional Features for selective disabling followed by all disabled Windows Optional Features for selective enabling.
-	
+
 	.PARAMETER WindowsStore
 		Integrates the Microsoft Windows Store packages, and its dependencies packages, into the image.
 		Applicable for the Windows 10 Enterprise LTSC 2019 edition.
-	
+
 	.PARAMETER MicrosoftEdge
 		Integrates the Microsoft Edge Browser packages into the image.
 		Applicable for the Windows 10 Enterprise LTSC 2019 edition.
-	
+
 	.PARAMETER Win32Calc
 		Integrates the traditional Calculator packages from Windows 10 Enterprise LTSC 2019 into the image.
 		NOT applicable for the Windows 10 Enterprise LTSC 2019.
-	
+
 	.PARAMETER Dedup
 		Integrates the Windows Server Data Deduplication packages into the image.
-	
+
 	.PARAMETER DaRT
 		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
-	
+
 	.PARAMETER Registry
 		Integrates optimized registry values into the registry hives of the image.
-	
+
 	.PARAMETER Additional
 		Integrates content found in the "Resources/Additional" directory into the image.
-	
+
 	.PARAMETER ISO
 		Creates a new bootable Windows Installation Media ISO
 		Requires the installation of the Windows ADK (Assessment and Deployment Kit).
 		Applicable when a Windows Installation Media ISO image is used as the source image.
-	
+
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\Win10Pro\Win10Pro_Full.iso" -MetroApps "Select" -SystemApps -Packages -Features -Win32Calc -Dedup -DaRT -Registry -ISO
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win Images\install.wim" -MetroApps "Whitelist" -SystemApps -Packages -Features -Dedup -Registry -Additional
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -DaRT
-	
+
 	.NOTES
 		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
 		A full Windows 10 ISO, along with the use of the -DaRT switch, will enable the script to extract the boot.wim along with the install.wim during the start of the script.
 		If only a WIM file is used with the -DaRT switch, DaRT 10 will only be applied to the default Recovery Image (winre.wim).
-	
+
 	.NOTES
 		===========================================================================
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
@@ -149,7 +149,7 @@ Function Out-Log
             ValueFromPipelineByPropertyName = $true)]
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
-	
+
     Process
     {
         $Timestamp = Get-Date -Format 's'
@@ -190,7 +190,7 @@ Function Exit-Script
 {
     [CmdletBinding()]
     Param ()
-	
+
     $Host.UI.RawUI.WindowTitle = "Cleaning-up and terminating $ScriptName."
     Out-Log -Info "Cleaning-up and terminating $ScriptName."
     Get-Process -Name Dism -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -221,7 +221,7 @@ Function New-OfflineDirectory
         [ValidateSet('Scratch', 'Image', 'Work', 'InstallMount', 'BootMount', 'RecoveryMount', 'Save')]
         [string]$Directory
     )
-	
+
     Switch ($Directory)
     {
         'Scratch'
@@ -278,7 +278,7 @@ Function Get-OfflineHives
         [ValidateSet('Load', 'Unload', 'Test')]
         [string]$Process
     )
-	
+
     Switch ($Process)
     {
         'Load'
@@ -310,7 +310,7 @@ Function New-Container
             ValueFromPipelineByPropertyName = $true)]
         [string]$Path
     )
-	
+
     Process
     {
         If (!(Test-Path -LiteralPath $Path)) { [void](New-Item -Path $Path -ItemType Directory -Force -ErrorAction SilentlyContinue) }
@@ -327,7 +327,7 @@ Function Remove-Container
             ValueFromPipelineByPropertyName = $true)]
         [string[]]$Path
     )
-	
+
     Process
     {
         ForEach ($Item In $Path) { If (Test-Path -LiteralPath $Item) { Remove-Item -LiteralPath $Item -Recurse -Force -ErrorAction SilentlyContinue } }
@@ -338,7 +338,7 @@ Function Get-Oscdimg
 {
     [CmdletBinding()]
     Param ()
-	
+
     $ADKRoot = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
         Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction Ignore | Select-Object -ExpandProperty KitsRoot10 | Where-Object { $($_) }
     }
@@ -468,7 +468,7 @@ ElseIf ($SourcePath.Extension -eq '.WIM')
     }
 }
 
-If ((Get-WindowsImage -ImagePath $InstallWim).ImageIndex -gt 1)
+If ((Get-WindowsImage -ImagePath $InstallWim).Count -gt 1)
 {
     Do
     {
@@ -696,9 +696,9 @@ If ($SystemApps.IsPresent)
     $PackageList = (Get-ChildItem -Path $InboxAppsKey -ErrorAction SilentlyContinue).Name.Split('\').Where{ $_ -like "Microsoft.*" }
     $InboxApps = $PackageList | Select-Object -Property @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } }, @{ Label = 'Package'; Expression = { ($_) } } | Out-GridView -Title "Remove System Applications." -PassThru
     $RemoveSystemApps = $InboxApps.Package
-    If ($RemoveSystemApps) 
+    If ($RemoveSystemApps)
     {
-        Try 
+        Try
         {
             Clear-Host
             $RemoveSystemApps | ForEach-Object {
@@ -1671,7 +1671,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Value 100 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling WiFi Sense." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots"
@@ -1686,7 +1686,7 @@ If ($Registry.IsPresent)
     {
         If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker")
         {
-            #****************************************************************	
+            #****************************************************************
             Write-Output "Disabling the Windows Maps Appx Service." >> $RegLog
             #****************************************************************
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
@@ -1696,7 +1696,7 @@ If ($Registry.IsPresent)
     {
         If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")
         {
-            #****************************************************************	
+            #****************************************************************
             Write-Output "Disabling the Microsoft Wallet Appx Service." >> $RegLog
             #****************************************************************
             Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord -ErrorAction SilentlyContinue
@@ -1736,7 +1736,7 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DontUsePowerShellOnWinX" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackDocs" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling Activity History." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System"
@@ -1789,10 +1789,10 @@ If ($Registry.IsPresent)
     Write-Output "Disabling Automatic Download of Content, Ads and Suggestions." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-    @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RemediationRequired", "RotatingLockScreenEnabled", 
-        "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled", "SubscribedContent-202914Enabled", 
-        "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled", 
-        "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", 
+    @("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RemediationRequired", "RotatingLockScreenEnabled",
+        "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled", "SubscribedContent-202914Enabled",
+        "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled",
+        "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled",
         "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled", "SubscribedContent-353698Enabled") | ForEach-Object { Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $($_) -Value 0 -Type DWord -ErrorAction SilentlyContinue }
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord -ErrorAction SilentlyContinue
@@ -1855,11 +1855,11 @@ If ($Registry.IsPresent)
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" -Name "OneDrive" -Value ([Byte[]](0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)) -Type Binary -ErrorAction SilentlyContinue
         Remove-Container -Path "$MountFolder\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk"
     }
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling Storage Sense." >> $RegLog
     #****************************************************************
     Remove-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling Modern UI Swap File." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management"
@@ -1950,12 +1950,12 @@ If ($Registry.IsPresent)
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        #****************************************************************	
+        #****************************************************************
         Write-Output "Disabling Microsoft Edge Tracking." >> $RegLog
         #****************************************************************
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     }
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling Internet Explorer First Run Wizard." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
@@ -1975,17 +1975,17 @@ If ($Registry.IsPresent)
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -Name "ManualLaunchAllowed" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Disabling People Icon from Taskbar." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People"
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Enabling Combining TaskBar Icons." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarGlomLevel" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Enabling Small TaskBar Icons." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
@@ -2038,7 +2038,7 @@ If ($Registry.IsPresent)
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search\Flighting\Override" -Name "CenterScreenRoundedCornerRadius" -Value 9 -Type DWord -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search\Flighting\Override" -Name "ImmersiveSearchFull" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     }
-    #****************************************************************	
+    #****************************************************************
     Write-Output "Removing 'Edit with Paint 3D and 3D Print' from the Context Menu." >> $RegLog
     #****************************************************************
     @('.3mf', '.bmp', '.fbx', '.gif', '.jfif', '.jpe', '.jpeg', '.jpg', '.png', '.tif', '.tiff') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\shell\3D Edit" }
@@ -2066,9 +2066,9 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Removing 'Share' and 'Give Access To' from the Context Menu." >> $RegLog
     #****************************************************************
-    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing", 
+    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing",
         "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\CopyHookHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing", 
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing",
         "HKLM:\WIM_HKLM_SOFTWARE\Classes\UserLibraryFolder\shellex\ContextMenuHandlers\Sharing") | ForEach-Object { Remove-Container -Path $($_) }
     #****************************************************************
     Write-Output "Removing 'Cast To Device' from the Context Menu." >> $RegLog
@@ -2462,7 +2462,7 @@ Try
     Else
     {
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -ErrorAction SilentlyContinue }
-        Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -ErrorAction SilentlyContinue }
+        Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -ErrorAction SilentlyContinue }
     }
 }
 Finally
