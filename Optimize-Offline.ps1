@@ -71,8 +71,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.5.3
-		Last updated:	06/04/2019
+		Version:        3.2.5.4
+		Last updated:	06/08/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -123,7 +123,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.5.3'
+$ScriptVersion = '3.2.5.4'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -193,22 +193,20 @@ Function Exit-Script
 
     $Host.UI.RawUI.WindowTitle = "Cleaning-up and terminating $ScriptName."
     Out-Log -Info "Cleaning-up and terminating $ScriptName."
-    Get-Process -Name Dism -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name Dism -ErrorAction SilentlyContinue | ForEach-Object { $_.Kill() }
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
-    [void](Dismount-WindowsImage -Path $MountFolder -Discard -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
-    If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
+    [void](Dismount-WindowsImage -Path $MountFolder -Discard -ErrorAction SilentlyContinue)
+    [void](Clear-WindowsCorruptMountPoint)
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value "Optimizations failed at [$(Get-Date -Format 'MM.dd.yyyy HH:mm:ss')]"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
+    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
+    If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
+    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
-    [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -Name -ErrorAction SilentlyContinue | Remove-Container
-    [void](Clear-WindowsCorruptMountPoint)
-    Write-Host ('All logs saved to: "{0}"' -f "$($SaveFolder)\OptimizeLogs.zip")
-    Start-Sleep 5
+    Remove-Container -Path $ParentDirectory
     (Get-Process -Id $PID -ErrorAction SilentlyContinue).Kill()
 }
 
@@ -294,8 +292,7 @@ Function Get-OfflineHives
         }
         'Test'
         {
-            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach-Object { If (Test-Path -Path $($_)) { $HivesLoaded = $true } }
-            If ($HivesLoaded) { Return $HivesLoaded }; Break
+            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU') | ForEach-Object { If (Test-Path -Path $($_)) { $true } }; Break
         }
     }
 }
@@ -339,20 +336,20 @@ Function Get-Oscdimg
     [CmdletBinding()]
     Param ()
 
-    $ADKRoot = @("HKLM:\Software\WOW6432Node\Microsoft\Windows Kits\Installed Roots", "HKLM:\Software\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
-        Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction Ignore | Select-Object -ExpandProperty KitsRoot10 | Where-Object { $($_) }
-    }
-    $OscdimgPath = Join-Path -Path $ADKRoot -ChildPath "Assessment and Deployment Kit\Deployment Tools\$Env:PROCESSOR_ARCHITECTURE\Oscdimg\oscdimg.exe"
-    If (Test-Path -Path $OscdimgPath) { Return $OscdimgPath }
+    $ADKRoot = @("HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
+        If (Test-Path -Path $($_)) { Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction SilentlyContinue }
+    } | Select-Object -First 1 -ExpandProperty KitsRoot10
+    If ($ADKRoot) { $OscdimgPath = Join-Path -Path $ADKRoot -ChildPath "Assessment and Deployment Kit\Deployment Tools\$Env:PROCESSOR_ARCHITECTURE\Oscdimg\oscdimg.exe" }
     Else
     {
         [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $ObjForm = New-Object -TypeName System.Windows.Forms.OpenFileDialog
-        $ObjForm.Title = "Select the Oscdimg executable for ISO creation."
-        $ObjForm.InitialDirectory = [System.IO.Directory]::GetCurrentDirectory()
-        $ObjForm.Filter = "oscdimg.exe|oscdimg.exe|All files|*.*"
-        If ($ObjForm.ShowDialog() -eq 'OK') { If ($ObjForm.CheckFileExists -eq $true) { Return $ObjForm.FileName } }
+        $OpenFile = New-Object -TypeName System.Windows.Forms.OpenFileDialog
+        $OpenFile.Title = "Select the Oscdimg executable for ISO creation."
+        $OpenFile.InitialDirectory = [System.IO.Directory]::GetCurrentDirectory()
+        $OpenFile.Filter = "oscdimg.exe|oscdimg.exe|All files|*.*"
+        If ($OpenFile.ShowDialog() -eq 'OK') { $OscdimgPath = $OpenFile.FileName }
     }
+    If (Test-Path -Path $OscdimgPath) { Return $OscdimgPath.ToString() }
 }
 #endregion Helper Functions
 
@@ -361,14 +358,11 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Write-Warning "Elevation is required to process optimizations. Relaunch $ScriptName as an administrator."
     Break
 }
-Else
+
+If (((Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption) -notlike "Microsoft Windows 10*") -and ((Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption) -notlike "Microsoft Windows Server 2016*"))
 {
-    $OSCaption = Get-WmiObject Win32_OperatingSystem | Select-Object -ExpandProperty Caption
-    If (($OSCaption -notlike "Microsoft Windows 10*") -and ($OSCaption -notlike "Microsoft Windows Server 2016*"))
-    {
-        Write-Warning "Offline optimizations of Windows 10 should be performed in a Windows 10 or Windows Server 2016 environment."
-        Break
-    }
+    Write-Warning "$ScriptName requires a Windows 10 or Windows Server 2016 environment."
+    Break
 }
 
 If (Get-WindowsImage -Mounted)
@@ -721,6 +715,7 @@ If ($SystemApps.IsPresent)
             Clear-Host
         }
     }
+    If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
 }
 
 If ($Packages.IsPresent)
@@ -1874,12 +1869,12 @@ If ($Registry.IsPresent)
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "ShippedWithReserves" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     }
     #****************************************************************
-    Write-Output "Hiding 'Recently Added Apps' list from the Start Menu." >> $RegLog
+    Write-Output "Disabling 'Recently Added Apps' list from the Start Menu." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Hiding 'Most Used Apps' list from the Start Menu." >> $RegLog
+    Write-Output "Disabling 'Most Used Apps' list from the Start Menu." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoStartMenuMFUprogramsList" -Value 1 -Type DWord -ErrorAction SilentlyContinue
@@ -2064,12 +2059,17 @@ If ($Registry.IsPresent)
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type String -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Removing 'Share' and 'Give Access To' from the Context Menu." >> $RegLog
+    Write-Output "Removing 'Give Access To' from the Context Menu." >> $RegLog
     #****************************************************************
-    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\CopyHookHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\Sharing",
-        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing",
+    @("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shellex\ContextMenuHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\CopyHookHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\Sharing",
+        "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\Sharing", "HKLM:\WIM_HKLM_SOFTWARE\Classes\LibraryFolder\background\shellex\ContextMenuHandlers\Sharing",
         "HKLM:\WIM_HKLM_SOFTWARE\Classes\UserLibraryFolder\shellex\ContextMenuHandlers\Sharing") | ForEach-Object { Remove-Container -Path $($_) }
+    #****************************************************************
+    Write-Output "Removing 'Share' from the Context Menu." >> $RegLog
+    #****************************************************************
+    Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\ModernSharing"
     #****************************************************************
     Write-Output "Removing 'Cast To Device' from the Context Menu." >> $RegLog
     #****************************************************************
@@ -2088,7 +2088,7 @@ If ($Registry.IsPresent)
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Hiding User Folders from This PC and Explorer." >> $RegLog
+    Write-Output "Removing User Folders from This PC and Explorer." >> $RegLog
     #****************************************************************
     Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
     Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
@@ -2121,13 +2121,6 @@ If ($Registry.IsPresent)
     Write-Output "Enabling Long File Paths." >> $RegLog
     #****************************************************************
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-    #****************************************************************
-    Write-Output "Adding 'Open with Notepad' to the Context Menu." >> $RegLog
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command"
-    If ($WimInfo.Build -lt '18362') { Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad" -Name "Icon" -Value "Notepad.exe,-2" -Type String -ErrorAction SilentlyContinue }
-    Set-ItemProperty -LiteralPath "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shell\Open with Notepad\command" -Name "(default)" -Value "Notepad.exe %1" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Adding 'Copy-Move' to the Context Menu." >> $RegLog
     #****************************************************************
@@ -2198,7 +2191,7 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer" -Name "Icon" -Value "Explorer.exe" -Type String -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"(Get-Process -Name explorer).Kill()`"" -Type String -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Get-Process -Name explorer | ForEach { $_.Kill() }`"" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
     Get-OfflineHives -Process Unload
 }
@@ -2214,7 +2207,7 @@ Try
     $UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
     $UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
     $UWPShortcut.WorkingDirectory = "%SystemRoot%"
-    $UWPShortcut.Description = "UWP File Explorer App"
+    $UWPShortcut.Description = "UWP File Explorer"
     $UWPShortcut.Save()
     $LayoutFile = "$MountFolder\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml"
     @'
@@ -2440,16 +2433,24 @@ If ($ISOMedia)
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
-        $Oscdimg = Get-Oscdimg
         $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
         $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
         $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
         $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
-        $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
-        Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-        $RunOscdimg = Start-Process -FilePath $Oscdimg -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru
-        If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
-        Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
+        Try
+        {
+            $Oscdimg = Get-Item -LiteralPath (Get-Oscdimg) -Force -ErrorAction Stop
+            $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
+            Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
+            $RunOscdimg = Start-Process -FilePath $($Oscdimg.FullName) -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
+            If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
+            Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
+        }
+        Catch
+        {
+            Out-Log -Error "ISO creation failed." -ErrorRecord $Error[0]
+            Start-Sleep 3
+        }
     }
 }
 
