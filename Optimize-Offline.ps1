@@ -71,8 +71,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.5.4
-		Last updated:	06/08/2019
+		Version:        3.2.5.5
+		Last updated:	06/11/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -123,7 +123,7 @@ Param
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.5.4'
+$ScriptVersion = '3.2.5.5'
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Additional"
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\DaRT"
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -186,14 +186,13 @@ Function Out-Log
     }
 }
 
-Function Exit-Script
+Function Stop-Optimize
 {
     [CmdletBinding()]
     Param ()
 
-    $Host.UI.RawUI.WindowTitle = "Cleaning-up and terminating $ScriptName."
-    Out-Log -Info "Cleaning-up and terminating $ScriptName."
-    Get-Process -Name Dism -ErrorAction SilentlyContinue | ForEach-Object { $_.Kill() }
+    $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
+    Out-Log -Info "Dismounting and discarding the image."
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     [void](Dismount-WindowsImage -Path $MountFolder -Discard -ErrorAction SilentlyContinue)
     [void](Clear-WindowsCorruptMountPoint)
@@ -207,7 +206,7 @@ Function Exit-Script
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     Remove-Container -Path $ParentDirectory
-    (Get-Process -Id $PID -ErrorAction SilentlyContinue).Kill()
+    Return
 }
 
 Function New-OfflineDirectory
@@ -337,19 +336,21 @@ Function Get-Oscdimg
     Param ()
 
     $ADKRoot = @("HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots") | ForEach-Object {
-        If (Test-Path -Path $($_)) { Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction SilentlyContinue }
-    } | Select-Object -First 1 -ExpandProperty KitsRoot10
-    If ($ADKRoot) { $OscdimgPath = Join-Path -Path $ADKRoot -ChildPath "Assessment and Deployment Kit\Deployment Tools\$Env:PROCESSOR_ARCHITECTURE\Oscdimg\oscdimg.exe" }
-    Else
+        Get-ItemProperty -Path $($_) -Name KitsRoot10 -ErrorAction Ignore } | Select-Object -First 1 -ExpandProperty KitsRoot10
+    If ($ADKRoot)
     {
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $OpenFile = New-Object -TypeName System.Windows.Forms.OpenFileDialog
-        $OpenFile.Title = "Select the Oscdimg executable for ISO creation."
-        $OpenFile.InitialDirectory = [System.IO.Directory]::GetCurrentDirectory()
-        $OpenFile.Filter = "oscdimg.exe|oscdimg.exe|All files|*.*"
-        If ($OpenFile.ShowDialog() -eq 'OK') { $OscdimgPath = $OpenFile.FileName }
+        $OscdimgPath = Join-Path -Path $ADKRoot -ChildPath "Assessment and Deployment Kit\Deployment Tools\$Env:PROCESSOR_ARCHITECTURE\Oscdimg\oscdimg.exe"
+        If (Test-Path -Path $OscdimgPath) { Return $OscdimgPath }
+        Else
+        {
+            [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
+            $OpenFile = New-Object -TypeName System.Windows.Forms.OpenFileDialog
+            $OpenFile.Title = "Select the Oscdimg executable for ISO creation."
+            $OpenFile.InitialDirectory = [System.IO.Directory]::GetCurrentDirectory()
+            $OpenFile.Filter = "oscdimg.exe|oscdimg.exe|All files|*.*"
+            If ($OpenFile.ShowDialog() -eq 'OK') { If ($OpenFile.CheckFileExists -eq $true) { Return $OpenFile.FileName } }
+        }
     }
-    If (Test-Path -Path $OscdimgPath) { Return $OscdimgPath.ToString() }
 }
 #endregion Helper Functions
 
@@ -372,7 +373,7 @@ If (Get-WindowsImage -Mounted)
     $MountPath = (Get-WindowsImage -Mounted).MountPath
     If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
     [void](Dismount-WindowsImage -Path $MountPath -Discard -ErrorAction SilentlyContinue)
-    $MountPath = $null; Clear-Host
+    Remove-Variable MountPath -ErrorAction SilentlyContinue; Clear-Host
 }
 
 Try
@@ -417,16 +418,16 @@ If ($SourcePath.Extension -eq '.ISO')
             ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
             {
                 $ISOExport = $ISOMedia + $Item.FullName.Replace($ISOMount, $null)
-                Copy-Item -Path $($Item.FullName) -Destination $ISOExport -ErrorAction Stop
+                Copy-Item -Path $($Item.FullName) -Destination $ISOExport
             }
-            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $ImageFolder -ErrorAction Stop
-            $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim -ErrorAction Stop | Select-Object -ExpandProperty FullName
-            $BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-            @($InstallWim, $BootWim) | ForEach-Object { Set-ItemProperty -Path $($_) -Name IsReadOnly -Value $false -ErrorAction Stop }
+            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse | Move-Item -Destination $ImageFolder
+            $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim | Select-Object -ExpandProperty FullName
+            $BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select-Object -ExpandProperty FullName
+            @($InstallWim, $BootWim) | ForEach-Object { Set-ItemProperty -Path $($_) -Name IsReadOnly -Value $false }
         }
         Catch
         {
-            Write-Warning ('Unable to export media from "{0}"' -f $($SourcePath.Name))
+            Write-Error $($_.Exception.Message)
             Remove-Container -Path $ParentDirectory
             Break
         }
@@ -449,13 +450,13 @@ ElseIf ($SourcePath.Extension -eq '.WIM')
         Try
         {
             Write-Host ('Copying WIM from "{0}"' -f $($SourcePath.DirectoryName)) -ForegroundColor Cyan
-            Copy-Item -Path $($SourcePath.FullName) -Destination $ImageFolder -ErrorAction Stop
-            $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim -ErrorAction Stop | Select-Object -ExpandProperty FullName
-            Set-ItemProperty -Path $InstallWim -Name IsReadOnly -Value $false -ErrorAction Stop
+            Copy-Item -Path $($SourcePath.FullName) -Destination $ImageFolder
+            $InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.wim | Select-Object -ExpandProperty FullName
+            Set-ItemProperty -Path $InstallWim -Name IsReadOnly -Value $false
         }
         Catch
         {
-            Write-Warning ('Unable to copy WIM from "{0}"' -f $($SourcePath.DirectoryName))
+            Write-Error $($_.Exception.Message)
             Remove-Container -Path $ParentDirectory
             Break
         }
@@ -473,7 +474,7 @@ If ((Get-WindowsImage -ImagePath $InstallWim).Count -gt 1)
 }
 Else { $ImageIndex = 1 }
 
-If ($ImageIndex)
+Try
 {
     $WimImage = (Get-WindowsImage -ImagePath $InstallWim -Index $ImageIndex)
     $WimInfo = [PSCustomObject]@{
@@ -485,9 +486,9 @@ If ($ImageIndex)
     }
     If ($WimImage.Architecture -eq 9) { $WimInfo | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
 }
-Else
+Catch
 {
-    Write-Warning "No Windows 10 Edition was selected to optimize."
+    Write-Error $($_.Exception.Message)
     Remove-Container -Path $ParentDirectory
     Break
 }
@@ -516,7 +517,6 @@ If ($WimInfo.Version.StartsWith(10))
     }
     ElseIf ($WimInfo.Build -eq '18362')
     {
-        If ($Win32Calc.IsPresent) { $Win32Calc = $false }
         If ($Dedup.IsPresent -and $WimInfo.Language -ne 'en-US') { $Dedup = $false }
         If ($MicrosoftEdge.IsPresent -and $WimInfo.Language -ne 'en-US') { $MicrosoftEdge = $false }
     }
@@ -569,7 +569,7 @@ Try
 Catch
 {
     Out-Log -Error ('Failed to Mount {0}' -f $($WimInfo.Name)) -ErrorRecord $Error[0]
-    Exit-Script
+    Stop-Optimize; Throw
 }
 
 If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -579,7 +579,7 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Further servicing is required before the image can be optimized."
-    Exit-Script
+    Stop-Optimize; Throw
 }
 
 If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
@@ -663,7 +663,7 @@ If ($MetroApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
     Catch
     {
         Out-Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
     Finally
     {
@@ -707,7 +707,7 @@ If ($SystemApps.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
-            Exit-Script
+            Stop-Optimize; Throw
         }
         Finally
         {
@@ -753,7 +753,7 @@ If ($Packages.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove Windows Capability Packages." -ErrorRecord $Error[0]
-            Exit-Script
+            Stop-Optimize; Throw
         }
         Finally
         {
@@ -843,7 +843,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
     Catch
     {
         Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
 }
 
@@ -883,7 +883,7 @@ If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName *SMB1*).State -e
     Catch
     {
         Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature." -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
 }
 
@@ -925,7 +925,7 @@ If ($Features.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Features." -ErrorRecord $Error[0]
-            Exit-Script
+            Stop-Optimize; Throw
         }
         Clear-Host
         $Host.UI.RawUI.WindowTitle = "Enabling Windows Features."
@@ -964,7 +964,7 @@ If ($Features.IsPresent)
             Catch
             {
                 Out-Log -Error "Failed to Enable Windows Features." -ErrorRecord $Error[0]
-                Exit-Script
+                Stop-Optimize; Throw
             }
         }
     }
@@ -1041,7 +1041,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
 }
 
@@ -1093,7 +1093,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
 }
 
@@ -1142,59 +1142,67 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
         Catch
         {
             Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Exit-Script
+            Stop-Optimize; Throw
         }
     }
-    ElseIf ($WimInfo.Build -lt '17763' -and (Test-Path -Path $Win32CalcPath -Filter Win32Calc.cab))
+    Else
     {
-        Try
+        If (Test-Path -Path $Win32CalcPath -Filter Win32Calc.cab)
         {
-            Start-Process -FilePath EXPAND -ArgumentList ('-F:* "{0}" "{1}"' -f "$($Win32CalcPath)\Win32Calc.cab", $MountFolder) -WindowStyle Hidden -Wait -ErrorAction Stop
-            Get-OfflineHives -Process Load
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon"
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command"
-            New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18"
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AppKey\18" -Name "ShellExecute" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
-            Get-OfflineHives -Process Unload
-            $CalcLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk"
-            $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-            $CalcShortcut = $CalcShell.CreateShortcut($CalcLnk)
-            $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
-            $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
-            $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
-            $CalcShortcut.Save()
-            $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-            $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-            If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
-            $SSDL = @'
-
-D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BU)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)
-'@
-            $SSDL.Insert(0, 'win32calc.exe') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
-            @("$($MountFolder)\Windows\System32", "$($MountFolder)\Windows\SysWOW64") | ForEach-Object {
-                Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
+            Try
+            {
+                $RunProcess = Start-Process -FilePath EXPAND -ArgumentList ('-F:* "{0}" "{1}"' -f "$($Win32CalcPath)\Win32Calc.cab", $MountFolder) -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
+                If ($RunProcess.ExitCode -eq 0)
+                {
+                    $ExeSDDL = 'O:S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464G:S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464D:PAI(A;;0x1200a9;;;SY)(A;;0x1200a9;;;BA)(A;;0x1200a9;;;BU)(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;AC)(A;;0x1200a9;;;S-1-15-2-2)'
+                    @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach-Object {
+                        $ACL = Get-Acl -Path $($_) -ErrorAction Stop
+                        $ACL.SetSecurityDescriptorSddlForm($ExeSDDL)
+                        $ACL | Set-Acl -Path $($_) -ErrorAction Stop
+                    }
+                    $CalcLnk = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Calculator.lnk"
+                    $CalcShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+                    $CalcShortcut = $CalcShell.CreateShortcut($CalcLnk)
+                    $CalcShortcut.TargetPath = "%SystemRoot%\System32\win32calc.exe"
+                    $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
+                    $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
+                    $CalcShortcut.Save()
+                    $LnkSDDL = 'O:SYG:SYD:AI(A;ID;DTSD;;;S-1-5-21-3953105342-482975687-1665615794-1000)(A;ID;FA;;;SY)(A;ID;FA;;;BA)(A;ID;0x1200a9;;;BU)(A;ID;0x1200a9;;;WD)'
+                    $ACL = Get-Acl -Path $CalcLnk -ErrorAction Stop
+                    $ACL.SetSecurityDescriptorSddlForm($LnkSDDL)
+                    $ACL | Set-Acl -Path $CalcLnk -ErrorAction Stop
+                    $IniFile = "$MountFolder\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
+                    $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
+                    If ((Get-Content -Path $IniFile).Contains($CalcString) -eq $false) { Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force -ErrorAction SilentlyContinue }
+                    Get-OfflineHives -Process Load
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities"
+                    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations"
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\DefaultIcon" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe,0" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator\shell\open\command" -Name "(default)" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationName" -Value "@%SystemRoot%\System32\win32calc.exe" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String -ErrorAction SilentlyContinue
+                    Get-OfflineHives -Process Unload
+                }
             }
-            $SSDL.Insert(0, 'win32calc.exe.mui') | Out-File -FilePath "$($WorkFolder)\SSDL.ini" -Force -ErrorAction Stop
-            @("$($MountFolder)\Windows\System32\en-US", "$($MountFolder)\Windows\SysWOW64\en-US") | ForEach-Object {
-                Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /RESTORE "{1}" /T /C /Q' -f $($_), "$($WorkFolder)\SSDL.ini") -WindowStyle Hidden -Wait -ErrorAction Stop
+            Catch
+            {
+                Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
+                Stop-Optimize; Throw
             }
-            $TrustedInstaller = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464') -ErrorAction Stop).Translate([System.Security.Principal.NTAccount]))
-            @("$MountFolder\Windows\System32\win32calc.exe", "$MountFolder\Windows\SysWOW64\win32calc.exe", "$MountFolder\Windows\System32\en-US\win32calc.exe.mui", "$MountFolder\Windows\SysWOW64\en-US\win32calc.exe.mui") | ForEach-Object {
-                $ACL = Get-Acl -Path $($_) -ErrorAction Stop
-                $ACL.SetOwner($TrustedInstaller)
-                $ACL | Set-Acl -Path $($_) -ErrorAction Stop
+            Finally
+            {
+                [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
             }
-        }
-        Catch
-        {
-            Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Exit-Script
-        }
-        Finally
-        {
-            [void][Runtime.InteropServices.Marshal]::ReleaseComObject($CalcShell)
         }
     }
 }
@@ -1311,7 +1319,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
     Catch
     {
         Out-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
-        Exit-Script
+        Stop-Optimize; Throw
     }
 }
 
@@ -1411,7 +1419,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10.wim) -and (
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Setup." -ErrorRecord $Error[0]
         If (Test-Path -Path $BootMount) { [void](Dismount-WindowsImage -Path $BootMount -Discard -ErrorAction SilentlyContinue); Remove-Container -Path $BootMount }
-        Exit-Script
+        Stop-Optimize; Throw
     }
     Try
     {
@@ -1491,7 +1499,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10.wim) -and (
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Recovery." -ErrorRecord $Error[0]
         If (Test-Path -Path $RecoveryMount) { [void](Dismount-WindowsImage -Path $RecoveryMount -Discard -ErrorAction SilentlyContinue); Remove-Container -Path $RecoveryMount }
-        Exit-Script
+        Stop-Optimize; Throw
     }
     Clear-Host
 }
@@ -2191,7 +2199,7 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer" -Name "Icon" -Value "Explorer.exe" -Type String -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer" -Name "Position" -Value "Bottom" -Type String -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Get-Process -Name explorer | ForEach { $_.Kill() }`"" -Type String -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\DesktopBackground\shell\Restart Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -Command `"Get-Process -Name explorer | ForEach { `$_`.Kill() }`"" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
     Get-OfflineHives -Process Unload
 }
@@ -2283,7 +2291,7 @@ If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory |
         Catch
         {
             Out-Log -Error "Failed to Inject Driver Packages." -ErrorRecord $Error[0]
-            Exit-Script
+            Stop-Optimize; Throw
         }
     }
 }
@@ -2296,7 +2304,7 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Discarding optimizations."
-    Exit-Script
+    Stop-Optimize; Throw
 }
 
 Try
@@ -2320,7 +2328,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Exit-Script
+    Stop-Optimize; Throw
 }
 
 Do
@@ -2356,14 +2364,14 @@ Try
         }
         [void](Export-WindowsImage @ExportInstall)
         Remove-Container -Path $InstallWim
-        Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim
+        Rename-Item -Path "$($ImageFolder)\tmp_install.wim" -NewName install.wim -Force -ErrorAction Stop
         $ImageFiles = @('install.wim', 'boot.wim')
     }
 }
 Catch
 {
     Out-Log -Error "Failed to Export $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Exit-Script
+    Stop-Optimize; Throw
 }
 
 If ($ISOMedia)
@@ -2433,16 +2441,16 @@ If ($ISOMedia)
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
+        $Oscdimg = Get-Oscdimg
         $ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
         $ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
         $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f "$($ISOMedia)\boot\etfsboot.com", "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")
         $OscdimgArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $($WimInfo.Name), $ISOMedia, $ISOPath)
         Try
         {
-            $Oscdimg = Get-Item -LiteralPath (Get-Oscdimg) -Force -ErrorAction Stop
             $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
             Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
-            $RunOscdimg = Start-Process -FilePath $($Oscdimg.FullName) -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
+            $RunOscdimg = Start-Process -FilePath $Oscdimg -ArgumentList $OscdimgArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop
             If ($RunOscdimg.ExitCode -eq 0) { $ISOIsCreated = $true }
             Else { Out-Log -Error "ISO creation failed. Oscdimg returned exit code: $($RunOscdimg.ExitCode)" }
         }
