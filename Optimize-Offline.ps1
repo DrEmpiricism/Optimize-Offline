@@ -1167,7 +1167,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
                     $CalcShortcut.IconLocation = "%SystemRoot%\System32\win32calc.exe,0"
                     $CalcShortcut.Description = "Performs basic arithmetic tasks with an on-screen calculator."
                     $CalcShortcut.Save()
-                    $LnkSDDL = 'O:SYG:SYD:AI(A;ID;DTSD;;;S-1-5-21-3953105342-482975687-1665615794-1000)(A;ID;FA;;;SY)(A;ID;FA;;;BA)(A;ID;0x1200a9;;;BU)(A;ID;0x1200a9;;;WD)'
+                    $LnkSDDL = 'O:SYG:SYD:AI(A;ID;FA;;;SY)(A;ID;FA;;;BA)(A;ID;0x1200a9;;;BU)(A;ID;0x1200a9;;;WD)'
                     $ACL = Get-Acl -Path $CalcLnk -ErrorAction Stop
                     $ACL.SetSecurityDescriptorSddlForm($LnkSDDL)
                     $ACL | Set-Acl -Path $CalcLnk -ErrorAction Stop
