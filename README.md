@@ -20,6 +20,7 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before. The best recourse for errors is to post them - and any log files - in the 'Issues' section of this repository.
+- Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause erros during Windows 10 setup.
 - Help will not be given to users who attempt to optimize unsupported builds.
 
 ## About the -Registry switch ##
@@ -79,29 +80,19 @@ This method is safer than force removing the System Application using its compon
 
 ## System Applications universally safe, and recommended, to remove ##
 
-This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, MicrosoftEdgeDevelopmentTools, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used (see below). Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
+This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, MicrosoftEdgeDevelopmentTools, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used. Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
 
-**ShellExperienceHost should never be removed**
-
-## Provisioned Application Packages (Metro Apps) removal ##
-
-The removal of Xbox.TCUI and Xbox.IdentityProvider will prevent the Windows Store Apps Troubleshooter from working properly and likewise affect the Windows Store. It is not recommended to remove these if the Windows Store is required.
+**Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of it's effect on a live system.**
 
 ## Microsoft DaRT 10 and Windows 10 Debugging Tools ##
 
 > Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
-*The supplied WIMs used for applying MS DaRT 10 and associated debugging tools are compressed using recovery compression.  This type of compression cannot be viewed in a GUI by some ISO image programs.*
-
 ## Win32Calc ##
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
-What Optimize-Offline does to remedy this:
-
-For Windows builds 17763 and above, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For builds lower than 17763, a custom created cabinet package, incorporating the latest win32calc.exe and language file, is expanded into the image and the ACL SSDLs (security descriptors) are edited so they're identical to the SSDLs applied by the OEM cabinet packages. This allows for proper system management and user control. Optimize-Offline then creates the proper Win32Calc link and adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
-
-Optimize-Offline can implement the traditional Calculator using the latest Win32Calc.exe, language files and Package Features found in the Windows 10 Enterprise LTSC 2019 edition.
+For Windows builds 17763, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For higher Windows builds, a custom Win32Calc.wim that incorporates the latest Win32Calc components and strict security descriptors (SDDL) is expanded into the image. This allows for proper system management and user control. Optimize-Offline then adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
 
 ## Data Deduplication ##
 
@@ -154,5 +145,5 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional
-- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Drivers -ISO
+- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
+- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge
