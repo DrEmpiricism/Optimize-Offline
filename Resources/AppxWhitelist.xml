@@ -3,6 +3,8 @@
   <DisplayName>Microsoft.DesktopAppInstaller</DisplayName>
   <DisplayName>Microsoft.WindowsStore</DisplayName>
   <DisplayName>Microsoft.StorePurchaseApp</DisplayName>
+  <DisplayName>Microsoft.Windows.Photos</DisplayName>
+  <DisplayName>Microsoft.VP9VideoExtensions</DisplayName>
   <DisplayName>Microsoft.XboxIdentityProvider</DisplayName>
 </Appx>
 
@@ -17,8 +19,6 @@ Microsoft.Microsoft3DViewer
 Microsoft.MicrosoftOfficeHub
 Microsoft.MicrosoftSolitaireCollection
 Microsoft.MicrosoftStickyNotes
-Microsoft.WindowsStore
-Microsoft.Windows.Photos
 Microsoft.MixedReality.Portal
 Microsoft.MSPaint
 Microsoft.Office.OneNote
@@ -32,6 +32,7 @@ Microsoft.VP9VideoExtensions
 Microsoft.Wallet
 Microsoft.WebMediaExtensions
 Microsoft.WebpImageExtension
+Microsoft.Windows.Photos
 Microsoft.WindowsAlarms
 Microsoft.WindowsCalculator
 Microsoft.WindowsCamera
@@ -39,6 +40,7 @@ microsoft.windowscommunicationsapps
 Microsoft.WindowsFeedbackHub
 Microsoft.WindowsMaps
 Microsoft.WindowsSoundRecorder
+Microsoft.WindowsStore
 Microsoft.Xbox.TCUI
 Microsoft.XboxApp
 Microsoft.XboxGameOverlay
