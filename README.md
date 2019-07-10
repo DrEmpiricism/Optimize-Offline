@@ -58,13 +58,11 @@ Any driver or driver package to be integrated into the offline image must be pla
 
 ## unattend.xml Answer File ##
 
-When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista.
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista. Addtionally, Optimize-Offline will check the contents of the unattend.xml to see if it includes offlineServicing or package servicing passes. If it does, it will apply the answer file directly to the image as well as copy it to the '\Windows\Panther' directory.
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
-An unattend.xml answer file can be created using the Windows System Image Manager that is including in the Windows ADK, or use some of the multiple online generators to create one. A word of caution, though, having incorrect or incomplete values in your answer file could prevent Windows from completing its setup or even starting its setup. Moreover, when customizing the disk layouts for installation, make certain you enter the proper drive index numbers, GPT partition sizes and type IDs.
-
-An example of an unattend.xml to boot into audit mode for System Preparation (Sysprep) and one for regular GPT/UEFI setup are included in the 'Unattend' folder.
+An unattend.xml answer file can be created using the Windows System Image Manager that is including in the Windows ADK, or use some of the multiple online generators to create one. A word of caution, though, having incorrect or incomplete values in your answer file could prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain you enter the proper drive index numbers, GPT partition sizes and type IDs.
 
 ## Script process and settings danger ##
 
@@ -100,13 +98,13 @@ For Windows builds 17763, the OEM cabinet packages extracted from Windows 10 Ent
 
 With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
 
-## Microsoft Store integration ##
+## Windows Store integration ##
 
-For Windows 10 Enterprise LTSC 2019, the Microsoft Store can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Metro Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu. Though I try to keep these packages as up-to-date as possible, it's best to update them on the live system to get the absolute latest version of the Windows Store package and any of its dependencies. With this, you can download, install and use any and all Metro Apps all other Windows 10 flavors can.
+For Windows 10 Enterprise LTSC 2019, the latest Windows Store package bundle and dependency packages can be integrated into the image, as this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Windows Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu.
 
 ## Microsoft Edge integration ##
 
-For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterlrise LTSB 2015-2016) does not contain Microsoft Edge in its default state.
+For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain Microsoft Edge in its OEM state.
 
 ## Solid image compression ##
 
@@ -145,5 +143,5 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -MetroApps 'Select' -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
+- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
 - .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge
