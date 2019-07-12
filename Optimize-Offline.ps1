@@ -59,9 +59,11 @@
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win10 LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Registry -DaRT
 
 	.NOTES
-		In order for Microsoft DaRT 10 to be applied to both the Windows Setup Boot Image (boot.wim), and the default Recovery Image (winre.wim), the source image used must be a full Windows 10 ISO.
-		A full Windows 10 ISO, along with the use of the -DaRT switch, will enable the script to extract the boot.wim along with the install.wim during the start of the script.
-		If only a WIM file is used with the -DaRT switch, DaRT 10 will only be applied to the default Recovery Image (winre.wim).
+		Four System Applications that can be removed use a GUID instead of an identifiable name:
+		1527c705-839a-4832-9118-54d4Bd6a0c89 = Microsoft.Windows.FilePicker
+		c5e2524a-ea46-4f67-841f-6a9465d9d515 = Microsoft.Windows.FileExplorer
+		E2A4F912-2574-4A75-9BB0-0D023378592B = Microsoft.Windows.AppResolverUX
+		F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE = Microsoft.Windows.AddSuggestedFoldersToLibraryDialog
 
 	.NOTES
 		===========================================================================
@@ -70,8 +72,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.5.8
-		Last updated:	07/09/2019
+		Version:        3.2.5.9
+		Last updated:	07/11/2019
 		===========================================================================
 #>
 [CmdletBinding(HelpUri = 'https://github.com/DrEmpiricism/Optimize-Offline')]
@@ -274,16 +276,12 @@ Function Get-OfflineHives
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT")) | ForEach-Object {
-                Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait
-            }; Break
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
         }
         'Unload'
         {
             [System.GC]::Collect()
-            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU') | ForEach-Object {
-                Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait
-            }; Break
+            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU') | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait }; Break
         }
         'Test'
         {
@@ -562,7 +560,7 @@ Else
     Stop-Optimize; Throw
 }
 
-If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
+If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
 {
     Clear-Host
     $Host.UI.RawUI.WindowTitle = "Removing Appx Provisioned Packages."
@@ -680,8 +678,7 @@ If ($SystemApps.IsPresent)
     $RemovedSystemApps = [System.Collections.ArrayList]@()
     $InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
     Get-OfflineHives -Process Load
-    $InboxAppPackages = (Get-ChildItem -Path $InboxAppsKey -ErrorAction SilentlyContinue).Name.Split('\').Where{ $_ -ilike "Microsoft.*" -or $_ -ilike "Windows.*" }
-    $InboxAppPackages = $InboxAppPackages | Select-Object -Property @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } }, @{ Label = 'Package'; Expression = { ($_) } } | Out-GridView -Title "Remove System Applications." -PassThru
+    $InboxAppPackages = Get-ChildItem -Path $InboxAppsKey -Name -ErrorAction SilentlyContinue | Select-Object -Property @{ Label = 'Name'; Expression = { ($_.Split('_')[0]) } }, @{ Label = 'Package'; Expression = { ($_) } } | Out-GridView -Title "Remove System Applications." -PassThru
     $InboxAppsList = $InboxAppPackages.Package
     If ($InboxAppsList)
     {
@@ -690,7 +687,7 @@ If ($SystemApps.IsPresent)
             Clear-Host
             $InboxAppsList | ForEach-Object {
                 $FullKeyPath = Join-Path -Path $InboxAppsKey -ChildPath $($_)
-                $FullKeyPath = $FullKeyPath -replace "HKLM:", "HKLM"
+                $FullKeyPath = $FullKeyPath -replace 'HKLM:', 'HKLM'
                 Out-Log -Info "Removing System Application: $($_.Split('_')[0])"
                 Start-Process -FilePath REG -ArgumentList ('DELETE "{0}" /F' -f $FullKeyPath) -WindowStyle Hidden -Wait -ErrorAction Stop
                 [void]$RemovedSystemApps.Add($_.Split('_')[0])
@@ -1561,8 +1558,6 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput"
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe"
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\DeviceCensus.exe"
     New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord -ErrorAction SilentlyContinue
@@ -1580,8 +1575,6 @@ If ($Registry.IsPresent)
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput" -Name "AllowLinguisticDataCollection" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe" -Name "Debugger" -Value "%windir%\System32\taskkill.exe" -Type String -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\DeviceCensus.exe" -Name "Debugger" -Value "%windir%\System32\taskkill.exe" -Type String -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener" -Name "Start" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling System Location Sensors." >> $RegLog
@@ -1779,16 +1772,12 @@ If ($Registry.IsPresent)
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Disabling Storage Sense." >> $RegLog
-    #****************************************************************
-    Remove-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
-    #****************************************************************
     Write-Output "Disabling Modern UI Swap File." >> $RegLog
     #****************************************************************
     New-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management"
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management" -Name "SwapfileControl" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
-    If ($WimInfo.Build -eq '18362')
+    If ($WimInfo.Build -ge '18362')
     {
         #****************************************************************
         Write-Output "Disabling Reserved Storage." >> $RegLog
@@ -1818,9 +1807,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Write-Output "Disabling Windows Start-up Sound." >> $RegLog
     #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "DisableStartupSound" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -Name "DisableStartupSound" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Changing Search Bar Icon to Magnifying Glass Icon." >> $RegLog
@@ -1855,11 +1842,6 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates"
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates" -Name "ShortcutNameTemplate" -Value "%s.lnk" -Type String -ErrorAction SilentlyContinue
     #****************************************************************
-    Write-Output "Disabling the Shortcut Arrow for Shortcuts." >> $RegLog
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Name "29" -Value "%SystemRoot%\System32\imageres.dll,-1015" -Type String -ErrorAction SilentlyContinue
-    #****************************************************************
     Write-Output "Enabling Explorer Opens to This PC." >> $RegLog
     #****************************************************************
     Set-ItemProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord -ErrorAction SilentlyContinue
@@ -1887,11 +1869,6 @@ If ($Registry.IsPresent)
         #****************************************************************
         Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     }
-    #****************************************************************
-    Write-Output "Disabling Internet Explorer First Run Wizard." >> $RegLog
-    #****************************************************************
-    New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
-    Set-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 1 -Type DWord -ErrorAction SilentlyContinue
     #****************************************************************
     Write-Output "Disabling Windows Store Icon from Taskbar." >> $RegLog
     #****************************************************************
@@ -2242,7 +2219,7 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
     Out-Log -Info "Post-Optimization Image Health State: [Healthy]"
     @"
 This $($WimInfo.Name) installation was optimized with Optimize-Offline.ps1 version $ScriptVersion
-on $([DateTime]::Now)
+on $(Get-Date -UFormat "%d/%m/%Y at %r")
 "@ | Out-File -FilePath (Join-Path -Path $MountFolder -ChildPath Optimize-Offline.txt) -Encoding Unicode -Force
     Start-Sleep 3
 }
@@ -2325,9 +2302,9 @@ If ($ISOMedia)
     $Host.UI.RawUI.WindowTitle = "Optimizing the Windows Media File Structure."
     Out-Log -Info "Optimizing the Windows Media File Structure."
     Get-ChildItem -Path $ISOMedia -Filter *.dll | Remove-Container
-    @("$ISOMedia\autorun.inf", "$ISOMedia\setup.exe", "$ISOMedia\ca", "$ISOMedia\NanoServer", "$ISOMedia\support", "$ISOMedia\upgrade", "$ISOMedia\sources\dlmanifests",
-        "$ISOMedia\sources\etwproviders", "$ISOMedia\sources\inf", "$ISOMedia\sources\hwcompat", "$ISOMedia\sources\migration", "$ISOMedia\sources\replacementmanifests",
-        "$ISOMedia\sources\servicing", "$ISOMedia\sources\servicingstackmisc", "$ISOMedia\sources\sxs", "$ISOMedia\sources\uup", "$ISOMedia\sources\vista", "$ISOMedia\sources\xp") | ForEach-Object { Remove-Container -Path $($_) }
+    @("$ISOMedia\autorun.inf", "$ISOMedia\setup.exe", "$ISOMedia\ca", "$ISOMedia\NanoServer", "$ISOMedia\support", "$ISOMedia\upgrade", "$ISOMedia\sources\dlmanifests", "$ISOMedia\sources\etwproviders",
+        "$ISOMedia\sources\inf", "$ISOMedia\sources\hwcompat", "$ISOMedia\sources\migration", "$ISOMedia\sources\replacementmanifests", "$ISOMedia\sources\servicing", "$ISOMedia\sources\servicingstackmisc",
+        "$ISOMedia\sources\sxs", "$ISOMedia\sources\uup", "$ISOMedia\sources\vista", "$ISOMedia\sources\xp") | ForEach-Object { Remove-Container -Path $($_) }
     @('.adml', '.mui', '.rtf', '.txt') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources\$($WimInfo.Language)" -Filter *$($_) -Exclude 'setup.exe.mui' -Recurse | Remove-Container }
     @('.dll', '.gif', '.xsl', '.bmp', '.mof', '.ini', '.cer', '.exe', '.sdb', '.txt', '.nls', '.xml', '.cat', '.inf', '.sys', '.bin', '.ait', '.admx', '.dat', '.ttf', '.cfg',
         '.xsd', '.rtf', '.xrm-ms') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources" -Filter *$($_) -Exclude @('EI.cfg', 'gatherosstate.exe', 'setup.exe', 'lang.ini', 'pid.txt', '*.clg') -Recurse | Remove-Container }
