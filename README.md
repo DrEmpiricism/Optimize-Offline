@@ -70,11 +70,16 @@ None of the automatic processes or settings are dangerous; however one must be c
 
 ## About System Applications ##
 
-System Applications are a lot like Provisioned Application Packages (Metro Apps) in respect that they are provisioned and installed during the setup of Windows. During the Windows Setup component pass, setup looks for these System Applications in the default registry and provisions them for installation only if their entries are present. By removing these entries, Windows Setup does not provision them for installation.
+System Applications are a lot like Provisioned Application Packages (Windows Apps) in respect that they are provisioned and installed during the setup of Windows. During the Windows Setup component pass, setup looks for these System Applications in the default registry and provisions them for installation only if their entries are present. By removing these entries, Windows Setup does not provision them for installation.
 
 This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevent both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
 
-*The upcoming GUI version of Optimize-Offline has full component package removal by both changing the permanency values of packages and using the DISM.API to allocate them and then remove them*.
+Four System Applications use a GUID instead of an identifiable name:
+
+> 1527c705-839a-4832-9118-54d4Bd6a0c89 = Microsoft.Windows.FilePicker
+> c5e2524a-ea46-4f67-841f-6a9465d9d515 = Microsoft.Windows.FileExplorer
+> E2A4F912-2574-4A75-9BB0-0D023378592B = Microsoft.Windows.AppResolverUX
+> F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE = Microsoft.Windows.AddSuggestedFoldersToLibraryDialog
 
 ## System Applications universally safe, and recommended, to remove ##
 
