@@ -74,7 +74,7 @@ System Applications are a lot like Provisioned Application Packages (Windows App
 
 This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevent both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
 
-Four System Applications use a GUID instead of an identifiable name:
+Four System Applications use a GUID namespace instead of a package name:
 
 * 1527c705-839a-4832-9118-54d4Bd6a0c89 = Microsoft.Windows.FilePicker
 * c5e2524a-ea46-4f67-841f-6a9465d9d515 = Microsoft.Windows.FileExplorer
