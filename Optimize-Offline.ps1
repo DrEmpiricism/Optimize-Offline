@@ -134,8 +134,8 @@ $EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge
 $StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
 $Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
 $AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\Additional'
-$AppxWhiteListPath = Join-Path -Path $AdditionalPath -ChildPath 'Content\AppxWhiteList.xml'
-$AppAssocListPath = Join-Path -Path $AdditionalPath -ChildPath 'Content\CustomAppAssociations.xml'
+$AppxWhiteListPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\AppxWhiteList.xml'
+$AppAssocListPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\CustomAppAssociations.xml'
 #endregion Script Variables
 
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
