@@ -44,21 +44,25 @@ A short list of some of the optimizations include:
 ## About the -Additional switch ##
 
 The -Additional script allows the end-user to add specific content to the image during Optimize-Offline's automated processes instead of having to re-mount the image or use an external Distribution Share.
-Within the '\Resources\Additional' directory are five folders: 'Drivers', 'Logo', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being uploaded. Aside from the Drivers folder, content validation is based on Microsoft's deployment guidelines. For example, only bitmap (.bmp) images will be uploaded in the 'Logo' folder and only image files will be uploaded in the 'Wallpaper' folder. Moreover, only an answer file named 'unattend.xml' will be uploaded in the 'Unattend' folder and any others will be omitted. Conversely, any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their machine can be an array of different container types - files, directories, executables, etc.
+Within the '\Content\Additional' directory are six folders: 'Drivers', 'Logo', 'Registry', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'Registry' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
 
-All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', scripts are uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
+All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', setup content is uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
 
 All content can be either folders or directories themselves, or individual files. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory. Optimize-Offline will not just copy all content over haphazardly and create a massive mess of files or completely omit a specific file structure.
 
 **Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
 
+## Registry template integration ##
+
+Any custom registry template (.reg) file to be integrated into the offline image must be placed in the '\Content\Additional\Registry' folder when using the -Additional switch. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate offline image's registry hives.
+
 ## Driver integration ##
 
-Any driver or driver package to be integrated into the offline image must be placed in the '\Resources\Additional\Drivers' folder when using the -Additional switch. Either single .inf files or full driver package directories are supported.
+Any driver or driver package to be integrated into the offline image must be placed in the '\Content\Additional\Drivers' folder when using the -Additional switch. Either single .inf files or full driver package directories are supported.
 
 ## unattend.xml Answer File ##
 
-When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista. Addtionally, Optimize-Offline will check the contents of the unattend.xml to see if it includes offlineServicing or package servicing passes. If it does, it will apply the answer file directly to the image as well as copy it to the '\Windows\Panther' directory.
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista. Addtionally, Optimize-Offline will check the contents of the unattend.xml to see if it includes offlineServicing or package servicing passes. If it does, it will also apply the answer file directly to the image.
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
@@ -74,7 +78,7 @@ System Applications are a lot like Provisioned Application Packages (Windows App
 
 This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevent both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
 
-Four System Applications use a GUID namespace instead of a package name:
+Four System Applications use a GUID namespace instead of an identifiable package name:
 
 * 1527c705-839a-4832-9118-54d4Bd6a0c89 = Microsoft.Windows.FilePicker
 * c5e2524a-ea46-4f67-841f-6a9465d9d515 = Microsoft.Windows.FileExplorer
@@ -149,4 +153,4 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
 - .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
-- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge
+- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Additional
