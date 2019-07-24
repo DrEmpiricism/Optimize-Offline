@@ -74,8 +74,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.6.0
-		Last updated:	07/20/2019
+		Version:        3.2.6.1
+		Last updated:	07/23/2019
 		===========================================================================
 
 	.LINK
@@ -121,13 +121,13 @@ Param
     [switch]$ISO
 )
 
-. "$PSScriptRoot\Lib\Functions.ps1"
 
 #region Script Variables
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.6.0'
+$ScriptVersion = '3.2.6.1'
+$ModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'Lib\Functions.psm1'
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
 $EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge"
@@ -144,16 +144,20 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Break
 }
 
-If (!(Test-Path -Path "$PSScriptRoot\Lib\Functions.ps1"))
-{
-    Write-Warning ('The required Functions.ps1 script is missing from "{0}"' -f "$PSScriptRoot\Lib")
-    Break
-}
-
 If (((Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption) -notlike "Microsoft Windows 10*") -and ((Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption) -notlike "Microsoft Windows Server 2016*"))
 {
     Write-Warning "$ScriptName requires a Windows 10 or Windows Server 2016 environment."
     Break
+}
+
+If (!(Test-Path -Path $ModulePath))
+{
+    Write-Warning ('The required functions module is missing from "{0}"' -f $(Split-Path -Path $ModulePath -Parent))
+    Break
+}
+Else
+{
+    Import-Module $ModulePath
 }
 
 If (Get-WindowsImage -Mounted)
@@ -170,16 +174,16 @@ If (Get-WindowsImage -Mounted)
 
 Try
 {
-    Get-Module Dism | Import-Module
+    Import-Module Dism
     Set-Location -Path $PSScriptRoot
     [void](Clear-WindowsCorruptMountPoint)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
     $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
     $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force
-    [void]($MountFolder = New-OfflineDirectory -Directory InstallMount)
-    [void]($ImageFolder = New-OfflineDirectory -Directory Image)
-    [void]($WorkFolder = New-OfflineDirectory -Directory Work)
-    [void]($ScratchFolder = New-OfflineDirectory -Directory Scratch)
+    $MountFolder = New-OfflineDirectory -Directory InstallMount
+    $ImageFolder = New-OfflineDirectory -Directory Image
+    $WorkFolder = New-OfflineDirectory -Directory Work
+    $ScratchFolder = New-OfflineDirectory -Directory Scratch
     $Timer = New-Object System.Diagnostics.Stopwatch
 }
 Catch
@@ -289,7 +293,7 @@ Catch
 
 If ($WimInfo.Architecture -ne 'amd64')
 {
-    Write-Warning "$($ScriptName) currently only supports 64-bit architectures."
+    Write-Warning "$ScriptName currently only supports 64-bit architectures."
     Remove-Container -Path $ParentDirectory
     Break
 }
@@ -309,6 +313,10 @@ If ($WimInfo.Version.StartsWith(10))
         Remove-Container -Path $ParentDirectory
         Break
     }
+    ElseIf ($WimInfo.Build -lt '17763' -or $WimInfo.Build -gt '17763')
+    {
+        If ($Win32Calc.IsPresent -and $WimInfo.Language -ne 'en-US') { $Win32Calc = $false }
+    }
     ElseIf ($WimInfo.Build -eq '18362')
     {
         If ($Dedup.IsPresent -and $WimInfo.Language -ne 'en-US') { $Dedup = $false }
@@ -325,7 +333,7 @@ Else
 If ($WimInfo.Name -like "*LTSC*")
 {
     $IsLTSC = $true
-    If ($WindowsApps) { Remove-Variable WindowsApps }
+    If (Test-Path -Path "Variable:\WindowsApps") { Remove-Variable WindowsApps }
     If ($Win32Calc.IsPresent) { $Win32Calc = $false }
 }
 Else
@@ -386,7 +394,6 @@ If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -
     Clear-Host
     $Host.UI.RawUI.WindowTitle = "Removing Appx Provisioned Packages."
     $RemovedAppxPackages = [System.Collections.ArrayList]@()
-    $AppxPackages = Get-AppxProvisionedPackage -Path $MountFolder
     Try
     {
         Switch ($WindowsApps)
@@ -487,7 +494,8 @@ If (Test-Path -Path $AppAssocListPath)
 {
     $Host.UI.RawUI.WindowTitle = "Importing Custom App Associations."
     Out-Log -Info "Importing Custom App Associations."
-    Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait
+    $RunProcess = Start-Process -FilePath DISM -ArgumentList ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $MountFolder, $AppAssocListPath) -WindowStyle Hidden -Wait -PassThru
+    If ($RunProcess.ExitCode -ne 0) { Out-Log -Error "Failed to Import Custom App Associations."; Start-Sleep 3 }
 }
 
 If ($SystemApps.IsPresent)
@@ -568,8 +576,8 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
 {
     $Host.UI.RawUI.WindowTitle = "Removing Windows Defender Remnants."
     Out-Log -Info "Disabling Windows Defender Services, Drivers and SmartScreen Integration."
-    Get-OfflineHives -Process Load
     $Visibility = 'hide:windowsdefender'
+    Get-OfflineHives -Process Load
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
@@ -597,9 +605,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
-    @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object {
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord }
-    }
+    @("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord } }
     Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\EPP"
     Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\EPP"
     Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\EPP"
@@ -646,9 +652,7 @@ If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Micros
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
-    @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object {
-        If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord }
-    }
+    @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord } }
     If ($Visibility)
     {
         If ($WimInfo.Build -lt '17763') { $Visibility += ';gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;gaming-trueplay' }
@@ -757,18 +761,18 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
     Out-Log -Info "Integrating the Microsoft Store Application Packages."
     Try
     {
-        $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle | Select-Object -ExpandProperty FullName
-        $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle | Select-Object -ExpandProperty FullName
-        $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle | Select-Object -ExpandProperty FullName
-        $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle | Select-Object -ExpandProperty FullName
-        $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml | Select-Object -ExpandProperty FullName
-        $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml | Select-Object -ExpandProperty FullName
-        $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml | Select-Object -ExpandProperty FullName
-        $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml | Select-Object -ExpandProperty FullName
+        $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -File | Select-Object -ExpandProperty FullName
+        $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -File | Select-Object -ExpandProperty FullName
+        $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -File | Select-Object -ExpandProperty FullName
+        $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -File | Select-Object -ExpandProperty FullName
+        $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -File | Select-Object -ExpandProperty FullName
+        $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -File | Select-Object -ExpandProperty FullName
+        $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -File | Select-Object -ExpandProperty FullName
+        $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -File | Select-Object -ExpandProperty FullName
         $DepAppx = @()
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
         Get-OfflineHives -Process Load
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
         Get-OfflineHives -Process Unload
@@ -803,7 +807,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
         }
         [void](Add-AppxProvisionedPackage @IdentityPackage)
         $DepAppx = @()
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx | Select-Object -ExpandProperty FullName
+        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
         $InstallerPackage = @{
             Path                  = $MountFolder
             PackagePath           = $InstallerBundle
@@ -1319,7 +1323,6 @@ If ($Registry.IsPresent)
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput" -Name "AllowLinguisticDataCollection" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation" -Name "value" -Value 0 -Type DWord
-    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener" -Name "Start" -Value 0 -Type DWord
     #****************************************************************
     Write-Output "Disabling System Location Sensors." >> $RegLog
     #****************************************************************
@@ -1360,21 +1363,21 @@ If ($Registry.IsPresent)
     If ($RemovedAppxPackages -contains 'Microsoft.WindowsMaps' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker"))
     {
         #****************************************************************
-        Write-Output "Disabling the Windows Maps Appx Service." >> $RegLog
+        Write-Output "Disabling the Windows Maps App Service." >> $RegLog
         #****************************************************************
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord
     }
     If ($RemovedAppxPackages -contains 'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService"))
     {
         #****************************************************************
-        Write-Output "Disabling the Microsoft Wallet Appx Service." >> $RegLog
+        Write-Output "Disabling the Microsoft Wallet App Service." >> $RegLog
         #****************************************************************
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord
     }
     If ($RemovedSystemApps -contains 'Microsoft.BioEnrollment')
     {
         #****************************************************************
-        Write-Output "Disabling Biometric and Microsoft Hello Service." >> $RegLog
+        Write-Output "Disabling Biometric and Microsoft Hello Services." >> $RegLog
         #****************************************************************
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\Credential Provider" -Name "Domain Accounts" -Value 0 -Type DWord
@@ -1439,7 +1442,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Input\TIPC" -Name "Enabled" -Value 0 -Type DWord
     #****************************************************************
-    Write-Output "Disabling Automatic Download of Content, Ads and Suggestions." >> $RegLog
+    Write-Output "Disabling the Automatic Downloading of Content, Ads and Suggestions." >> $RegLog
     #****************************************************************
     @("SubscribedContent-202914Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
         "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled",
@@ -1452,7 +1455,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments" -Name "SaveZoneInformation" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Disabling Notifications on Lock Screen." >> $RegLog
+    Write-Output "Disabling Lock Screen Notifications." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK" -Value 0 -Type DWord
@@ -1475,7 +1478,7 @@ If ($Registry.IsPresent)
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord
     #****************************************************************
-    Write-Output "Disabling Modern UI Swap File." >> $RegLog
+    Write-Output "Disabling the Modern UI Swap File." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\Session Manager\Memory Management" -Name "SwapfileControl" -Value 0 -Type DWord
     #****************************************************************
@@ -1487,11 +1490,11 @@ If ($Registry.IsPresent)
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "ShippedWithReserves" -Value 0 -Type DWord
     }
     #****************************************************************
-    Write-Output "Disabling 'Recently Added Apps' list from the Start Menu." >> $RegLog
+    Write-Output "Disabling 'Recently Added Apps' on the Start Menu." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Disabling 'Most Used Apps' list from the Start Menu." >> $RegLog
+    Write-Output "Disabling 'Most Used Apps' on the Start Menu." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoStartMenuMFUprogramsList" -Value 1 -Type DWord
     #****************************************************************
@@ -1507,11 +1510,11 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -Name "DisableStartupSound" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Changing Search Bar Icon to Magnifying Glass Icon." >> $RegLog
+    Write-Output "Reducing the Search Bar Icon Size." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Moving Drive Letter Before Drive Label." >> $RegLog
+    Write-Output "Setting the Drive Letter before the Drive Label." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowDriveLettersFirst" -Value 4 -Type DWord
     #****************************************************************
@@ -1536,7 +1539,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates" -Name "ShortcutNameTemplate" -Value "%s.lnk" -Type String
     #****************************************************************
-    Write-Output "Enabling Explorer Opens to This PC." >> $RegLog
+    Write-Output "Setting Explorer Opens to This PC." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "LaunchTo" -Value 1 -Type DWord
     #****************************************************************
@@ -1559,11 +1562,11 @@ If ($Registry.IsPresent)
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
     }
     #****************************************************************
-    Write-Output "Disabling Windows Store Icon from Taskbar." >> $RegLog
+    Write-Output "Disabling the Windows Store Icon from Taskbar." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Disabling Windows Mail Icon from Taskbar." >> $RegLog
+    Write-Output "Disabling the Windows Mail Icon from Taskbar." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -Name "MailPin" -Value 2 -Type DWord
     #****************************************************************
@@ -1571,11 +1574,11 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Mail" -Name "ManualLaunchAllowed" -Value 0 -Type DWord
     #****************************************************************
-    Write-Output "Disabling People Icon from Taskbar." >> $RegLog
+    Write-Output "Disabling the People Icon from Taskbar." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Value 0 -Type DWord
     #****************************************************************
-    Write-Output "Enabling Combining TaskBar Icons." >> $RegLog
+    Write-Output "Enabling TaskBar Icon Combining." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarGlomLevel" -Value 0 -Type DWord
     #****************************************************************
@@ -1583,7 +1586,7 @@ If ($Registry.IsPresent)
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Value 1 -Type DWord
     #****************************************************************
-    Write-Output "Disabling 'How do you want to open this file?' prompt." >> $RegLog
+    Write-Output "Disabling 'How do you want to open this file?' Prompt." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoUseStoreOpenWith" -Value 1 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoNewAppAlert" -Value 1 -Type DWord
@@ -1708,7 +1711,7 @@ If ($Registry.IsPresent)
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB630-2971-11D1-A18C-00C04FD75D13}"
     New-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\{C2FBB631-2971-11D1-A18C-00C04FD75D13}"
     #****************************************************************
-    Write-Output "Adding 'Elevated Command-Prompt' to the Context Menu." >> $RegLog
+    Write-Output "Adding 'Elevated Command Prompt' to the Context Menu." >> $RegLog
     #****************************************************************
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "(default)" -Value "Elevated Command Prompt" -Type String
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\Background\shell\runas" -Name "Icon" -Value "cmd.exe" -Type String
@@ -1770,11 +1773,7 @@ If ($Additional.IsPresent -and (Get-ChildItem -Path $AdditionalPath -Directory |
     Out-Log -Info "Applying Additional Setup Content."
     If (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml")
     {
-        [XML]$XML = Get-Content -Path "$AdditionalPath\Unattend\unattend.xml"
-        If ($XML.unattend.settings.pass -contains 'offlineServicing' -or $XML.unattend.servicing)
-        {
-            [void](Use-WindowsUnattend -UnattendPath "$AdditionalPath\Unattend\unattend.xml" -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
-        }
+        [void](Use-WindowsUnattend -UnattendPath "$AdditionalPath\Unattend\unattend.xml" -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction SilentlyContinue)
         New-Container -Path "$MountFolder\Windows\Panther"
         Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
     }
@@ -1875,8 +1874,8 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
 {
     Out-Log -Info "Post-Optimization Image Health State: [Healthy]"
     @"
-This $($WimInfo.Name) installation was optimized with Optimize-Offline.ps1 version $ScriptVersion
-on $(Get-Date -UFormat "%m/%d/%Y at %r")
+This $($WimInfo.Name) installation was optimized with $ScriptName version $ScriptVersion on
+$(Get-Date -UFormat "%m/%d/%Y at %r")
 "@ | Out-File -FilePath (Join-Path -Path $MountFolder -ChildPath Optimize-Offline.txt) -Encoding Unicode -Force
     Start-Sleep 3
 }
@@ -1994,7 +1993,7 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Out-Log -Info "Finalizing Optimizations."
-    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
+    $SaveFolder = New-OfflineDirectory -Directory Save
     If ($ISOIsCreated) { Move-Item -Path $($NewISO.Path) -Destination $SaveFolder -ErrorAction SilentlyContinue }
     Else
     {
