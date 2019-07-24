@@ -5,6 +5,7 @@
 
     Begin
     {
+        $EAP = $ErrorActionPreference
         $ErrorActionPreference = 'SilentlyContinue'
         $ProgressPreference = 'SilentlyContinue'
     }
@@ -42,9 +43,9 @@
         Start-Process -FilePath REG -ArgumentList ('REG UNLOAD HKLM\DEFAULT_USER') -WindowStyle Hidden -Wait
 
         # Disables OneDrive policies.
-        If (!(Test-Path -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")) { [void](New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -ItemType Directory -Force) }
-        If (!(Test-Path -Path "HKLM:\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\OneDrive")) { [void](New-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\OneDrive" -ItemType Directory -Force) }
-        If (!(Test-Path -Path "HKCU:\SOFTWARE\Microsoft\OneDrive")) { [void](New-Item -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -ItemType Directory -Force) }
+        [void](New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -ItemType Directory -Force)
+        [void](New-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\OneDrive" -ItemType Directory -Force)
+        [void](New-Item -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -ItemType Directory -Force)
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "PreventNetworkTrafficPreUserSignIn" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -Type DWord
@@ -55,23 +56,27 @@
         Set-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\OneDrive" -Name "DisableLibrariesDefaultSaveToOneDrive" -Value 1 -Type DWord
         Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\OneDrive" -Name "DisablePersonalSync" -Value 1 -Type DWord
 
-        # Removes OneDrive directories and the Start Menu shell link.
-        If (Test-Path -Path "$Env:LOCALAPPDATA\Microsoft\OneDrive") { Remove-Item -Path "$Env:LOCALAPPDATA\Microsoft\OneDrive" -Recurse -Force }
-        If (Test-Path -Path "$Env:PROGRAMDATA\Microsoft OneDrive") { Remove-Item -Path "$Env:PROGRAMDATA\Microsoft OneDrive" -Recurse -Force }
-        If (Test-Path -Path "$Env:SYSTEMDRIVE\OneDriveTemp") { Remove-Item -Path "$Env:SYSTEMDRIVE\OneDriveTemp" -Recurse -Force }
-        If ((Get-ChildItem -Path "$Env:USERPROFILE\OneDrive" -Recurse | Measure-Object).Count.Equals(0)) { Remove-Item -Path "$Env:USERPROFILE\OneDrive" -Recurse -Force }
+        # Removes OneDrive directories, Start Menu shell link and global environmental variable.
+        Remove-Item -Path "$Env:LOCALAPPDATA\Microsoft\OneDrive" -Recurse -Force
+        Remove-Item -Path "$Env:PROGRAMDATA\Microsoft OneDrive" -Recurse -Force
+        Remove-Item -Path "$Env:SYSTEMDRIVE\OneDriveTemp" -Recurse -Force
+        If ((Get-ChildItem -Path "$Env:USERPROFILE\OneDrive" -Recurse | Measure-Object).Count -eq 0) { Remove-Item -Path "$Env:USERPROFILE\OneDrive" -Recurse -Force }
         Remove-Item -Path "$Env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" -Force
         Remove-Item Env:OneDrive
 
-        # Removes the OneDrive component store files.
+        # Removes the OneDrive component store items.
         ForEach ($Item in Get-ChildItem -Path $Env:SystemRoot\WinSxS -Filter *OneDrive*)
         {
-            Start-Process -FilePath TAKEOWN -ArgumentList ('/F "{0}" /A /R /D Y' -f $Item.FullName) -WindowStyle Hidden -Wait
-            Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /GRANT *S-1-5-32-544:F /T /C' -f $Item.FullName) -WindowStyle Hidden -Wait
-            Remove-Item -Path $Item.FullName -Recurse -Force
+            Start-Process -FilePath TAKEOWN -ArgumentList ('/F "{0}" /A /R /D Y' -f $($Item.FullName)) -WindowStyle Hidden -Wait
+            Start-Process -FilePath ICACLS -ArgumentList ('"{0}" /GRANT *S-1-5-32-544:F /T /C' -f $($Item.FullName)) -WindowStyle Hidden -Wait
+            Remove-Item -Path $($Item.FullName) -Recurse -Force
         }
-        Get-Process -Name explorer | ForEach-Object { $_.Kill() }; Start-Sleep 5
+        Get-Process -Name explorer | Stop-Process -Force
         Write-Host "[Complete]" -ForegroundColor Cyan
+    }
+    End
+    {
+        $ErrorActionPreference = $EAP
     }
 }
 Remove-OneDrive
