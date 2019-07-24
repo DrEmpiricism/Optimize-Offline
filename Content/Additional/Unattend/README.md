@@ -1,1 +1,3 @@
-Place an unattend.xml answer file herein to customize the Windows installation and setup process. This unattend.xml answer file acts indentically to an autounattend.xml answer file placed in the root of the installation media.
+Place an unattend.xml answer file herein to customize the Windows installation and setup process.
+
+This unattend.xml answer file acts indentically to an autounattend.xml answer file placed in the root of the installation media.
