@@ -1,3 +1,14 @@
+﻿<#
+	===========================================================================
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
+	 Created on:   	7/22/2019 9:02 PM
+	 Created by:   	BenTheGreat
+	 Filename:     	Functions.psm1
+	-------------------------------------------------------------------------
+	 Module Name: Functions
+	===========================================================================
+#>
+
 #region Helper Functions
 Function Out-Log
 {
@@ -68,7 +79,7 @@ Function Stop-Optimize
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value "Optimizations failed at [$(Get-Date -UFormat "%m/%d/%Y %r")]"
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-    [void]($SaveFolder = New-OfflineDirectory -Directory Save)
+    $SaveFolder = New-OfflineDirectory -Directory Save
     If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
@@ -382,3 +393,15 @@ Function New-ISO
     }
 }
 #endregion Helper Functions
+
+
+Export-ModuleMember -Function Out-Log,
+					Stop-Optimize,
+					New-OfflineDirectory,
+					Get-OfflineHives,
+					New-Container,
+					Remove-Container,
+					Set-KeyProperty,
+					Get-RegistryTemplates,
+					Set-RegistryTemplates,
+					New-ISO
