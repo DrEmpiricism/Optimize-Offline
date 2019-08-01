@@ -1,4 +1,4 @@
-﻿#Requires -RunAsAdministrator
+#Requires -RunAsAdministrator
 #Requires -Version 5
 #Requires -Module Dism
 <#
@@ -1895,8 +1895,9 @@ If ($ISOMedia)
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
-        $NewISO = (New-ISO -Image $InstallWim -Index $ImageIndex)
-        If ($null -ne $NewISO.Error) { Out-Log -Error $($NewISO.Error) }
+        $ISOPath = Join-Path -Path $WorkFolder -ChildPath ($($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso")
+        $CreateMedia = (New-ISOMedia -ISOMedia $ISOMedia -ISOLabel $($WimInfo.Name) -ISOPath $ISOPath)
+        If ($null -ne $CreateMedia.Error) { Out-Log -Error $($CreateMedia.Error) }
         Else { $ISOIsCreated = $true }
     }
 }
@@ -1906,7 +1907,7 @@ Try
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Out-Log -Info "Finalizing Optimizations."
     $SaveFolder = New-OfflineDirectory -Directory Save
-    If ($ISOIsCreated) { Move-Item -Path $($NewISO.Path) -Destination $SaveFolder -ErrorAction SilentlyContinue }
+    If ($ISOIsCreated) { Move-Item -Path $($CreateMedia.Path) -Destination $SaveFolder -ErrorAction SilentlyContinue }
     Else
     {
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -ErrorAction SilentlyContinue }
