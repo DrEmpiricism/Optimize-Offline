@@ -1700,7 +1700,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
         $Host.UI.RawUI.WindowTitle = "Applying System Logo to the Image."
         Out-Log -Info "Applying System Logo to the Image."
         New-Container -Path "$MountFolder\Windows\System32\oobe\info\logo"
-        Copy-Item -Path "$AdditionalPath\Logo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -ErrorAction SilentlyContinue
+        Copy-Item -Path "$AdditionalPath\SystemLogo\*.bmp" -Destination "$MountFolder\Windows\System32\oobe\info\logo" -Recurse -ErrorAction SilentlyContinue
         Start-Sleep 3
     }
     If ($ConfigVars.RegistryTemplates -eq $true -and (Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse))
