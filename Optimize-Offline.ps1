@@ -1893,10 +1893,11 @@ If ($ISOMedia)
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia)\sources" -Force -ErrorAction SilentlyContinue
     If ($ISO.IsPresent)
     {
+        $Host.UI.RawUI.WindowTitle = "Creating a Bootable Windows Installation Media ISO."
+        Out-Log -Info "Creating a Bootable Windows Installation Media ISO."
         $ISOPath = Join-Path -Path $WorkFolder -ChildPath ($($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso")
-        $CreateMedia = (New-ISOMedia -ISOMedia $ISOMedia -ISOLabel $($WimInfo.Name) -ISOPath $ISOPath)
-        If ($null -ne $CreateMedia.Error) { Out-Log -Error $($CreateMedia.Error) }
-        Else { $ISOIsCreated = $true }
+        $NewISO = (New-ISOMedia -ISOMedia $ISOMedia -ISOLabel $($WimInfo.Name) -ISOPath $ISOPath)
+        If ($NewISO.Path) { $ISOIsCreated = $true } Else { Out-Log -Error "ISO creation failed." -ErrorRecord $Error[0] }
     }
 }
 
@@ -1905,7 +1906,7 @@ Try
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Out-Log -Info "Finalizing Optimizations."
     $SaveFolder = New-OfflineDirectory -Directory Save
-    If ($ISOIsCreated) { Move-Item -Path $($CreateMedia.Path) -Destination $SaveFolder -ErrorAction SilentlyContinue }
+    If ($ISOIsCreated) { Move-Item -Path $($NewISO.Path) -Destination $SaveFolder -ErrorAction SilentlyContinue }
     Else
     {
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -ErrorAction SilentlyContinue }
@@ -1924,7 +1925,7 @@ Finally
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
     [void](Clear-WindowsCorruptMountPoint)
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables -ErrorAction SilentlyContinue).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."

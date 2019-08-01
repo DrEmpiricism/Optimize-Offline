@@ -9,10 +9,6 @@
 	===========================================================================
 #>
 
-#region Module Variables
-$ScriptPath = Split-Path -Path $PSScriptRoot
-#endregion Module Variables
-
 #region Helper Functions
 Function Import-Config
 {
@@ -140,7 +136,7 @@ Function Stop-Optimize
         Remove-Container -Path $DISMLog
         Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
         [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest)
-        Get-ChildItem -Path $ScriptPath -Filter "OptimizeOfflineTemp_*" -Directory | Remove-Container
+        Get-ChildItem -Path (Split-Path -Path $PSScriptRoot) -Filter "OptimizeOfflineTemp_*" -Directory | Remove-Container
         Start-Sleep 5
         Get-Process -Id $PID | Stop-Process -Force
     }
@@ -202,8 +198,8 @@ Function New-OfflineDirectory
         }
         'Save'
         {
-            $SaveDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ScriptPath -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
-            $SaveDirectory = Get-Item -LiteralPath (Join-Path -Path $ScriptPath -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
+            $SaveDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path (Split-Path -Path $PSScriptRoot) -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
+            $SaveDirectory = Get-Item -LiteralPath (Join-Path -Path (Split-Path -Path $PSScriptRoot) -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
             $SaveDirectory.FullName; Break
         }
     }
@@ -448,19 +444,15 @@ Function New-ISOMedia
 
     Begin
     {
-        $EAP = $ErrorActionPreference
-        $ErrorActionPreference = 'SilentlyContinue'
-        $ExceptionMessage = $_.Exception.Message
-        $BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
         ($CompilerOptions = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters).CompilerOptions = '/unsafe'
-        If (!('ComType' -as [Type]))
+        If (!('ComBuilder' -as [Type]))
         {
-            Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
+			Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
-namespace ComType {
-    public class ISOFile {
+namespace ComBuilder {
+    public class ISOWriter {
         public unsafe static void Create (string Path, object Stream, int BlockSize, int TotalBlocks) {
             int BytesRead = 0;
             byte[] Buffer = new byte[BlockSize];
@@ -479,42 +471,43 @@ namespace ComType {
     }
 }
 '@
-        }
-    }
-    Process
+		}
+		$EAP = $ErrorActionPreference
+		$ErrorActionPreference = 'SilentlyContinue'
+		$BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
+		[void](New-Item -Path $ISOPath -ItemType File -Force)
+		$FileSystem = @{ UDF = 4 }
+		$PlatformID = @{ EFI = 0xEF }
+		$Emulation = @{ None = 0 }
+	}
+	Process
     {
-        $BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }
-        $BootStream.Open()
+		$BootStream = New-Object -ComObject ADODB.Stream
+		$BootOptions = New-Object -ComObject IMAPI2FS.BootOptions
+		$FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+		$FSImage.FileSystemsToCreate = $FileSystem.UDF
+		$BootStream.Open()
+		$BootStream.Type = 1
         $BootStream.LoadFromFile($BootFile.FullName)
-        $BootOptions = New-Object -ComObject IMAPI2FS.BootOptions
-        $BootOptions.AssignBootImage($BootStream)
-        $FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+		$BootOptions.AssignBootImage($BootStream)
+		$BootOptions.PlatformId = $PlatformID.EFI
+		$BootOptions.Emulation = $Emulation.None
         $FSImage.VolumeName = $ISOLabel
         $FSImage.ChooseImageDefaultsForMediaType(6)
-        $FSImage.BootImageOptions = $BootOptions
-        $ISOFile = New-Item -Path $ISOPath -ItemType File -Force
-        $Result = New-Object -TypeName PSObject -Property @{ }
-        Try
-        {
-            ForEach ($Item In Get-ChildItem -Path $ISOMedia)
-            {
-                If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force}
-                If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
-                $FSImage.Root.AddTree($Item.FullName, $true)
-            }
-        }
-        Catch
-        {
-            $Result | Add-Member -MemberType NoteProperty Error -Value $ExceptionMessage.Trim()
-        }
-        $WriteISO = $FSImage.CreateResultImage()
-        [ComType.ISOFile]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-        $Result = New-Object -TypeName PSObject -Property @{ }
-        $Result | Add-Member -MemberType NoteProperty Path -Value $ISOFile.FullName
-        $Result
-    }
-    End
+		$FSImage.BootImageOptions = $BootOptions
+		ForEach ($Item In Get-ChildItem -Path $ISOMedia -Force)
+		{
+			If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force }
+			If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
+		}
+		$WriteISO = $FSImage.CreateResultImage()
+		[ComBuilder.ISOWriter]::Create($ISOPath, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
+		If (Test-Path -Path $ISOPath) { [PSCustomObject]@{ Path = $ISOPath } }
+	}
+	End
     {
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
         $ErrorActionPreference = $EAP
     }
 }
