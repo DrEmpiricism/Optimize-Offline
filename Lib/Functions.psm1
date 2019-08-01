@@ -1,4 +1,4 @@
-<#
+﻿<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 	 Created on:   	7/22/2019 9:02 PM
@@ -504,6 +504,10 @@ namespace ComBuilder {
         [ComBuilder.ISOWriter]::Create($ISOPath, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
         If (Test-Path -Path $ISOPath) { [PSCustomObject]@{ Path = $ISOPath }
         }
+        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
+        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
+        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }
+        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }
     }
     End
     {

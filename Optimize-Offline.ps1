@@ -75,7 +75,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.2.6.2
-		Last updated:	07/31/2019
+		Last updated:	08/01/2019
 		===========================================================================
 
 	.LINK
@@ -1912,6 +1912,7 @@ Try
         If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveFolder -ErrorAction SilentlyContinue }
         Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination $SaveFolder -ErrorAction SilentlyContinue }
     }
+    Start-Sleep 5
 }
 Finally
 {
