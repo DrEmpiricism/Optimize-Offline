@@ -1,4 +1,4 @@
-<#
+﻿<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 	 Created on:   	7/22/2019 9:02 PM
@@ -699,7 +699,6 @@ Function Grant-FolderOwnership
     }
 }
 #endregion Helper Functions
-
 
 Export-ModuleMember -Function Import-Config,
 					Out-Log,
