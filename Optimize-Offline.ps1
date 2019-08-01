@@ -127,17 +127,16 @@ $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
 $ScriptVersion = '3.2.6.2'
-$ScriptPath = (Get-Item -Path $PSScriptRoot).FullName
-$ModulePath = Join-Path -Path $ScriptPath -ChildPath 'Lib\Functions.psm1'
-$DaRTPath = Join-Path -Path $ScriptPath -ChildPath 'Resources\DaRT'
-$DedupPath = Join-Path -Path $ScriptPath -ChildPath "Resources\Deduplication"
-$EdgeAppPath = Join-Path -Path $ScriptPath -ChildPath "Resources\MicrosoftEdge"
-$StoreAppPath = Join-Path -Path $ScriptPath -ChildPath "Resources\WindowsStore"
-$Win32CalcPath = Join-Path -Path $ScriptPath -ChildPath "Resources\Win32Calc"
-$AdditionalPath = Join-Path -Path $ScriptPath -ChildPath 'Content\Additional'
+$ModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'Lib\Functions.psm1'
+$DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath 'Resources\DaRT'
+$DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
+$EdgeAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\MicrosoftEdge"
+$StoreAppPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\WindowsStore"
+$Win32CalcPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Win32Calc"
+$AdditionalPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\Additional'
 $AdditionalConfigPath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
-$AppxWhiteListPath = Join-Path -Path $ScriptPath -ChildPath 'Content\AppxWhiteList.xml'
-$AppAssocListPath = Join-Path -Path $ScriptPath -ChildPath 'Content\CustomAppAssociations.xml'
+$AppxWhiteListPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\AppxWhiteList.xml'
+$AppAssocListPath = Join-Path -Path $PSScriptRoot -ChildPath 'Content\CustomAppAssociations.xml'
 #endregion Script Variables
 
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
@@ -176,12 +175,11 @@ If (Get-WindowsImage -Mounted)
 
 Try
 {
-    Import-Module Dism
-    Set-Location -Path $ScriptPath
+    Set-Location -Path $PSScriptRoot
     [void](Clear-WindowsCorruptMountPoint)
-    Get-ChildItem -Path $ScriptPath -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
-    $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $ScriptPath -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
-    $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $ScriptPath -ChildPath $ParentDirectory) -Force
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
+    $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
+    $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force
     $MountFolder = New-OfflineDirectory -Directory InstallMount
     $ImageFolder = New-OfflineDirectory -Directory Image
     $WorkFolder = New-OfflineDirectory -Directory Work
@@ -191,7 +189,7 @@ Try
 Catch
 {
     Write-Warning $($_.Exception.Message)
-    Get-ChildItem -Path $ScriptPath -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
     Break
 }
 
@@ -1926,7 +1924,7 @@ Finally
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $ScriptPath -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void](Clear-WindowsCorruptMountPoint)
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables -ErrorAction SilentlyContinue).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."

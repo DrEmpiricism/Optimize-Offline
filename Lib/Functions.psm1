@@ -10,8 +10,7 @@
 #>
 
 #region Module Variables
-$ModulePath = (Get-Item -Path $PSScriptRoot).FullName
-$ScriptPath = Split-Path -Path $ModulePath
+$ScriptPath = Split-Path -Path $PSScriptRoot
 #endregion Module Variables
 
 #region Helper Functions
