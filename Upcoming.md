@@ -13,4 +13,4 @@ All of these features, modules and add-ons are already either complete or going 
 * Additional runtime modules to further customize and attain full control over your system.
 * Many, many more features.
 
-** The full GUI version is in its alpha stage and has been delayed to ensure complete compatibility with PowerShell 6. Its release will be coming soon, though. **
+**The full GUI version is in its alpha stage and has been delayed to ensure complete compatibility with PowerShell 6. Its release will be coming soon, though.**
