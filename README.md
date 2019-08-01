@@ -66,7 +66,11 @@ When an unattend.xml answer file is added to the 'Unattend' folder with the -Add
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
-An unattend.xml answer file can be created using the Windows System Image Manager that is including in the Windows ADK, or use some of the multiple online generators to create one. A word of caution, though, having incorrect or incomplete values in your answer file could prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain you enter the proper drive index numbers, GPT partition sizes and type IDs.
+It is recommended to create an unattend.xml using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an unattend.xml for you, just like with Windows 10 features, answer file variables can change between builds. Likewise, having faulty or unsuppored variables in an answer file can prevent Windows Setup from completing.
+
+It is also in good practice to have a good idea what each Configuration Pass does and what it in regards to setting up Windows. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
+
+A final word of caution: Having incorrect, null or incomplete values in your answer file, most notably the WindowsPE Configuration Pass, WILL prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain the proper drive index numbers, partition type IDs and sizes are entered.
 
 ## Script process and settings danger ##
 
@@ -125,9 +129,9 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 ## ISO Remastering and Creation ##
 
-When a Windows Installation ISO is used as the source image for optimization, Optimize-Offline expands the entire media content of the ISO. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed if the Windows ADK (Assessment and Deployment Kit) is installed on the system. If the Windows ADK is not installed on the system and the -ISO switch was used, a Windows Dialog Form will display allowing the end-user to select the oscdimg.exe premastering tool Optimize-Offline will use to create the bootable ISO.
+When a Windows Installation Media ISO is used as the source image for optimization, Optimize-Offline expands the entire media contents of the ISO into its own directory. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed.
 
-Optimize-Offline queries specific registry keys that contain the path to the ADK's installed root location and then joins the absolute paths to the ADK boot files. Once it tests that the Oscdimg location exists, it silently passes the appropriate command-line arguments to the oscdimg executable that apply the proper bootcode and switches to create a new bootable Windows Installation Media ISO. Optimize-Offline queries the registry for the path to the ADK, as opposed to setting a static string for it, because many users install programs on different drives (i.e. SSD users). Likewise, these are the same registry keys various Microsoft software also queries when tools from the ADK are required, for example in the creation of the Windows 10 DaRT bootable media.
+Optimize-Offline used a C# wrapper that accesses the specific Interop COM type for ISO creation and opens a binary stream COM object that adds the Microsoft efisys.bin bootable binary header to the ISO, thus making it EFI bootable. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party executables like oscdimg.exe or end-user input.
 
 Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
 
