@@ -451,7 +451,7 @@ Function New-ISOMedia
     {
         $EAP = $ErrorActionPreference
         $ErrorActionPreference = 'SilentlyContinue'
-        $ErrVar = 'ErrorVariable'
+        $ExceptionMessage = $_.Exception.Message
         $BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
         ($CompilerOptions = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters).CompilerOptions = '/unsafe'
         If (!('ComType' -as [Type]))
@@ -493,23 +493,29 @@ namespace ComType {
         $FSImage.VolumeName = $ISOLabel
         $FSImage.ChooseImageDefaultsForMediaType(6)
         $FSImage.BootImageOptions = $BootOptions
-        $ISOFile = New-Item -Path $ISOPath -ItemType File -Force -ErrorVariable ErrorVar
-        ForEach ($Item In Get-ChildItem -Path $ISOMedia)
+        $ISOFile = New-Item -Path $ISOPath -ItemType File -Force
+        $Result = New-Object -TypeName PSObject -Property @{ }
+        Try
         {
-            If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force -ErrorVariable +ErrorVar }
-            If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
-            Invoke-Command -ScriptBlock ($FSImage.Root.AddTree($Item.FullName, $true)) -ErrorAction SilentlyContinue -ErrorVariable +ErrorVar
+            ForEach ($Item In Get-ChildItem -Path $ISOMedia)
+            {
+                If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force}
+                If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
+                $FSImage.Root.AddTree($Item.FullName, $true)
+            }
+        }
+        Catch
+        {
+            $Result | Add-Member -MemberType NoteProperty Error -Value $ExceptionMessage.Trim()
         }
         $WriteISO = $FSImage.CreateResultImage()
         [ComType.ISOFile]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
         $Result = New-Object -TypeName PSObject -Property @{ }
         $Result | Add-Member -MemberType NoteProperty Path -Value $ISOFile.FullName
-        If ($ErrVar) { $Result | Add-Member -MemberType NoteProperty Error -Value $ErrVar.Exception.Message }
         $Result
     }
     End
     {
-        $ErrVar.Clear()
         $ErrorActionPreference = $EAP
     }
 }
