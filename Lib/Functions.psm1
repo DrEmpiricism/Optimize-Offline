@@ -1,4 +1,4 @@
-﻿<#
+<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 	 Created on:   	7/22/2019 9:02 PM
@@ -447,7 +447,7 @@ Function New-ISOMedia
         ($CompilerOptions = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters).CompilerOptions = '/unsafe'
         If (!('ComBuilder' -as [Type]))
         {
-			Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
+            Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
@@ -471,40 +471,41 @@ namespace ComBuilder {
     }
 }
 '@
-		}
-		$EAP = $ErrorActionPreference
-		$ErrorActionPreference = 'SilentlyContinue'
-		$BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
-		[void](New-Item -Path $ISOPath -ItemType File -Force)
-		$FileSystem = @{ UDF = 4 }
-		$PlatformID = @{ EFI = 0xEF }
-		$Emulation = @{ None = 0 }
-	}
-	Process
+        }
+        $EAP = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
+        $BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
+        [void](New-Item -Path $ISOPath -ItemType File -Force)
+        $FileSystem = @{ UDF = 4 }
+        $PlatformID = @{ EFI = 0xEF }
+        $Emulation = @{ None = 0 }
+    }
+    Process
     {
-		$BootStream = New-Object -ComObject ADODB.Stream
-		$BootOptions = New-Object -ComObject IMAPI2FS.BootOptions
-		$FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
-		$FSImage.FileSystemsToCreate = $FileSystem.UDF
-		$BootStream.Open()
-		$BootStream.Type = 1
+        $BootStream = New-Object -ComObject ADODB.Stream
+        $BootOptions = New-Object -ComObject IMAPI2FS.BootOptions
+        $FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+        $FSImage.FileSystemsToCreate = $FileSystem.UDF
+        $BootStream.Open()
+        $BootStream.Type = 1
         $BootStream.LoadFromFile($BootFile.FullName)
-		$BootOptions.AssignBootImage($BootStream)
-		$BootOptions.PlatformId = $PlatformID.EFI
-		$BootOptions.Emulation = $Emulation.None
+        $BootOptions.AssignBootImage($BootStream)
+        $BootOptions.PlatformId = $PlatformID.EFI
+        $BootOptions.Emulation = $Emulation.None
         $FSImage.VolumeName = $ISOLabel
         $FSImage.ChooseImageDefaultsForMediaType(6)
-		$FSImage.BootImageOptions = $BootOptions
-		ForEach ($Item In Get-ChildItem -Path $ISOMedia -Force)
-		{
-			If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force }
-			If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
-		}
-		$WriteISO = $FSImage.CreateResultImage()
-		[ComBuilder.ISOWriter]::Create($ISOPath, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-		If (Test-Path -Path $ISOPath) { [PSCustomObject]@{ Path = $ISOPath } }
-	}
-	End
+        $FSImage.BootImageOptions = $BootOptions
+        ForEach ($Item In Get-ChildItem -Path $ISOMedia -Force)
+        {
+            If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force }
+            If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
+        }
+        $WriteISO = $FSImage.CreateResultImage()
+        [ComBuilder.ISOWriter]::Create($ISOPath, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
+        If (Test-Path -Path $ISOPath) { [PSCustomObject]@{ Path = $ISOPath }
+        }
+    }
+    End
     {
         [System.GC]::Collect()
         [System.GC]::WaitForPendingFinalizers()
