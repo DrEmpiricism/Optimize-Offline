@@ -378,7 +378,7 @@ Function Get-RegistryTemplates
     Begin
     {
         $RegistryTemplates = @()
-        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
     }
     Process
     {
@@ -407,7 +407,7 @@ Function Set-RegistryTemplates
     Begin
     {
         $RegistryTemplates = @()
-        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
         $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
     }
     Process
