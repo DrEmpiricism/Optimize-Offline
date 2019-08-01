@@ -61,99 +61,55 @@ Function Import-Config
 
 Function Out-Log
 {
-	[CmdletBinding()]
-	[OutputType([PSCustomObject])]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[ValidatePattern('\.ini$')]
-		[IO.FileInfo]$Path
-	)
+    [CmdletBinding(DefaultParameterSetName = 'Info')]
+    Param
+    (
+        [Parameter(ParameterSetName = 'Info')]
+        [string]$Info,
+        [Parameter(ParameterSetName = 'Error')]
+        [string]$Error,
+        [Parameter(ParameterSetName = 'Error',
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [System.Management.Automation.ErrorRecord]$ErrorRecord
+    )
 
-	Begin
-	{
-		$ConfigFile = Get-Content -Path $Path.FullName | Where-Object { $_ -notmatch "^(\s+)?;|^\s*$" }
-		$ConfigObj = New-Object -TypeName PSObject -Property @{ }
-		$ConfigParams = [Ordered]@{ }
-	}
-	Process
-	{
-		ForEach ($Line In $ConfigFile)
-		{
-			If ($Line -match "^\[.*\]$" -and $ConfigParams.Count -gt 0)
-			{
-				$ConfigObj | Add-Member -MemberType Noteproperty -Name $Section -Value $([PSCustomObject]$ConfigParams) -Force
-				$ConfigParams = [Ordered]@{ }
-				$Section = $Line -replace '\[|\]', ''
-			}
-			ElseIf ($Line -match "^\[.*\]$")
-			{
-				$Section = $Line -replace '\[|\]', ''
-			}
-			ElseIf ($Line -match '=')
-			{
-				$Data = $Line.Split('=').Trim()
-				$ConfigParams.Add($Data[0], $Data[1])
-			}
-		}
-		$ConfigObj | Add-Member -MemberType Noteproperty -Name $Section -Value $([PSCustomObject]$ConfigParams) -Force
-		$ConfigObj
-	}
-}
-
-Function Out-Log
-{
-	[CmdletBinding(DefaultParameterSetName = 'Info')]
-	Param
-	(
-		[Parameter(ParameterSetName = 'Info')]
-		[string]$Info,
-		[Parameter(ParameterSetName = 'Error')]
-		[string]$Error,
-		[Parameter(ParameterSetName = 'Error',
-				   ValueFromPipeline = $true,
-				   ValueFromPipelineByPropertyName = $true)]
-		[System.Management.Automation.ErrorRecord]$ErrorRecord
-	)
-
-	Begin
-	{
-		$Timestamp = (Get-Date -Format 's')
-		$LogMutex = New-Object System.Threading.Mutex($false, "SyncLogMutex")
-		[void]$LogMutex.WaitOne()
-	}
-	Process
-	{
-		Switch ($PSBoundParameters.Keys)
-		{
-			'Info'
-			{
-				Add-Content -Path $ScriptLog -Value "$Timestamp [INFO]: $Info" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
-				Write-Host $Info -ForegroundColor Cyan
-			}
-			'Error'
-			{
-				Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $Error" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
-				Write-Host $Error -ForegroundColor Red
-				If ($PSBoundParameters.ContainsKey('ErrorRecord'))
-				{
-					$ExceptionMessage = '{0} ({1}: {2}:{3} char:{4})' -f $ErrorRecord.Exception.Message,
-					$ErrorRecord.FullyQualifiedErrorId,
-					$ErrorRecord.InvocationInfo.ScriptName,
-					$ErrorRecord.InvocationInfo.ScriptLineNumber,
-					$ErrorRecord.InvocationInfo.OffsetInLine
-					Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $ExceptionMessage" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
-					Write-Host $ExceptionMessage -ForegroundColor Red
-				}
-			}
-		}
-	}
-	End
-	{
-		[void]$LogMutex.ReleaseMutex()
-	}
+    Begin
+    {
+        $Timestamp = (Get-Date -Format 's')
+        $LogMutex = New-Object System.Threading.Mutex($false, "SyncLogMutex")
+        [void]$LogMutex.WaitOne()
+    }
+    Process
+    {
+        Switch ($PSBoundParameters.Keys)
+        {
+            'Info'
+            {
+                Add-Content -Path $ScriptLog -Value "$Timestamp [INFO]: $Info" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                Write-Host $Info -ForegroundColor Cyan
+            }
+            'Error'
+            {
+                Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $Error" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                Write-Host $Error -ForegroundColor Red
+                If ($PSBoundParameters.ContainsKey('ErrorRecord'))
+                {
+                    $ExceptionMessage = '{0} ({1}: {2}:{3} char:{4})' -f $ErrorRecord.Exception.Message,
+                    $ErrorRecord.FullyQualifiedErrorId,
+                    $ErrorRecord.InvocationInfo.ScriptName,
+                    $ErrorRecord.InvocationInfo.ScriptLineNumber,
+                    $ErrorRecord.InvocationInfo.OffsetInLine
+                    Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $ExceptionMessage" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                    Write-Host $ExceptionMessage -ForegroundColor Red
+                }
+            }
+        }
+    }
+    End
+    {
+        [void]$LogMutex.ReleaseMutex()
+    }
 }
 
 Function Stop-Optimize
@@ -197,62 +153,15 @@ Function Stop-Optimize
 
 Function New-OfflineDirectory
 {
-	[CmdletBinding()]
-	[OutputType([IO.DirectoryInfo])]
-	Param
-	(
-		[Parameter(Mandatory = $true)]
-		[ValidateSet('Scratch', 'Image', 'Work', 'InstallMount', 'BootMount', 'RecoveryMount', 'Save')]
-		[ValidateNotNullOrEmpty()]
-		[string]$Directory
-	)
-
-	Switch ($Directory)
-	{
-		'Scratch'
-		{
-			$ScratchDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ScratchOffline'))
-			$ScratchDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ScratchDirectory) -Force -ErrorAction SilentlyContinue
-			$ScratchDirectory.FullName; Break
-		}
-		'Image'
-		{
-			$ImageDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ImageOffline'))
-			$ImageDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ImageDirectory) -Force -ErrorAction SilentlyContinue
-			$ImageDirectory.FullName; Break
-		}
-		'Work'
-		{
-			$WorkDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'WorkOffline'))
-			$WorkDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $WorkDirectory) -Force -ErrorAction SilentlyContinue
-			$WorkDirectory.FullName; Break
-		}
-		'InstallMount'
-		{
-			$InstallMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountInstallOffline'))
-			$InstallMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $InstallMountDirectory) -Force -ErrorAction SilentlyContinue
-			$InstallMountDirectory.FullName; Break
-		}
-		'BootMount'
-		{
-			$BootMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountBootOffline'))
-			$BootMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $BootMountDirectory) -Force -ErrorAction SilentlyContinue
-			$BootMountDirectory.FullName; Break
-		}
-		'RecoveryMount'
-		{
-			$RecoveryMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountRecoveryOffline'))
-			$RecoveryMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $RecoveryMountDirectory) -Force -ErrorAction SilentlyContinue
-			$RecoveryMountDirectory.FullName; Break
-		}
-		'Save'
-		{
-			$SaveDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ScriptPath -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
-			$SaveDirectory = Get-Item -LiteralPath (Join-Path -Path $ScriptPath -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
-			$SaveDirectory.FullName; Break
-		}
-	}
-}
+    [CmdletBinding()]
+    [OutputType([IO.DirectoryInfo])]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Scratch', 'Image', 'Work', 'InstallMount', 'BootMount', 'RecoveryMount', 'Save')]
+        [ValidateNotNullOrEmpty()]
+        [string]$Directory
+    )
 
     Switch ($Directory)
     {
@@ -342,269 +251,186 @@ Function Get-WimInfo
 
 Function Get-OfflineHives
 {
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true)]
-		[ValidateNotNullOrEmpty()]
-		[ValidateSet('Load', 'Unload', 'Test')]
-		[string]$Process
-	)
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('Load', 'Unload', 'Test')]
+        [string]$Process
+    )
 
-	Switch ($Process)
-	{
-		'Load'
-		{
-			@(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($MountFolder)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
-		}
-		'Unload'
-		{
-			[System.GC]::Collect()
-			@('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait }; Break
-		}
-		'Test'
-		{
-			@('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { If (Test-Path -Path $($_)) { $true } }; Break
-		}
-	}
+    Switch ($Process)
+    {
+        'Load'
+        {
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($MountFolder)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
+        }
+        'Unload'
+        {
+            [System.GC]::Collect()
+            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait }; Break
+        }
+        'Test'
+        {
+            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { If (Test-Path -Path $($_)) { $true } }; Break
+        }
+    }
 }
 
 Function New-Container
 {
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[ValidateNotNullOrEmpty()]
-		[string[]]$Path
-	)
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$Path
+    )
 
-	Process
-	{
-		ForEach ($Item In $Path)
-		{
-			If (!(Test-Path -LiteralPath $Item))
-			{
-				[void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
-			}
-		}
-	}
-}
-
-Function Remove-Container
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[ValidateNotNullOrEmpty()]
-		[string[]]$Path
-	)
-
-	Process
-	{
-		ForEach ($Item In $Path)
-		{
-			If (Test-Path -LiteralPath $Item)
-			{
-				Remove-Item -LiteralPath $Item -Recurse -Force -ErrorAction SilentlyContinue
-			}
-		}
-	}
-}
-
-Function Set-KeyProperty
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[ValidateNotNullOrEmpty()]
-		[string[]]$Path,
-		[Parameter(Mandatory = $true)]
-		[ValidateNotNullOrEmpty()]
-		[string]$Name,
-		[Parameter(Mandatory = $false)]
-		$Value,
-		[Parameter(Mandatory = $true)]
-		[ValidateSet('DWord', 'String', 'ExpandString', 'QWord', 'Binary')]
-		[ValidateNotNullOrEmpty()]
-		[string]$Type
-	)
-
-	Begin
-	{
-		Switch ($Type)
-		{
-			'DWord' { [int32]$Value = $Value }
-			'String' { [string]$Value = $Value }
-			'ExpandString' { [string]$Value = $Value }
-			'QWord' { [int64]$Value = $Value }
-			'Binary' { [byte[]]$Value = $Value }
-		}
-	}
-	Process
-	{
-		ForEach ($Item In $Path)
-		{
-			If (Test-Path -LiteralPath $Item)
-			{
-				Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue
-			}
-			Else
-			{
-				[void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
-				[void](New-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
-			}
-		}
-	}
-}
-
-Function Get-RegistryTemplates
-{
-	[CmdletBinding()]
-	Param ()
-
-	Begin
-	{
-		$RegistryTemplates = @()
-		$RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-	}
-	Process
-	{
-		ForEach ($RegistryTemplate In $RegistryTemplates)
-		{
-			$REGContent = Get-Content -Path $RegistryTemplate.FullName
-			$REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
-			$REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
-			$REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
-			$REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
-			$REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
-			$REGContent | Set-Content -Path "$($RegistryTemplate.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
-		}
-	}
-	End
-	{
-		Remove-Variable RegistryTemplates
-	}
-}
-
-Function Set-RegistryTemplates
-{
-	[CmdletBinding()]
-	Param ()
-
-	Begin
-	{
-		$RegistryTemplates = @()
-		$RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-		$RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
-	}
-	Process
-	{
-		Get-OfflineHives -Process Load
-		ForEach ($RegistryTemplate In $RegistryTemplates)
-		{
-			Write-Output ('Importing Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) >> $RegLog
-			$RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $RegistryTemplate.FullName) -WindowStyle Hidden -Wait -PassThru
-			If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) }
-			Remove-Item -Path $RegistryTemplate.FullName -Force -ErrorAction SilentlyContinue
-		}
-		Get-OfflineHives -Process Unload
-	}
-	End
-	{
-		Remove-Variable RegistryTemplates
-	}
-}
-
-Function New-ISO
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   Position = 0)]
-		[IO.FileInfo]$Image,
-		[Parameter(Mandatory = $false)]
-		[Int]$Index = 1
-	)
-
-	Begin
-	{
-		$EAP = $ErrorActionPreference
-		$ErrorActionPreference = 'SilentlyContinue'
-		$ErrVar = 'ErrorVariable'
-		$WimInfo = (Get-WimInfo -WimFile $Image -Index $Index)
-		$ISOName = $($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso"
-		$ISOPath = Join-Path -Path $WorkFolder -ChildPath $ISOName
-		[IO.FileInfo]$BootFile = "$($ISOMedia)\efi\Microsoft\boot\efisys.bin"
-		($CompilerOptions = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters).CompilerOptions = '/unsafe'
-		If (!('ComType' -as [Type]))
-		{
-			Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
-using System;
-using System.IO;
-using System.Runtime.InteropServices.ComTypes;
-namespace ComType {
-    public class ISOFile {
-        public unsafe static void Create (string Path, object Stream, int BlockSize, int TotalBlocks) {
-            int BytesRead = 0;
-            byte[] Buffer = new byte[BlockSize];
-            int * Pointer = & BytesRead;
-            var OpenFile = System.IO.File.OpenWrite (Path);
-            var IStream = Stream as System.Runtime.InteropServices.ComTypes.IStream;
-            if (OpenFile != null) {
-                while (TotalBlocks-- > 0) {
-                    IStream.Read (Buffer, BlockSize, (IntPtr) Pointer);
-                    OpenFile.Write (Buffer, 0, BytesRead);
-                }
-                OpenFile.Flush ();
-                OpenFile.Close ();
+    Process
+    {
+        ForEach ($Item In $Path)
+        {
+            If (!(Test-Path -LiteralPath $Item))
+            {
+                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
             }
         }
     }
 }
-'@
-		}
-	}
-	Process
-	{
-		$BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }
-		$BootStream.Open()
-		$BootStream.LoadFromFile($BootFile.FullName)
-		$BootOptions = New-Object -ComObject IMAPI2FS.BootOptions
-		$BootOptions.AssignBootImage($BootStream)
-		$FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
-		$FSImage.VolumeName = $($WimInfo.Name)
-		$FSImage.WorkingDirectory = $WorkingDirectory
-		$FSImage.ChooseImageDefaultsForMediaType(6)
-		$FSImage.BootImageOptions = $BootOptions
-		ForEach ($Item In Get-ChildItem -Path $ISOMedia)
-		{
-			If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force -ErrorVariable ErrorVar }
-			If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
-			Invoke-Expression -Command ("$FSImage.Root.AddTree($Item.FullName, $true)") -ErrorVariable +ErrorVar
-		}
-		$ISOPath = New-Item -Path $ISOPath -ItemType File -Force
-		$WriteISO = $FSImage.CreateResultImage()
-		[ComType.ISOFile]::Create($ISOPath.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-		$Result = New-Object -TypeName PSObject -Property @{ }
-		$Result | Add-Member -MemberType NoteProperty Path -Value $ISOPath.FullName
-		If ($ErrVar) { $Result | Add-Member -MemberType NoteProperty Error -Value $ErrVar.Exception.Message }
-		$Result
-	}
-	End
-	{
-		$ErrVar.Clear()
-		$ErrorActionPreference = $EAP
-	}
+
+Function Remove-Container
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$Path
+    )
+
+    Process
+    {
+        ForEach ($Item In $Path)
+        {
+            If (Test-Path -LiteralPath $Item)
+            {
+                Remove-Item -LiteralPath $Item -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
+Function Set-KeyProperty
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$Path,
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Name,
+        [Parameter(Mandatory = $false)]
+        $Value,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('DWord', 'String', 'ExpandString', 'QWord', 'Binary')]
+        [ValidateNotNullOrEmpty()]
+        [string]$Type
+    )
+
+    Begin
+    {
+        Switch ($Type)
+        {
+            'DWord' { [int32]$Value = $Value }
+            'String' { [string]$Value = $Value }
+            'ExpandString' { [string]$Value = $Value }
+            'QWord' { [int64]$Value = $Value }
+            'Binary' { [byte[]]$Value = $Value }
+        }
+    }
+    Process
+    {
+        ForEach ($Item In $Path)
+        {
+            If (Test-Path -LiteralPath $Item)
+            {
+                Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue
+            }
+            Else
+            {
+                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
+                [void](New-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
+            }
+        }
+    }
+}
+
+Function Get-RegistryTemplates
+{
+    [CmdletBinding()]
+    Param ()
+
+    Begin
+    {
+        $RegistryTemplates = @()
+        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+    }
+    Process
+    {
+        ForEach ($RegistryTemplate In $RegistryTemplates)
+        {
+            $REGContent = Get-Content -Path $RegistryTemplate.FullName
+            $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
+            $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
+            $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
+            $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
+            $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
+            $REGContent | Set-Content -Path "$($RegistryTemplate.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
+        }
+    }
+    End
+    {
+        Remove-Variable RegistryTemplates
+    }
+}
+
+Function Set-RegistryTemplates
+{
+    [CmdletBinding()]
+    Param ()
+
+    Begin
+    {
+        $RegistryTemplates = @()
+        $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\Registry" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
+    }
+    Process
+    {
+        Get-OfflineHives -Process Load
+        ForEach ($RegistryTemplate In $RegistryTemplates)
+        {
+            Write-Output ('Importing Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) >> $RegLog
+            $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $RegistryTemplate.FullName) -WindowStyle Hidden -Wait -PassThru
+            If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) }
+            Remove-Item -Path $RegistryTemplate.FullName -Force -ErrorAction SilentlyContinue
+        }
+        Get-OfflineHives -Process Unload
+    }
+    End
+    {
+        Remove-Variable RegistryTemplates
+    }
 }
 
 Function New-ISOMedia
@@ -665,7 +491,6 @@ namespace ComType {
         $BootOptions.AssignBootImage($BootStream)
         $FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
         $FSImage.VolumeName = $ISOLabel
-        $FSImage.WorkingDirectory = $WorkingDirectory
         $FSImage.ChooseImageDefaultsForMediaType(6)
         $FSImage.BootImageOptions = $BootOptions
         $ISOFile = New-Item -Path $ISOPath -ItemType File -Force -ErrorVariable ErrorVar
@@ -865,10 +690,6 @@ Function Grant-FolderOwnership
                     Grant-FileOwnership -Path $($Object.FullName)
                 }
             }
-        } finally {
-            CloseHandle (
-                processToken
-            );
         }
     }
     End
@@ -876,102 +697,6 @@ Function Grant-FolderOwnership
         Remove-Variable Path, Item, Object
         $ErrorActionPreference = $EAP
     }
-}
-'@
-		$CurrentProcess = Get-Process -Id $Process
-	}
-	Process
-	{
-		[AccessToken]::AdjustPrivilege($CurrentProcess.Handle, $Privilege, !$Disable)
-	}
-	End
-	{
-		$CurrentProcess.Close()
-	}
-}
-
-Function Grant-FileOwnership
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[string[]]$Path
-	)
-
-	Begin
-	{
-		$EAP = $ErrorActionPreference
-		$ErrorActionPreference = 'SilentlyContinue'
-		"SeTakeOwnershipPrivilege" | Grant-ProcessPrivilege
-		"SeBackupPrivilege" | Grant-ProcessPrivilege
-		"SeRestorePrivilege" | Grant-ProcessPrivilege
-	}
-	Process
-	{
-		ForEach ($Item In $Path)
-		{
-			$Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
-			$Rights = [System.Security.AccessControl.FileSystemRights]::FullControl
-			$Inheritance = [System.Security.AccessControl.InheritanceFlags]::None
-			$Propagation = [System.Security.AccessControl.PropagationFlags]::None
-			$Type = [System.Security.AccessControl.AccessControlType]::Allow
-			$ACL = Get-Acl -Path $Item
-			$ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Type)))
-			$ACL | Set-Acl -Path $Item
-		}
-	}
-	End
-	{
-		"SeTakeOwnershipPrivilege" | Grant-ProcessPrivilege -Disable
-		"SeBackupPrivilege" | Grant-ProcessPrivilege -Disable
-		"SeRestorePrivilege" | Grant-ProcessPrivilege -Disable
-		Remove-Variable Path, Item, ACL
-		$ErrorActionPreference = $EAP
-	}
-}
-
-Function Grant-FolderOwnership
-{
-	[CmdletBinding()]
-	Param
-	(
-		[Parameter(Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   Position = 0)]
-		[string[]]$Path
-	)
-
-	Begin
-	{
-		$EAP = $ErrorActionPreference
-		$ErrorActionPreference = 'SilentlyContinue'
-	}
-	Process
-	{
-		ForEach ($Item In $Path)
-		{
-			Grant-FileOwnership -Path $Item
-			ForEach ($Object In Get-ChildItem $Item -Recurse -Force)
-			{
-				If (Test-Path $Object.FullName -PathType Container)
-				{
-					Grant-FolderOwnership -Path $($Object.FullName)
-				}
-				Else
-				{
-					Grant-FileOwnership -Path $($Object.FullName)
-				}
-			}
-		}
-	}
-	End
-	{
-		Remove-Variable Path, Item, Object
-		$ErrorActionPreference = $EAP
-	}
 }
 #endregion Helper Functions
 
