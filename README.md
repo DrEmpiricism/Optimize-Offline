@@ -131,9 +131,7 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 When a Windows Installation Media ISO is used as the source image for optimization, Optimize-Offline expands the entire media contents of the ISO into its own directory. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed.
 
-Optimize-Offline used a C# wrapper that accesses the specific Interop COM type for ISO creation and opens a binary stream COM object that adds the Microsoft efisys.bin bootable binary header to the ISO, thus making it EFI bootable. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party executables like oscdimg.exe or end-user input.
-
-Optimize-Offline uses the Edition ID of the image that was optimized as the name of the ISO and the Display Name as its label.
+Optimize-Offline used a C# wrapper that calls the COM interface used for ISO creation and also opens a binary stream that writes the efisys.bin boot sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party executables like oscdimg.exe or end-user input.
 
 ## About the Defaultuser0 ghost account ##
 
