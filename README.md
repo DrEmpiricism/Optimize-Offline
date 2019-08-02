@@ -43,18 +43,19 @@ A short list of some of the optimizations include:
 
 ## About the -Additional switch ##
 
-The -Additional script allows the end-user to add specific content to the image during Optimize-Offline's automated processes instead of having to re-mount the image or use an external Distribution Share.
-Within the '\Content\Additional' directory are six folders: 'Drivers', 'Logo', 'Registry', 'Setup', 'Unattend' and 'Wallpaper'. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'Registry' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
+When the -Additional switch it used, all content enabled in the Config.ini file will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
 
-All content is copied to the image in locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is uploaded to '\Windows\System32\oobe\info\logo', wallpaper is uploaded to '\Windows\Web\Wallpaper', setup content is uploaded to '\Windows\Setup\Scripts' and an unattend.xml is uploaded to '\Windows\Panther' (this is detailed more below).
+Within the '\Content\Additional' directory are six folders: 'Drivers', 'Logo', 'Registry', 'Setup', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
 
-All content can be either folders or directories themselves, or individual files. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory. Optimize-Offline will not just copy all content over haphazardly and create a massive mess of files or completely omit a specific file structure.
+All content that gets copied to the image are copied to the locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied do the image itself (this is detailed more below).
+
+All content can be files, folders or directories. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory while keeping its original file structure. Content is NOT copied haphazardly nor are original file structures ignored.
 
 **Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
 
 ## Registry template integration ##
 
-Any custom registry template (.reg) file to be integrated into the offline image must be placed in the '\Content\Additional\Registry' folder when using the -Additional switch. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate offline image's registry hives.
+Any custom registry template (.reg) file to be integrated into the offline image must be placed in the '\Content\Additional\RegistryTemplates' folder when using the -Additional switch and Config.ini. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate offline image's registry hives.
 
 ## Driver integration ##
 
@@ -62,13 +63,13 @@ Any driver or driver package to be integrated into the offline image must be pla
 
 ## unattend.xml Answer File ##
 
-When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch enabled, Optimize-Offline creates the '\Windows\Panther' directory within the image and copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista. Addtionally, Optimize-Offline will check the contents of the unattend.xml to see if it includes offlineServicing or package servicing passes. If it does, it will also apply the answer file directly to the image.
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch and Config.ini, Optimize-Offline applies the answer file directly to the image, creates the '\Windows\Panther' directory within the image and finally copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista and has remained as such since.
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
 It is recommended to create an unattend.xml using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an unattend.xml for you, just like with Windows 10 features, answer file variables can change between builds. Likewise, having faulty or unsuppored variables in an answer file can prevent Windows Setup from completing.
 
-It is also in good practice to have a good idea what each Configuration Pass does and what it in regards to setting up Windows. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
+It is also in good practice to have a good idea what each Configuration Pass does and what actions its child parameters takes during the Windows setup process. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
 
 A final word of caution: Having incorrect, null or incomplete values in your answer file, most notably the WindowsPE Configuration Pass, WILL prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain the proper drive index numbers, partition type IDs and sizes are entered.
 
