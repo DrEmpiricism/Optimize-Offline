@@ -107,6 +107,18 @@ Function Out-Log
     }
 }
 
+Function Close-Process
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Int32]$Process = $PID
+    )
+
+    Get-Process | Where-Object { $_.Name -eq 'cmd' -or $_.Name -eq 'powershell' } | Stop-Process -Force -Confirm:$false -ErrorAction Ignore
+    Get-Process -Id $Process -ErrorAction Ignore | Stop-Process -Force -Confirm:$false -ErrorAction Ignore
+}
+
 Function Stop-Optimize
 {
     [CmdletBinding()]
@@ -115,7 +127,7 @@ Function Stop-Optimize
     Begin
     {
         $EAP = $ErrorActionPreference
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Ignore'
     }
     Process
     {
@@ -124,21 +136,19 @@ Function Stop-Optimize
         If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
         $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
         If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
-        Start-Sleep 5
         [void](Dismount-WindowsImage -Path $MountFolder -Discard)
         [void](Clear-WindowsCorruptMountPoint)
         Add-Content -Path $ScriptLog -Value ""
         Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
         Add-Content -Path $ScriptLog -Value "Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]"
         Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-        $SaveFolder = New-OfflineDirectory -Directory Save
         If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force }
         Remove-Container -Path $DISMLog
         Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-        [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest)
+        $SaveFolder = New-OfflineDirectory -Directory Save
+        Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Move-Item -Destination $SaveFolder -Force
         Get-ChildItem -Path (Split-Path -Path $PSScriptRoot) -Filter "OptimizeOfflineTemp_*" -Directory | Remove-Container
-        Start-Sleep 5
-        Get-Process -Id $PID | Stop-Process -Force
+        Exit
     }
     End
     {
@@ -222,20 +232,29 @@ Function Get-WimInfo
     {
         $EAP = $ErrorActionPreference
         $ErrorActionPreference = 'Stop'
+        $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index)
     }
     Process
     {
-        $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index)
-        $WimInfo = [PSCustomObject]@{
-            Name     = $($WimImage.ImageName)
-            Edition  = $($WimImage.EditionID)
-            Version  = $($WimImage.Version)
-            Build    = $($WimImage.Build.ToString())
-            Language = $($WimImage.Languages)
+        $WimObject = New-Object -TypeName PSObject -Property @{
+            Name             = $($WimImage.ImageName)
+            Description      = $($WimImage.ImageDescription)
+            Size             = [Math]::Round($WimImage.ImageSize / 1GB).ToString() + " GB"
+            Edition          = $($WimImage.EditionID)
+            Version          = $($WimImage.Version)
+            Build            = $($WimImage.Build).ToString()
+            SPBuild          = $($WimImage.SPBuild).ToString()
+            SPLevel          = $($WimImage.SPLevel).ToString()
+            InstallationType = $($WimImage.InstallationType)
+            DirectoryCount   = $($WimImage.DirectoryCount)
+            FileCount        = $($WimImage.FileCount)
+            Created          = $($WimImage.CreatedTime)
+            Modified         = $($WimImage.ModifiedTime)
+            Language         = $($WimImage.Languages)
         }
-        If ($WimImage.Architecture -eq 9) { $WimInfo | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
-        ElseIf ($WimImage.Architecture -eq 0) { $WimInfo | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
-        $WimInfo
+        If ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
+        ElseIf ($WimImage.Architecture -eq 0) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
+        $WimObject
     }
     End
     {
@@ -444,10 +463,14 @@ Function New-ISOMedia
 
     Begin
     {
-        ($CompilerOptions = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters).CompilerOptions = '/unsafe'
+        $CompilerParams = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters -Property @{
+            CompilerOptions       = '/unsafe'
+            WarningLevel          = 4
+            TreatWarningsAsErrors = $true
+        }
         If (!('ComBuilder' -as [Type]))
         {
-            Add-Type -CompilerParameters $CompilerOptions -TypeDefinition @'
+            Add-Type -CompilerParameters $CompilerParams -TypeDefinition @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
@@ -493,7 +516,7 @@ namespace ComBuilder {
         $BootOptions.PlatformId = $PlatformID.EFI
         $BootOptions.Emulation = $Emulation.None
         $FSImage.VolumeName = $ISOLabel
-        $FSImage.ChooseImageDefaultsForMediaType(6)
+        $FSImage.ChooseImageDefaultsForMediaType(8)
         $FSImage.BootImageOptions = $BootOptions
         ForEach ($Item In Get-ChildItem -Path $ISOMedia -Force)
         {
@@ -656,7 +679,6 @@ Function Grant-FileOwnership
         "SeTakeOwnershipPrivilege" | Grant-ProcessPrivilege -Disable
         "SeBackupPrivilege" | Grant-ProcessPrivilege -Disable
         "SeRestorePrivilege" | Grant-ProcessPrivilege -Disable
-        Remove-Variable Path, Item, ACL
         $ErrorActionPreference = $EAP
     }
 }
@@ -697,7 +719,6 @@ Function Grant-FolderOwnership
     }
     End
     {
-        Remove-Variable Path, Item, Object
         $ErrorActionPreference = $EAP
     }
 }
@@ -705,6 +726,7 @@ Function Grant-FolderOwnership
 
 Export-ModuleMember -Function Import-Config,
 					Out-Log,
+					Close-Process,
 					Stop-Optimize,
 					New-OfflineDirectory,
 					Get-WimInfo,
