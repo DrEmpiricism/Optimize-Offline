@@ -1,4 +1,5 @@
-﻿<#
+﻿#Requires -Module Dism
+<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 	 Created on:   	7/22/2019 9:02 PM
@@ -9,7 +10,8 @@
 	===========================================================================
 #>
 
-#region Helper Functions
+
+#region Module Functions
 Function Import-Config
 {
     [CmdletBinding()]
@@ -66,11 +68,19 @@ Function Out-Log
         [Parameter(ParameterSetName = 'Error',
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [System.Management.Automation.ErrorRecord]$ErrorRecord
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [Parameter(ParameterSetName = 'Header')]
+        [switch]$Header,
+        [Parameter(ParameterSetName = 'Footer')]
+        [switch]$Footer,
+        [Parameter(ParameterSetName = 'Failed')]
+        [switch]$Failed
     )
 
     Begin
     {
+        $EAP = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
         $Timestamp = (Get-Date -Format 's')
         $LogMutex = New-Object System.Threading.Mutex($false, "SyncLogMutex")
         [void]$LogMutex.WaitOne()
@@ -79,14 +89,45 @@ Function Out-Log
     {
         Switch ($PSBoundParameters.Keys)
         {
+            'Header'
+            {
+                @"
+***************************************************************************************************
+
+$ScriptName v$ScriptVersion starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+
+***************************************************************************************************
+"Optimizing image: $($WimInfo.Name)"
+***************************************************************************************************
+
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8
+            }
+            'Footer'
+            {
+                @"
+
+***************************************************************************************************
+Optimizations finalized on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+***************************************************************************************************
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+            }
+            'Failed'
+            {
+                @"
+
+***************************************************************************************************
+Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+***************************************************************************************************
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+            }
             'Info'
             {
-                Add-Content -Path $ScriptLog -Value "$Timestamp [INFO]: $Info" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                "$Timestamp [INFO]: $Info" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                 Write-Host $Info -ForegroundColor Cyan
             }
             'Error'
             {
-                Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $Error" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                "$Timestamp [ERROR]: $Error" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                 Write-Host $Error -ForegroundColor Red
                 If ($PSBoundParameters.ContainsKey('ErrorRecord'))
                 {
@@ -95,7 +136,7 @@ Function Out-Log
                     $ErrorRecord.InvocationInfo.ScriptName,
                     $ErrorRecord.InvocationInfo.ScriptLineNumber,
                     $ErrorRecord.InvocationInfo.OffsetInLine
-                    Add-Content -Path $ScriptLog -Value "$Timestamp [ERROR]: $ExceptionMessage" -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+                    "$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                     Write-Host $ExceptionMessage -ForegroundColor Red
                 }
             }
@@ -104,6 +145,7 @@ Function Out-Log
     End
     {
         [void]$LogMutex.ReleaseMutex()
+        $ErrorActionPreference = $EAP
     }
 }
 
@@ -132,16 +174,12 @@ Function Stop-Optimize
     Process
     {
         $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
-        Out-Log -Info "Dismounting and discarding the image."
+        Out-Log -Info "Dismounting and discarding the image."; Out-Log -Failed
         If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
         $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
         If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
         [void](Dismount-WindowsImage -Path $MountFolder -Discard)
         [void](Clear-WindowsCorruptMountPoint)
-        Add-Content -Path $ScriptLog -Value ""
-        Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
-        Add-Content -Path $ScriptLog -Value "Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]"
-        Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
         If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $WorkFolder -ChildPath ErrorRecord.log) -Force }
         Remove-Container -Path $DISMLog
         Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
@@ -236,7 +274,7 @@ Function Get-WimInfo
     }
     Process
     {
-        $WimObject = New-Object -TypeName PSObject -Property @{
+        $WimObject = [PSCustomObject]@{
             Name             = $($WimImage.ImageName)
             Description      = $($WimImage.ImageDescription)
             Size             = [Math]::Round($WimImage.ImageSize / 1GB).ToString() + " GB"
@@ -500,7 +538,7 @@ namespace ComBuilder {
         $BootFile = Get-Item -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
         [void](New-Item -Path $ISOPath -ItemType File -Force)
         $FileSystem = @{ UDF = 4 }
-        $PlatformID = @{ EFI = 0xEF }
+        $PlatformId = @{ EFI = 0xEF }
         $Emulation = @{ None = 0 }
     }
     Process
@@ -513,7 +551,7 @@ namespace ComBuilder {
         $BootStream.Type = 1
         $BootStream.LoadFromFile($BootFile.FullName)
         $BootOptions.AssignBootImage($BootStream)
-        $BootOptions.PlatformId = $PlatformID.EFI
+        $BootOptions.PlatformId = $PlatformId.EFI
         $BootOptions.Emulation = $Emulation.None
         $FSImage.VolumeName = $ISOLabel
         $FSImage.ChooseImageDefaultsForMediaType(8)
@@ -525,7 +563,9 @@ namespace ComBuilder {
         }
         $WriteISO = $FSImage.CreateResultImage()
         [ComBuilder.ISOWriter]::Create($ISOPath, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-        If (Test-Path -Path $ISOPath) { [PSCustomObject]@{ Path = $ISOPath }
+        If (Test-Path -Path $ISOPath)
+        {
+            [PSCustomObject]@{ Path = $ISOPath }
         }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
@@ -722,7 +762,7 @@ Function Grant-FolderOwnership
         $ErrorActionPreference = $EAP
     }
 }
-#endregion Helper Functions
+#endregion Module Functions
 
 Export-ModuleMember -Function Import-Config,
 					Out-Log,
