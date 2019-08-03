@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 3.2.6.3 (08-03-2019) ##
+
+- Added the ability to integrate NetFx3 using the -Additional switch and the Config.ini located in the 'Content\Additional' directory. Integration requires a Windows Media ISO to be used as the source image.
+- Fixed a bug in the Functions module where the ISO creation process would fail if the install.wim was over a specific size.
+- Removed a duplicate variable in one of the processes.
+- Updated the Functions module.
+
 ## Build 3.2.6.2 (08-01-2019) ##
 
 - ISO creation now uses a C# wrapper function that utilizes the Interop COM type for image creation and binary reader to set the ISO as EFI bootable. This removes the need for any 3rd party programs such as oscdimg.exe, or end-user input, to create a bootable Windows 10 Media ISO.
