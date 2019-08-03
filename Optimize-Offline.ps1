@@ -74,8 +74,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.6.2
-		Last updated:	08/01/2019
+		Version:        3.2.6.3
+		Last updated:	08/03/2019
 		===========================================================================
 
 	.LINK
@@ -126,7 +126,7 @@ $DefaultVariables = (Get-Variable).Name
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.6.2'
+$ScriptVersion = '3.2.6.3'
 $ModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'Lib\Functions.psm1'
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath "Resources\Deduplication"
@@ -337,11 +337,11 @@ Try
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     $DISMLog = Join-Path -Path $WorkFolder -ChildPath DISM.log
     $ScriptLog = Join-Path -Path $WorkFolder -ChildPath Optimize-Offline.log
-    $AppxPackageList = Join-Path -Path $WorkFolder -ChildPath AppxProvisionedPackages.txt
-    $WindowsFeatureList = Join-Path -Path $WorkFolder -ChildPath WindowsFeatures.txt
-    $IntegratedPackageList = Join-Path -Path $WorkFolder -ChildPath IntegratedPackages.txt
-    $CapabilityPackageList = Join-Path -Path $WorkFolder -ChildPath CapabilityPackages.txt
-    $InjectedDriverList = Join-Path -Path $WorkFolder -ChildPath InjectedDrivers.txt
+    $AppxPackagesList = Join-Path -Path $WorkFolder -ChildPath AppxProvisionedPackages.txt
+    $WindowsFeaturesList = Join-Path -Path $WorkFolder -ChildPath WindowsFeatures.txt
+    $IntegratedPackagesList = Join-Path -Path $WorkFolder -ChildPath IntegratedPackages.txt
+    $CapabilityPackagesList = Join-Path -Path $WorkFolder -ChildPath CapabilityPackages.txt
+    $DriversList = Join-Path -Path $WorkFolder -ChildPath Drivers.txt
     Add-Content -Path $ScriptLog -Value "***************************************************************************************************"
     Add-Content -Path $ScriptLog -Value ""
     Add-Content -Path $ScriptLog -Value "$ScriptName v$ScriptVersion starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]"
@@ -366,7 +366,7 @@ Try
 Catch
 {
     Out-Log -Error ('Failed to Mount {0}' -f $($WimInfo.Name)) -ErrorRecord $Error[0]
-    Stop-Optimize
+    Stop-Optimize; Close-Process -Process $PID; Exit
 }
 
 If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -376,7 +376,7 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Further servicing is required before the image can be optimized."
-    Stop-Optimize
+    Stop-Optimize; Close-Process -Process $PID; Exit
 }
 
 If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
@@ -460,7 +460,7 @@ If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -
     Catch
     {
         Out-Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
     If ((Get-AppxProvisionedPackage -Path $MountFolder).Count -eq 0)
     {
@@ -488,7 +488,7 @@ If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -
     }
     Else
     {
-        Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -ExpandProperty DisplayName | Out-File -FilePath $AppxPackageList -Append -ErrorAction SilentlyContinue
+        Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -Property DisplayName | Out-File -FilePath $AppxPackagesList -Append -ErrorAction SilentlyContinue
     }
 }
 
@@ -529,7 +529,7 @@ If ($SystemApps.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
-            Stop-Optimize
+            Stop-Optimize; Close-Process -Process $PID; Exit
         }
     }
     Get-OfflineHives -Process Unload; Clear-Host
@@ -564,12 +564,12 @@ If ($Packages.IsPresent)
                 }
                 [void](Remove-WindowsCapability @ParamsCapability)
             }
-            Get-WindowsCapability -Path $MountFolder | Where-Object -Property State -EQ Installed | Select-Object -Property Name, State | Out-File -FilePath $CapabilityPackageList -ErrorAction SilentlyContinue
+            Get-WindowsCapability -Path $MountFolder | Where-Object -Property State -EQ Installed | Select-Object -Property Name, State | Out-File -FilePath $CapabilityPackagesList -ErrorAction SilentlyContinue
         }
         Catch
         {
             Out-Log -Error "Failed to Remove Windows Capability Packages." -ErrorRecord $Error[0]
-            Stop-Optimize
+            Stop-Optimize; Close-Process -Process $PID; Exit
         }
     }
     Remove-Variable PackageName; Clear-Host
@@ -635,7 +635,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
-            Stop-Optimize
+            Stop-Optimize; Close-Process -Process $PID; Exit
         }
     }
 }
@@ -672,12 +672,12 @@ If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName *SMB1*).State -e
         $Host.UI.RawUI.WindowTitle = "Disabling the SMBv1 Protocol Windows Feature."
         Out-Log -Info "Disabling the SMBv1 Protocol Windows Feature."
         [void](Get-WindowsOptionalFeature -Path $MountFolder | Where-Object FeatureName -Like *SMB1* | Disable-WindowsOptionalFeature -Path $MountFolder -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop)
-        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeatureList -Force -ErrorAction SilentlyContinue
+        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeaturesList -Force -ErrorAction SilentlyContinue
     }
     Catch
     {
         Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
 }
 
@@ -715,7 +715,7 @@ If ($Features.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Features." -ErrorRecord $Error[0]
-            Stop-Optimize
+            Stop-Optimize; Close-Process -Process $PID; Exit
         }
         Clear-Host
         $OptionalFeatures = [System.Collections.ArrayList]@()
@@ -751,11 +751,11 @@ If ($Features.IsPresent)
             Catch
             {
                 Out-Log -Error "Failed to Enable Windows Features." -ErrorRecord $Error[0]
-                Stop-Optimize
+                Stop-Optimize; Close-Process -Process $PID; Exit
             }
         }
     }
-    Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeatureList -Force -ErrorAction SilentlyContinue
+    Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeaturesList -Force -ErrorAction SilentlyContinue
 }
 
 If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle))
@@ -821,12 +821,12 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
             ErrorAction           = 'Stop'
         }
         [void](Add-AppxProvisionedPackage @InstallerPackage)
-        Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -ExpandProperty DisplayName | Out-File -FilePath $AppxPackageList -Append -ErrorAction SilentlyContinue
+        Get-AppxProvisionedPackage -Path $MountFolder | Select-Object -Property DisplayName | Out-File -FilePath $AppxPackagesList -Append -ErrorAction SilentlyContinue
     }
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
 }
 
@@ -867,13 +867,13 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
             Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
         }
         Get-OfflineHives -Process Unload
-        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Internet-Browser* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackageList -Append -ErrorAction SilentlyContinue
+        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Internet-Browser* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackagesList -Append -ErrorAction SilentlyContinue
         $EdgeIntegrated = $true
     }
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
 }
 
@@ -912,12 +912,12 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
             Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Name "ApplicationDescription" -Value "@%SystemRoot%\System32\win32calc.exe,-217" -Type ExpandString
             Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities\URLAssociations" -Name "calculator" -Value "calculator" -Type String
             Get-OfflineHives -Process Unload
-            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackageList -Append -ErrorAction SilentlyContinue
+            Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *win32calc* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackagesList -Append -ErrorAction SilentlyContinue
         }
         Catch
         {
             Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Stop-Optimize
+            Stop-Optimize; Close-Process -Process $PID; Exit
         }
     }
     Else
@@ -957,7 +957,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
             Catch
             {
                 Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-                Stop-Optimize
+                Stop-Optimize; Close-Process -Process $PID; Exit
             }
         }
     }
@@ -1060,14 +1060,13 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
         }
         Set-KeyProperty @FirewallRule
         Get-OfflineHives -Process Unload
-        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-FileServer-ServerCore* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackageList -Append -ErrorAction SilentlyContinue
-        Get-WindowsPackage -Path $MountFolder | Where-Object PackageName -Like *Windows-Dedup* | Select-Object -ExpandProperty PackageName | Out-File -FilePath $IntegratedPackageList -Append -ErrorAction SilentlyContinue
-        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeatureList -Force -ErrorAction SilentlyContinue
+        Get-WindowsPackage -Path $MountFolder | Where-Object { $_.PackageName -like "*Windows-FileServer-ServerCore*" -or $_.PackageName -like "*Windows-Dedup*" } | Select-Object -Property PackageName, PackageState | Out-File -FilePath $IntegratedPackagesList -Append -ErrorAction SilentlyContinue
+        Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeaturesList -Force -ErrorAction SilentlyContinue
     }
     Catch
     {
         Out-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
 }
 
@@ -1154,7 +1153,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
     Catch
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Setup." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
     Try
     {
@@ -1221,7 +1220,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
     Catch
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Recovery." -ErrorRecord $Error[0]
-        Stop-Optimize
+        Stop-Optimize; Close-Process -Process $PID; Exit
     }
     Clear-Host
 }
@@ -1337,10 +1336,7 @@ If ($Registry.IsPresent)
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 -Type DWord
-    If (!$IsLTSC -and !$EdgeIntegrated)
-    {
-        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
-    }
+    If (!$IsLTSC -and !$EdgeIntegrated) { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord }
     #****************************************************************
     Write-Output "Disabling System Location Sensors." >> $RegLog
     #****************************************************************
@@ -1656,7 +1652,6 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
             {
                 $Host.UI.RawUI.WindowTitle = "Applying Answer File to the Image."
                 Out-Log -Info "Applying Answer File to the Image."
-                $UnattendFile = Get-ChildItem -Path "$AdditionalPath\Unattend" -Filter unattend.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
                 $UnattendParams = @{
                     UnattendPath     = $UnattendFile
                     Path             = $MountFolder
@@ -1666,7 +1661,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
                 }
                 [void](Use-WindowsUnattend @UnattendParams)
                 New-Container -Path "$MountFolder\Windows\Panther"
-                Copy-Item -Path $UnattendFile -Destination "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
+                Copy-Item -Path $UnattendFile -Destination "$MountFolder\Windows\Panther" -ErrorAction Stop
                 Start-Sleep 3
             }
             Catch
@@ -1725,11 +1720,37 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
                 ErrorAction      = 'Stop'
             }
             [void](Add-WindowsDriver @DriverParams)
-            Get-WindowsDriver -Path $MountFolder | Out-File -FilePath $InjectedDriverList -ErrorAction SilentlyContinue
+            Get-WindowsDriver -Path $MountFolder | Sort-Object -Property ProviderName | Out-File -FilePath $DriversList -ErrorAction SilentlyContinue
         }
         Catch
         {
-            Out-Log -Error "Failed to Apply Driver Packages to the  Image." -ErrorRecord $Error[0]
+            Out-Log -Error "Failed to Apply Driver Packages to the Image." -ErrorRecord $Error[0]
+            Start-Sleep 3
+        }
+    }
+    If (($ConfigVars.NetFx3 -eq $true -and (Get-WindowsOptionalFeature -Path $MountFolder -FeatureName NetFx3).State -eq 'DisabledWithPayloadRemoved' -and (Get-ChildItem -Path "$ISOMedia\sources\sxs" -Recurse -Filter *netfx3*.cab)))
+    {
+        Try
+        {
+            $Host.UI.RawUI.WindowTitle = "Enabling Windows Feature: NetFx3"
+            Out-Log -Info "Enabling Windows Feature: NetFx3"
+            $NetFx3Params = @{
+                Path             = $MountFolder
+                FeatureName      = 'NetFx3'
+                Source           = "$ISOMedia\sources\sxs"
+                All              = $true
+                LimitAccess      = $true
+                NoRestart        = $true
+                ScratchDirectory = $ScratchFolder
+                LogPath          = $DISMLog
+                ErrorAction      = 'Stop'
+            }
+            [void](Enable-WindowsOptionalFeature @NetFx3Params)
+            Get-WindowsOptionalFeature -Path $MountFolder | Select-Object -Property FeatureName, State | Sort-Object -Property State -Descending | Out-File -FilePath $WindowsFeaturesList -Force -ErrorAction SilentlyContinue
+        }
+        Catch
+        {
+            Out-Log -Error "Failed to Enable Windows Feature: NetFx3" -ErrorRecord $Error[0]
             Start-Sleep 3
         }
     }
@@ -1795,7 +1816,7 @@ $(Get-Date -UFormat "%m/%d/%Y at %r")
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Discarding optimizations."
-    Stop-Optimize
+    Stop-Optimize; Close-Process -Process $PID; Exit
 }
 
 Try
@@ -1828,13 +1849,12 @@ Try
         ErrorAction      = 'Stop'
     }
     [void](Dismount-WindowsImage @DismountWindowsImage)
-    Remove-Container -Path $MountFolder
     Clear-Host
 }
 Catch
 {
     Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimize
+    Stop-Optimize; Close-Process -Process $PID; Exit
 }
 
 Do
@@ -1844,7 +1864,7 @@ Do
 }
 While ($CompressionList.Length -eq 0)
 
-If ($CompressionType -eq 'Solid') { Write-Warning "Solid compression can take quite a while. Please be patient until it completes."; Start-Sleep 3 }
+If ($CompressionType -eq 'Solid') { Write-Warning "Solid compression can take quite a while. Please be patient until it completes."; Start-Sleep 5; Clear-Host }
 
 Try
 {
@@ -1877,7 +1897,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Export $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimize
+    Stop-Optimize; Close-Process -Process $PID; Exit
 }
 
 If ($ISOMedia)
@@ -1926,7 +1946,7 @@ Finally
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     [void](Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Compress-Archive -DestinationPath "$SaveFolder\OptimizeLogs.zip" -CompressionLevel Fastest -ErrorAction SilentlyContinue)
-    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
+    Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     [void](Clear-WindowsCorruptMountPoint)
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables -ErrorAction SilentlyContinue).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     $Host.UI.RawUI.WindowTitle = "Optimizations Complete."
