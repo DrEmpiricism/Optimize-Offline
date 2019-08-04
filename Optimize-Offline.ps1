@@ -1631,7 +1631,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
             }
             [void](Use-WindowsUnattend @UnattendParams)
             New-Container -Path "$MountFolder\Windows\Panther"
-            Copy-Item -Path $UnattendFile -Destination "$MountFolder\Windows\Panther" -ErrorAction Stop
+            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -ErrorAction Stop
             Start-Sleep 3
         }
         Catch
