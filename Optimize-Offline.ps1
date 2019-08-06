@@ -74,8 +74,8 @@
 		Created by:     BenTheGreat
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.6.4
-		Last updated:	08/03/2019
+		Version:        3.2.6.5
+		Last updated:	08/06/2019
 		===========================================================================
 
 	.LINK
@@ -126,7 +126,7 @@ $DefaultVariables = (Get-Variable).Name
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
 $ProgressPreference = 'SilentlyContinue'
 $ScriptName = 'Optimize-Offline'
-$ScriptVersion = '3.2.6.4'
+$ScriptVersion = '3.2.6.5'
 $ModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'Lib\Functions.psm1'
 $DaRTPath = Join-Path -Path $PSScriptRoot -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $PSScriptRoot -ChildPath 'Resources\Deduplication'
@@ -178,7 +178,7 @@ Try
     Set-Location -Path $PSScriptRoot
     [void](Clear-WindowsCorruptMountPoint)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Container
-    $ParentDirectory = [System.IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
+    $ParentDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $PSScriptRoot -ChildPath "OptimizeOfflineTemp_$(Get-Random)"))
     $ParentDirectory = Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath $ParentDirectory) -Force
     $MountFolder = New-OfflineDirectory -Directory InstallMount
     $ImageFolder = New-OfflineDirectory -Directory Image
@@ -205,7 +205,7 @@ If ($SourcePath.Extension -eq '.ISO')
     }
     Else
     {
-        $ISOName = [System.IO.Path]::GetFileNameWithoutExtension($SourcePath)
+        $ISOName = [IO.Path]::GetFileNameWithoutExtension($SourcePath)
         $ISOMedia = Join-Path -Path $ParentDirectory -ChildPath $ISOName
         New-Container -Path $ISOMedia
         Try
@@ -272,7 +272,7 @@ Else { $ImageIndex = 1 }
 
 Try
 {
-    $WimInfo = Get-WimInfo -WimFile $InstallWim -Index $ImageIndex -ErrorAction Stop
+    $WimInfo = Get-WimFileInfo -WimFile $InstallWim -Index $ImageIndex -ErrorAction Stop
 }
 Catch
 {
@@ -305,9 +305,9 @@ If ($WimInfo.Edition.Contains('Server'))
 If ($WimInfo.Build -gt '17134' -or $WimInfo.Build -lt '18362')
 {
     If ($WimInfo.Build -eq '18362' -and $WimInfo.Language -ne 'en-US' -and $MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
-    If ($WimInfo.Build -ne '17762' -or $WimInfo.Build -ne '18362' -and $MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
+    If ($WimInfo.Build -lt '17763' -and $MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
     If ($WimInfo.Build -ne '17763' -and $WimInfo.Language -ne 'en-US' -and $Win32Calc.IsPresent) { $Win32Calc = $false }
-    If ($WimInfo.Build -ne '17134' -and $WimInfo.Language -ne 'en-US' -and $Dedup.IsPresent) { $Dedup = $false }
+    If ($WimInfo.Build -gt '17134' -and $WimInfo.Language -ne 'en-US' -and $Dedup.IsPresent) { $Dedup = $false }
     If ($WimInfo.Language -ne 'en-US' -and $DaRT.IsPresent) { $DaRT = $false }
     If ($WimInfo.Name -like "*LTSC*")
     {
@@ -332,7 +332,6 @@ Try
 {
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     $DISMLog = Join-Path -Path $WorkFolder -ChildPath DISM.log
-    $ScriptLog = Join-Path -Path $WorkFolder -ChildPath Optimize-Offline.log
     $AppxPackagesList = Join-Path -Path $WorkFolder -ChildPath AppxProvisionedPackages.txt
     $WindowsFeaturesList = Join-Path -Path $WorkFolder -ChildPath WindowsFeatures.txt
     $IntegratedPackagesList = Join-Path -Path $WorkFolder -ChildPath IntegratedPackages.txt
@@ -354,7 +353,7 @@ Try
 Catch
 {
     Out-Log -Error ('Failed to Mount {0}' -f $($WimInfo.Name)) -ErrorRecord $Error[0]
-    Stop-Optimize; Close-Process -Process $PID; Exit
+    Stop-Optimize
 }
 
 If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -364,7 +363,7 @@ If ((Repair-WindowsImage -Path $MountFolder -CheckHealth).ImageHealthState -eq '
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Further servicing is required before the image can be optimized."
-    Stop-Optimize; Close-Process -Process $PID; Exit
+    Stop-Optimize
 }
 
 If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -Path $MountFolder).Count -gt 0)
@@ -448,7 +447,7 @@ If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -
     Catch
     {
         Out-Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
     If ((Get-AppxProvisionedPackage -Path $MountFolder).Count -eq 0)
     {
@@ -456,7 +455,7 @@ If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -
         Out-Log -Info "Removing Windows App Program Files."
         $ACL = Get-Acl -Path "$MountFolder\Program Files\WindowsApps" -ErrorAction SilentlyContinue
         Grant-FolderOwnership -Path "$MountFolder\Program Files\WindowsApps"
-        Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path "$MountFolder\Program Files\WindowsApps" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Container
         $ACL | Set-Acl -Path "$MountFolder\Program Files\WindowsApps" -ErrorAction SilentlyContinue
     }
     Else
@@ -502,7 +501,7 @@ If ($SystemApps.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
-            Stop-Optimize; Close-Process -Process $PID; Exit
+            Stop-Optimize
         }
     }
     Get-OfflineHives -Process Unload; Clear-Host
@@ -542,7 +541,7 @@ If ($Packages.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove Windows Capability Packages." -ErrorRecord $Error[0]
-            Stop-Optimize; Close-Process -Process $PID; Exit
+            Stop-Optimize
         }
     }
     Remove-Variable PackageName; Clear-Host
@@ -608,7 +607,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
-            Stop-Optimize; Close-Process -Process $PID; Exit
+            Stop-Optimize
         }
     }
 }
@@ -650,7 +649,7 @@ If ((Get-WindowsOptionalFeature -Path $MountFolder -FeatureName *SMB1*).State -e
     Catch
     {
         Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
 }
 
@@ -688,7 +687,7 @@ If ($Features.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Features." -ErrorRecord $Error[0]
-            Stop-Optimize; Close-Process -Process $PID; Exit
+            Stop-Optimize
         }
         Clear-Host
         $OptionalFeatures = [System.Collections.ArrayList]@()
@@ -724,7 +723,7 @@ If ($Features.IsPresent)
             Catch
             {
                 Out-Log -Error "Failed to Enable Windows Features." -ErrorRecord $Error[0]
-                Stop-Optimize; Close-Process -Process $PID; Exit
+                Stop-Optimize
             }
         }
     }
@@ -799,7 +798,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
 }
 
@@ -846,7 +845,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
 }
 
@@ -890,7 +889,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
         Catch
         {
             Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Stop-Optimize; Close-Process -Process $PID; Exit
+            Stop-Optimize
         }
     }
     Else
@@ -930,7 +929,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $MountFolder |
             Catch
             {
                 Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-                Stop-Optimize; Close-Process -Process $PID; Exit
+                Stop-Optimize
             }
         }
     }
@@ -1039,7 +1038,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
     Catch
     {
         Out-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
 }
 
@@ -1097,28 +1096,19 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
             Out-Log -Info "Saving and Dismounting the Boot Image."
             [void](Dismount-WindowsImage @DismountBootImage)
             Out-Log -Info "Rebuilding and Exporting the Boot Image."
-            $ExportBoot = @{
-                SourceImagePath      = $BootWim
-                SourceIndex          = 1
-                DestinationImagePath = "$($ImageFolder)\tmp_boot.wim"
-                CompressionType      = 'Maximum'
-                CheckIntegrity       = $true
-                ScratchDirectory     = $ScratchFolder
-                LogPath              = $DISMLog
-                ErrorAction          = 'Stop'
+            Get-WindowsImage -ImagePath $BootWim | ForEach-Object {
+                $ExportBootParams = @{
+                    SourceImagePath      = $BootWim
+                    SourceIndex          = $_.ImageIndex
+                    DestinationImagePath = "$($ImageFolder)\tmp_boot.wim"
+                    CompressionType      = 'Maximum'
+                    CheckIntegrity       = $true
+                    ScratchDirectory     = $ScratchFolder
+                    LogPath              = $DISMLog
+                    ErrorAction          = 'Stop'
+                }
+                [void](Export-WindowsImage @ExportBootParams)
             }
-            [void](Export-WindowsImage @ExportBoot)
-            $ExportBoot = @{
-                SourceImagePath      = $BootWim
-                SourceIndex          = 2
-                DestinationImagePath = "$($ImageFolder)\tmp_boot.wim"
-                CompressionType      = 'Maximum'
-                CheckIntegrity       = $true
-                ScratchDirectory     = $ScratchFolder
-                LogPath              = $DISMLog
-                ErrorAction          = 'Stop'
-            }
-            [void](Export-WindowsImage @ExportBoot)
             @("$BootWim", "$BootMount") | ForEach-Object { Remove-Container -Path $($_) }
             Rename-Item -Path "$($ImageFolder)\tmp_boot.wim" -NewName boot.wim -Force -ErrorAction Stop
         }
@@ -1126,7 +1116,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
     Catch
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Setup." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
     Try
     {
@@ -1193,7 +1183,7 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
     Catch
     {
         Out-Log -Error "Failed to integrate Microsoft DaRT 10 into Windows Recovery." -ErrorRecord $Error[0]
-        Stop-Optimize; Close-Process -Process $PID; Exit
+        Stop-Optimize
     }
     Clear-Host
 }
@@ -1615,7 +1605,7 @@ If ($Registry.IsPresent)
 
 If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
 {
-    $ConfigVars = (Import-Config -Path $AdditionalConfigPath).Additional
+    $ConfigVars = (Import-Config -Path $AdditionalConfigPath).Additional; Clear-Host
     If ($ConfigVars.Unattend -eq $true -and (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml"))
     {
         Try
@@ -1631,7 +1621,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
             }
             [void](Use-WindowsUnattend @UnattendParams)
             New-Container -Path "$MountFolder\Windows\Panther"
-            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -ErrorAction Stop
+            Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$MountFolder\Windows\Panther" -ErrorAction SilentlyContinue
             Start-Sleep 3
         }
         Catch
@@ -1669,9 +1659,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $AdditionalConfigPath))
     {
         $Host.UI.RawUI.WindowTitle = "Applying Registry Templates to the Image."
         Out-Log -Info "Applying Registry Templates to the Image."
-        Get-RegistryTemplates
-        Set-RegistryTemplates
-        Start-Sleep 3
+        Get-RegistryTemplates; Set-RegistryTemplates; Start-Sleep 3
     }
     If ($ConfigVars.Drivers -eq $true -and (Get-ChildItem -Path "$AdditionalPath\Drivers" -Filter *.inf -Recurse -ErrorAction SilentlyContinue))
     {
@@ -1788,7 +1776,7 @@ $(Get-Date -UFormat "%m/%d/%Y at %r")
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Discarding optimizations."
-    Stop-Optimize; Close-Process -Process $PID; Exit
+    Stop-Optimize
 }
 
 Try
@@ -1826,7 +1814,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Save and Dismount $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimize; Close-Process -Process $PID; Exit
+    Stop-Optimize
 }
 
 Do
@@ -1869,7 +1857,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Export $($WimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimize; Close-Process -Process $PID; Exit
+    Stop-Optimize
 }
 
 If ($ISOMedia)
