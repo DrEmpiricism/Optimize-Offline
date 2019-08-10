@@ -9,50 +9,37 @@
 	===========================================================================
 #>
 
+#region Module Variables
+$ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
+$DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
+$DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
+$EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
+$StoreAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\WindowsStore'
+$Win32CalcPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Win32Calc'
+$AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional'
+$ConfigFilePath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
+$AppxWhitelistPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.xml'
+$AppAssocPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\CustomAppAssociations.xml'
+#endregion Module Variables
+
+Export-ModuleMember -Variable *
 
 #region Module Functions
 Function Import-Config
 {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            ValueFromPipeline = $true,
-            Position = 0)]
-        [ValidatePattern('\.ini$')]
-        [IO.FileInfo]$Path
-    )
+    Param ()
 
-    Begin
-    {
-        $ConfigFile = Get-Content -Path $Path.FullName | Where-Object { $_ -notmatch "^(\s+)?;|^\s*$" }
-        $ConfigObj = New-Object -TypeName PSObject -Property @{ }
-        $ConfigParams = [Ordered]@{ }
-    }
-    Process
-    {
-        ForEach ($Line In $ConfigFile)
+    $ConfigObj = New-Object -TypeName PSObject -Property @{ }
+    Get-Content -Path $ConfigFilePath | ForEach-Object {
+        If ($_ -match '=')
         {
-            If ($Line -match "^\[.*\]$" -and $ConfigParams.Count -gt 0)
-            {
-                $ConfigObj | Add-Member -MemberType Noteproperty -Name $Section -Value $([PSCustomObject]$ConfigParams) -Force
-                $ConfigParams = [Ordered]@{ }
-                $Section = $Line -replace '\[|\]', ''
-            }
-            ElseIf ($Line -match "^\[.*\]$")
-            {
-                $Section = $Line -replace '\[|\]', ''
-            }
-            ElseIf ($Line -match '=')
-            {
-                $Data = $Line.Split('=').Trim()
-                $ConfigParams.Add($Data[0], $Data[1])
-            }
+            $Data = $_.Split('=').Trim()
+            $ConfigObj | Add-Member -MemberType NoteProperty -Name $Data[0] -Value $Data[1]
         }
-        $ConfigObj | Add-Member -MemberType Noteproperty -Name $Section -Value $([PSCustomObject]$ConfigParams) -Force
-        $ConfigObj
     }
+    $ConfigObj
 }
 
 Function Out-Log
@@ -98,7 +85,7 @@ $ScriptName v$ScriptVersion starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 Optimizing image: $($WimInfo.Name)
 ***************************************************************************************************
 
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -ErrorAction SilentlyContinue
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8
             }
             'Footer'
             {
@@ -107,7 +94,7 @@ Optimizing image: $($WimInfo.Name)
 ***************************************************************************************************
 Optimizations finalized on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 ***************************************************************************************************
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
             }
             'Failed'
             {
@@ -116,16 +103,16 @@ Optimizations finalized on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 ***************************************************************************************************
 Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 ***************************************************************************************************
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
             }
             'Info'
             {
-                "$Timestamp [INFO]: $Info" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+                "$Timestamp [INFO]: $Info" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                 Write-Host $Info -ForegroundColor Cyan
             }
             'Error'
             {
-                "$Timestamp [ERROR]: $Error" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+                "$Timestamp [ERROR]: $Error" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                 Write-Host $Error -ForegroundColor Red
                 If ($PSBoundParameters.ContainsKey('ErrorRecord'))
                 {
@@ -134,7 +121,7 @@ Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
                     $ErrorRecord.InvocationInfo.ScriptName,
                     $ErrorRecord.InvocationInfo.ScriptLineNumber,
                     $ErrorRecord.InvocationInfo.OffsetInLine
-                    "$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+                    "$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
                     Write-Host $ExceptionMessage -ForegroundColor Red
                 }
             }
@@ -144,27 +131,6 @@ Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
     {
         [void]$LogMutex.ReleaseMutex()
     }
-}
-
-Function Stop-Optimize
-{
-    [CmdletBinding()]
-    Param ()
-
-    $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
-    Out-Log -Info "Dismounting and discarding the image."; Out-Log -Failed
-    If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
-    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
-    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
-    [void](Dismount-WindowsImage -Path $MountFolder -Discard -ErrorAction SilentlyContinue)
-    [void](Clear-WindowsCorruptMountPoint)
-    Remove-Container -Path $DISMLog
-    Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    $SaveFolder = New-OfflineDirectory -Directory Save
-    If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $SaveFolder -ChildPath ErrorRecord.log) -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $SaveFolder -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path (Split-Path -Path $PSScriptRoot) -Filter "OptimizeOfflineTemp_*" -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    Get-Process | Where-Object { $_.Name -eq 'cmd' -or $_.Name -eq 'powershell' } | ForEach-Object { $_.Kill(); Start-Sleep -Seconds 1 }
 }
 
 Function New-OfflineDirectory
@@ -183,44 +149,37 @@ Function New-OfflineDirectory
     {
         'Scratch'
         {
-            $ScratchDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ScratchOffline'))
-            $ScratchDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ScratchDirectory) -Force -ErrorAction SilentlyContinue
+            $ScratchDirectory = New-Item -Path $TempDirectory -Name ScratchOffline -ItemType Directory -Force
             $ScratchDirectory.FullName; Break
         }
         'Image'
         {
-            $ImageDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'ImageOffline'))
-            $ImageDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $ImageDirectory) -Force -ErrorAction SilentlyContinue
+            $ImageDirectory = New-Item -Path $TempDirectory -Name ImageOffline -ItemType Directory -Force
             $ImageDirectory.FullName; Break
         }
         'Work'
         {
-            $WorkDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'WorkOffline'))
-            $WorkDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $WorkDirectory) -Force -ErrorAction SilentlyContinue
+            $WorkDirectory = New-Item -Path $TempDirectory -Name  WorkOffline -ItemType Directory -Force
             $WorkDirectory.FullName; Break
         }
         'InstallMount'
         {
-            $InstallMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountInstallOffline'))
-            $InstallMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $InstallMountDirectory) -Force -ErrorAction SilentlyContinue
+            $InstallMountDirectory = New-Item -Path $TempDirectory -Name MountInstallOffline -ItemType Directory -Force
             $InstallMountDirectory.FullName; Break
         }
         'BootMount'
         {
-            $BootMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountBootOffline'))
-            $BootMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $BootMountDirectory) -Force -ErrorAction SilentlyContinue
+            $BootMountDirectory = New-Item -Path $TempDirectory -Name MountBootOffline -ItemType Directory -Force
             $BootMountDirectory.FullName; Break
         }
         'RecoveryMount'
         {
-            $RecoveryMountDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path $ParentDirectory -ChildPath 'MountRecoveryOffline'))
-            $RecoveryMountDirectory = Get-Item -LiteralPath (Join-Path -Path $ParentDirectory -ChildPath $RecoveryMountDirectory) -Force -ErrorAction SilentlyContinue
+            $RecoveryMountDirectory = New-Item -Path $TempDirectory -Name MountRecoveryOffline -ItemType Directory -Force
             $RecoveryMountDirectory.FullName; Break
         }
         'Save'
         {
-            $SaveDirectory = [IO.Directory]::CreateDirectory((Join-Path -Path (Split-Path -Path $PSScriptRoot) -ChildPath Optimize-Offline"_[$((Get-Date).ToString('MM.dd.yy hh.mm.ss'))]"))
-            $SaveDirectory = Get-Item -LiteralPath (Join-Path -Path (Split-Path -Path $PSScriptRoot) -ChildPath $SaveDirectory) -Force -ErrorAction SilentlyContinue
+            $SaveDirectory = New-Item -Path $ScriptRootPath -Name Optimize-Offline"_$((Get-Date).ToString('MM-dd-yyyyThh.mm.sstt'))" -ItemType Directory -Force
             $SaveDirectory.FullName; Break
         }
     }
@@ -286,7 +245,7 @@ Function Get-OfflineHives
         }
         'Test'
         {
-            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { If (Test-Path -Path $($_)) { $true } }; Break
+            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU', 'HKLM:\WIM_HKU_DEFAULT') | ForEach-Object { If (Test-Path -Path $($_)) { $true } }; Break
         }
     }
 }
@@ -310,7 +269,7 @@ Function New-Container
         {
             If (!(Test-Path -LiteralPath $Item))
             {
-                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
+                [void](New-Item -Path $Item -ItemType Directory -Force)
             }
         }
     }
@@ -335,7 +294,7 @@ Function Remove-Container
         {
             If (Test-Path -LiteralPath $Item)
             {
-                Remove-Item -LiteralPath $Item -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $Item -Recurse -Force
             }
         }
     }
@@ -380,12 +339,12 @@ Function Set-KeyProperty
         {
             If (Test-Path -LiteralPath $Item)
             {
-                Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue
+                Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force
             }
             Else
             {
-                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue)
-                [void](New-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
+                [void](New-Item -Path $Item -ItemType Directory -Force)
+                [void](New-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -PropertyType $Type -Force)
             }
         }
     }
@@ -396,9 +355,7 @@ Function Get-RegistryTemplates
     [CmdletBinding()]
     Param ()
 
-    $RegistryTemplates = @()
-    $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-    ForEach ($RegistryTemplate In $RegistryTemplates)
+    ForEach ($RegistryTemplate In Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse)
     {
         $REGContent = Get-Content -Path $RegistryTemplate.FullName
         $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
@@ -415,7 +372,7 @@ Function Set-RegistryTemplates
     [CmdletBinding()]
     Param ()
 
-    $RegistryTemplates = @()
+    Get-RegistryTemplates
     $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
     $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
     Get-OfflineHives -Process Load
@@ -424,7 +381,7 @@ Function Set-RegistryTemplates
         Write-Output ('Importing Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) >> $RegLog
         $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $RegistryTemplate.FullName) -WindowStyle Hidden -Wait -PassThru
         If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) }
-        Remove-Item -Path $RegistryTemplate.FullName -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $RegistryTemplate.FullName -Force
     }
     Get-OfflineHives -Process Unload
 }
@@ -432,21 +389,10 @@ Function Set-RegistryTemplates
 Function New-ISOMedia
 {
     [CmdletBinding()]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            Position = 0)]
-        [string]$ISOMedia,
-        [Parameter(Mandatory = $true)]
-        [string]$ISOLabel,
-        [Parameter(Mandatory = $true)]
-        [string]$ISOPath
-    )
+    Param ()
 
     Begin
     {
-        $EAP = $ErrorActionPreference
-        $ErrorActionPreference = 'Stop'
         $CompilerParams = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters -Property @{
             CompilerOptions       = '/unsafe'
             WarningLevel          = 4
@@ -480,13 +426,13 @@ namespace ComBuilder {
 '@
         }
         $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
-        $ISOFile = New-Item -Path $ISOPath -ItemType File -Force
+        $ISOFile = New-Item -Path $WorkFolder -Name ($($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso") -ItemType File -Force
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
         $BootStream.LoadFromFile($BootFile.FullName)
         ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
-        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $ISOLabel }).ChooseImageDefaultsForMediaType(8)
+        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($WimInfo.Name) }).ChooseImageDefaultsForMediaType(8)
     }
     Process
     {
@@ -508,11 +454,10 @@ namespace ComBuilder {
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }
         [System.GC]::Collect()
         [System.GC]::WaitForPendingFinalizers()
-        $ErrorActionPreference = $EAP
     }
 }
 
-Function Grant-ProcessPrivilege
+Function Grant-Privilege
 {
     [CmdletBinding()]
     Param
@@ -520,8 +465,6 @@ Function Grant-ProcessPrivilege
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true)]
         [string]$Privilege,
-        [Parameter(Mandatory = $false)]
-        [int]$Process = $PID,
         [switch]$Disable
     )
 
@@ -601,7 +544,7 @@ public class AccessToken {
     }
 }
 '@
-        $CurrentProcess = Get-Process -Id $Process
+        $CurrentProcess = Get-Process -Id $PID
     }
     Process
     {
@@ -627,9 +570,9 @@ Function Grant-FileOwnership
 
     Begin
     {
-        "SeTakeOwnershipPrivilege" | Grant-ProcessPrivilege
-        "SeBackupPrivilege" | Grant-ProcessPrivilege
-        "SeRestorePrivilege" | Grant-ProcessPrivilege
+        "SeTakeOwnershipPrivilege" | Grant-Privilege
+        "SeBackupPrivilege" | Grant-Privilege
+        "SeRestorePrivilege" | Grant-Privilege
     }
     Process
     {
@@ -640,17 +583,17 @@ Function Grant-FileOwnership
             $Inheritance = [System.Security.AccessControl.InheritanceFlags]::None
             $Propagation = [System.Security.AccessControl.PropagationFlags]::None
             $Type = [System.Security.AccessControl.AccessControlType]::Allow
-            $ACL = Get-Acl -Path $Item -ErrorAction Stop
+            $ACL = Get-Acl -Path $Item
             $ACL.SetOwner($Admin)
             $ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Type)))
-            $ACL | Set-Acl -Path $Item -ErrorAction Stop
+            $ACL | Set-Acl -Path $Item
         }
     }
     End
     {
-        "SeTakeOwnershipPrivilege" | Grant-ProcessPrivilege -Disable
-        "SeBackupPrivilege" | Grant-ProcessPrivilege -Disable
-        "SeRestorePrivilege" | Grant-ProcessPrivilege -Disable
+        "SeTakeOwnershipPrivilege" | Grant-Privilege -Disable
+        "SeBackupPrivilege" | Grant-Privilege -Disable
+        "SeRestorePrivilege" | Grant-Privilege -Disable
     }
 }
 
@@ -671,7 +614,7 @@ Function Grant-FolderOwnership
         ForEach ($Item In $Path)
         {
             Grant-FileOwnership -Path $Item
-            ForEach ($Object In Get-ChildItem $Item -Recurse -Force -ErrorAction SilentlyContinue)
+            ForEach ($Object In Get-ChildItem $Item -Recurse -Force)
             {
                 If (Test-Path $Object.FullName -PathType Container)
                 {
@@ -685,23 +628,68 @@ Function Grant-FolderOwnership
         }
     }
 }
+
+Function Dismount-Images
+{
+    [CmdletBinding()]
+    Param ()
+
+    $MountPath = @()
+    If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
+    {
+        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Recovery*" }
+    }
+    If ((Get-WindowsImage -Mounted).ImagePath -match "install.wim")
+    {
+        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Install*" }
+    }
+    If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
+    {
+        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Boot*" }
+    }
+    $MountPath.ForEach{ [void](Dismount-WindowsImage -Path $_ -Discard) }
+    [void](Clear-WindowsCorruptMountPoint)
+}
+
+Function Stop-Optimize
+{
+    [CmdletBinding()]
+    Param ()
+
+    $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
+    Out-Log -Info "Dismounting and discarding the image."; Out-Log -Failed
+    If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
+    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
+    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
+    Dismount-Images
+    Remove-Container -Path $DISMLog
+    Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
+    $SaveFolder = New-OfflineDirectory -Directory Save
+    If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $SaveFolder -ChildPath ErrorRecord.log) -Force }
+    Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Move-Item -Destination $SaveFolder -Force
+    Remove-Container -Path $TempDirectory
+    $ErrorActionPreference = $DefaultErrorActionPreference
+    ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
+    Write-Host "Terminating all optimization processes..." -ForegroundColor Yellow
+    Start-Sleep 3
+    @('cmd', 'powershell') | ForEach-Object { Get-Process | Where-Object -Property Name -EQ $_ | ForEach-Object { $_.Kill(); Start-Sleep -Seconds 1 } }
+    Exit
+}
 #endregion Module Functions
 
 Export-ModuleMember -Function Import-Config,
 					Out-Log,
-					Stop-Optimize,
 					New-OfflineDirectory,
 					Get-WimFileInfo,
 					Get-OfflineHives,
 					New-Container,
 					Remove-Container,
 					Set-KeyProperty,
-					Get-RegistryTemplates,
 					Set-RegistryTemplates,
 					New-ISOMedia,
-					Grant-ProcessPrivilege,
 					Grant-FileOwnership,
-					Grant-FolderOwnership
+					Grant-FolderOwnership,
+					Stop-Optimize
 # SIG # Begin signature block
 # MIILtAYJKoZIhvcNAQcCoIILpTCCC6ECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR

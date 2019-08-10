@@ -1,5 +1,9 @@
 # ChangeLog #
 
+## Build 3.2.6.6 (08-09-2019) ##
+
+- Updated both the primary script and the functions module.
+
 ## Build 3.2.6.5 (08-06-2019) ##
 
 - Restructured error-handling and module functions.
