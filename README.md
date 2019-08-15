@@ -19,7 +19,8 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before. The best recourse for errors is to post them - and any log files - in the 'Issues' section of this repository.
+- Not all integrations are available for languages outside of en-US.
+- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before.
 - Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause erros during Windows 10 setup.
 - Help will not be given to users who attempt to optimize unsupported builds.
 
@@ -30,32 +31,31 @@ The script only applies those registry entries and values applicable to the imag
 
 A short list of some of the optimizations include:
 
-- Completely disables Cortana without removing the default search feature.
+- Completely disables Cortana without disabling the default search feature.
 - Disables a significant amount of telemetry, logging, tracking, monitoring and background feedback submission.
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system location sensor access.
 - Disables background error reporting and automatic syncronization to Microsoft.
-- Disables Cortana's intrusiveness during the OOBE component pass.
 - Disables the automatic creation of tabs and icons for Microsoft Edge.
 - Disables intrusive Microsoft feedback and notification queries.
-- Cleans-up the default Context Menu options and integrates custom options.
+- Cleans-up the default Context Menu.
 
 ## About the -Additional switch ##
 
-When the -Additional switch it used, all content enabled in the Config.ini file will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
+When the -Additional switch it used, any content specified in its configuration file (Config.ini) will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
 
-Within the '\Content\Additional' directory are six folders: 'Drivers', 'SystemLogo', 'RegistryTemplates', 'Setup', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be uploaded because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
+Within the '\Content\Additional' directory are six folders: 'Drivers', 'SystemLogo', 'RegistryTemplates', 'Setup', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be copied because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
 
 All content that gets copied to the image are copied to the locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
 
-All content can be files, folders or directories. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory while keeping its original file structure. Content is NOT copied haphazardly nor are original file structures ignored.
+Content can be in the form of files, folders or directories. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory while keeping its original file structure. Content is NOT copied haphazardly nor are original file structures ignored.
 
 **Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
 
 ## Registry template integration ##
 
-Any custom registry template (.reg) file to be integrated into the offline image must be placed in the '\Content\Additional\RegistryTemplates' folder when using the -Additional switch and Config.ini. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate offline image's registry hives.
+Any custom registry template (.reg) file to be integrated into the offline image must be placed in the '\Content\Additional\RegistryTemplates' folder when using the -Additional switch. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate offline image's registry hives.
 
 ## Driver integration ##
 
@@ -63,7 +63,7 @@ Any driver or driver package to be integrated into the offline image must be pla
 
 ## unattend.xml Answer File ##
 
-When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch and Config.ini, Optimize-Offline applies the answer file directly to the image, creates the '\Windows\Panther' directory within the image and finally copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista and has remained as such since.
+When an unattend.xml answer file is added to the 'Unattend' folder with the -Additional switch, Optimize-Offline applies the answer file directly to the image, creates the '\Windows\Panther' directory within the image and finally copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista and has remained as such since.
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther is the first directory checked for an answer file including the installation media. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used.
 
@@ -104,7 +104,7 @@ This can vary, depending on the end-user's final image requirements, but SecHeal
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
-For Windows builds 17763, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For higher Windows builds, a custom Win32Calc.wim that incorporates the latest Win32Calc components and strict security descriptors (SDDL) is expanded into the image. This allows for proper system management and user control. Optimize-Offline then adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
+For Windows builds 17763, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For higher Windows builds, a custom Win32Calc.wim that incorporates the latest Win32Calc components and strict security descriptors is expanded into the image. This allows for proper system management and user control. Optimize-Offline then adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
 
 ## Data Deduplication ##
 
@@ -132,7 +132,7 @@ This is a process that occurrs automatically when a Windows Installation ISO is 
 
 When a Windows Installation Media ISO is used as the source image for optimization, Optimize-Offline expands the entire media contents of the ISO into its own directory. Using the -ISO switch will tell Optimize-Offline to automatically create a new Windows Installation Media ISO once all optimizations have been processed.
 
-Optimize-Offline used a C# wrapper that calls the COM interface used for ISO creation and also opens a binary stream that writes the efisys.bin boot sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party executables like oscdimg.exe or end-user input.
+Optimize-Offline used a C# wrapper that calls a COM interface used for ISO creation and also opens a binary stream that writes the efisys.bin boot sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party executables like oscdimg.exe or end-user input.
 
 ## About the Defaultuser0 ghost account ##
 
@@ -155,5 +155,5 @@ The easist way to call Optimize-Offline is by using the provided [Start.cmd scri
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourceImage "D:\Win ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
-- .\Optimize-Offline.ps1 -SourceImage "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Additional
+- .\Optimize-Offline.ps1 -SourcePath "D:\Win ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO
+- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Additional

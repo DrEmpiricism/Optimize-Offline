@@ -11,6 +11,7 @@
 
 #region Module Variables
 $ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
+$TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OptimizeOfflineTemp_$(Get-Random)"
 $DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
 $EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
@@ -36,6 +37,7 @@ Function Import-Config
         If ($_ -match '=')
         {
             $Data = $_.Split('=').Trim()
+            If ($Data[1] -eq "True" -or $Data[1] -eq "False") { $Data[1] = [Convert]::ToBoolean($Data[1]) }
             $ConfigObj | Add-Member -MemberType NoteProperty -Name $Data[0] -Value $Data[1]
         }
     }
@@ -82,7 +84,7 @@ Function Out-Log
 $ScriptName v$ScriptVersion starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 
 ***************************************************************************************************
-Optimizing image: $($WimInfo.Name)
+Optimizing image: $($InstallWimInfo.Name)
 ***************************************************************************************************
 
 "@ | Out-File -FilePath $ScriptLog -Encoding UTF8
@@ -164,22 +166,22 @@ Function New-OfflineDirectory
         }
         'InstallMount'
         {
-            $InstallMountDirectory = New-Item -Path $TempDirectory -Name MountInstallOffline -ItemType Directory -Force
+            $InstallMountDirectory = New-Item -Path $TempDirectory -Name InstallMountOffline -ItemType Directory -Force
             $InstallMountDirectory.FullName; Break
         }
         'BootMount'
         {
-            $BootMountDirectory = New-Item -Path $TempDirectory -Name MountBootOffline -ItemType Directory -Force
+            $BootMountDirectory = New-Item -Path $TempDirectory -Name BootMountOffline -ItemType Directory -Force
             $BootMountDirectory.FullName; Break
         }
         'RecoveryMount'
         {
-            $RecoveryMountDirectory = New-Item -Path $TempDirectory -Name MountRecoveryOffline -ItemType Directory -Force
+            $RecoveryMountDirectory = New-Item -Path $TempDirectory -Name RecoveryMountOffline -ItemType Directory -Force
             $RecoveryMountDirectory.FullName; Break
         }
         'Save'
         {
-            $SaveDirectory = New-Item -Path $ScriptRootPath -Name Optimize-Offline"_$((Get-Date).ToString('MM-dd-yyyyThh.mm.sstt'))" -ItemType Directory -Force
+            $SaveDirectory = New-Item -Path $ScriptRootPath -Name Optimize-Offline"_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -ItemType Directory -Force
             $SaveDirectory.FullName; Break
         }
     }
@@ -223,20 +225,22 @@ Function Get-WimFileInfo
 
 Function Get-OfflineHives
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'None')]
     Param
     (
-        [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [ValidateSet('Load', 'Unload', 'Test')]
-        [string]$Process
+        [Parameter(ParameterSetName = 'Load')]
+        [switch]$Load,
+        [Parameter(ParameterSetName = 'Unload')]
+        [switch]$Unload,
+        [Parameter(ParameterSetName = 'Test')]
+        [switch]$Test
     )
 
-    Switch ($Process)
+    Switch ($PSBoundParameters.Keys)
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($MountFolder)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($MountFolder)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($MountFolder)\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($MountFolder)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($InstallMount)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($InstallMount)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($InstallMount)\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
         }
         'Unload'
         {
@@ -326,11 +330,11 @@ Function Set-KeyProperty
     {
         Switch ($Type)
         {
-            'DWord' { [int32]$Value = $Value }
-            'String' { [string]$Value = $Value }
-            'ExpandString' { [string]$Value = $Value }
-            'QWord' { [int64]$Value = $Value }
-            'Binary' { [byte[]]$Value = $Value }
+            'DWord' { [int32]$Value = $Value; Break }
+            'String' { [string]$Value = $Value; Break }
+            'ExpandString' { [string]$Value = $Value; Break }
+            'QWord' { [int64]$Value = $Value; Break }
+            'Binary' { [byte[]]$Value = $Value; Break }
         }
     }
     Process
@@ -350,40 +354,31 @@ Function Set-KeyProperty
     }
 }
 
-Function Get-RegistryTemplates
-{
-    [CmdletBinding()]
-    Param ()
-
-    ForEach ($RegistryTemplate In Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse)
-    {
-        $REGContent = Get-Content -Path $RegistryTemplate.FullName
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
-        $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
-        $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
-        $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
-        $REGContent | Set-Content -Path "$($RegistryTemplate.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
-    }
-}
-
 Function Set-RegistryTemplates
 {
     [CmdletBinding()]
     Param ()
 
-    Get-RegistryTemplates
-    $RegistryTemplates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-    $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
-    Get-OfflineHives -Process Load
-    ForEach ($RegistryTemplate In $RegistryTemplates)
-    {
-        Write-Output ('Importing Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) >> $RegLog
-        $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $RegistryTemplate.FullName) -WindowStyle Hidden -Wait -PassThru
-        If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($RegistryTemplate.BaseName.Replace('_Offline', $null))) }
-        Remove-Item -Path $RegistryTemplate.FullName -Force
+    Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse | ForEach-Object -Process {
+        $REGContent = Get-Content -Path $($_.FullName)
+        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
+        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
+        $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
+        $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
+        $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
+        $REGContent | Set-Content -Path "$($_.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
     }
-    Get-OfflineHives -Process Unload
+    $Templates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+    $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
+    Get-OfflineHives -Load
+    ForEach ($Template In $Templates)
+    {
+        Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
+        $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $Template.FullName) -WindowStyle Hidden -Wait -PassThru
+        If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
+        Remove-Item -Path $Template.FullName -Force
+    }
+    Get-OfflineHives -Unload
 }
 
 Function New-ISOMedia
@@ -426,13 +421,13 @@ namespace ComBuilder {
 '@
         }
         $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
-        $ISOFile = New-Item -Path $WorkFolder -Name ($($WimInfo.Edition).Replace(' ', '') + "_$($WimInfo.Build).iso") -ItemType File -Force
+        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
         $BootStream.LoadFromFile($BootFile.FullName)
         ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
-        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($WimInfo.Name) }).ChooseImageDefaultsForMediaType(8)
+        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name) }).ChooseImageDefaultsForMediaType(8)
     }
     Process
     {
@@ -573,16 +568,16 @@ Function Grant-FileOwnership
         "SeTakeOwnershipPrivilege" | Grant-Privilege
         "SeBackupPrivilege" | Grant-Privilege
         "SeRestorePrivilege" | Grant-Privilege
+        $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
+        $Rights = [System.Security.AccessControl.FileSystemRights]::FullControl
+        $Inheritance = [System.Security.AccessControl.InheritanceFlags]::None
+        $Propagation = [System.Security.AccessControl.PropagationFlags]::None
+        $Type = [System.Security.AccessControl.AccessControlType]::Allow
     }
     Process
     {
         ForEach ($Item In $Path)
         {
-            $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
-            $Rights = [System.Security.AccessControl.FileSystemRights]::FullControl
-            $Inheritance = [System.Security.AccessControl.InheritanceFlags]::None
-            $Propagation = [System.Security.AccessControl.PropagationFlags]::None
-            $Type = [System.Security.AccessControl.AccessControlType]::Allow
             $ACL = Get-Acl -Path $Item
             $ACL.SetOwner($Admin)
             $ACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Type)))
@@ -634,21 +629,52 @@ Function Dismount-Images
     [CmdletBinding()]
     Param ()
 
+    If (Get-OfflineHives -Test) { Get-OfflineHives -Unload }
+    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
+    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
     $MountPath = @()
-    If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim")
-    {
-        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Recovery*" }
-    }
-    If ((Get-WindowsImage -Mounted).ImagePath -match "install.wim")
-    {
-        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Install*" }
-    }
-    If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim")
-    {
-        $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Boot*" }
-    }
+    If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Recovery*" } }
+    If ((Get-WindowsImage -Mounted).ImagePath -match "install.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Install*" } }
+    If ((Get-WindowsImage -Mounted).ImagePath -match "boot.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Boot*" } }
     $MountPath.ForEach{ [void](Dismount-WindowsImage -Path $_ -Discard) }
     [void](Clear-WindowsCorruptMountPoint)
+}
+
+Function Invoke-Cleanup
+{
+    [CmdletBinding(DefaultParameterSetName = 'None')]
+    Param
+    (
+        [Parameter(ParameterSetName = 'Install')]
+        [switch]$Install,
+        [Parameter(ParameterSetName = 'Boot')]
+        [switch]$Boot,
+        [Parameter(ParameterSetName = 'Recovery')]
+        [switch]$Recovery
+    )
+
+    $MountPath = Switch ($PSBoundParameters.Keys)
+    {
+        'Install' { $InstallMount }
+        'Boot' { $BootMount }
+        'Recovery' { $RecoveryMount }
+    }
+    If (Test-Path -Path "$MountPath\Windows\WinSxS\Temp\PendingDeletes\*")
+    {
+        Grant-FileOwnership -Path "$MountPath\Windows\WinSxS\Temp\PendingDeletes\*"
+        Remove-Container -Path "$MountPath\Windows\WinSxS\Temp\PendingDeletes\*"
+    }
+    If (Test-Path -Path "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*")
+    {
+        Grant-FolderOwnership -Path "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*"
+        Remove-Container -Path "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*"
+    }
+    If (Test-Path -Path "$MountPath\Windows\WinSxS\ManifestCache\*.bin")
+    {
+        Grant-FileOwnership -Path "$MountPath\Windows\WinSxS\ManifestCache\*.bin"
+        Remove-Container -Path "$MountPath\Windows\WinSxS\ManifestCache\*.bin"
+    }
+    @("$MountPath\Windows\INF\*.log", "$MountPath\Windows\CbsTemp\*", "$MountPath\PerfLogs", ("$MountPath\" + '$Recycle.Bin')) | ForEach-Object { Remove-Container -Path $($_) }
 }
 
 Function Stop-Optimize
@@ -658,38 +684,28 @@ Function Stop-Optimize
 
     $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
     Out-Log -Info "Dismounting and discarding the image."; Out-Log -Failed
-    If (Get-OfflineHives -Process Test) { Get-OfflineHives -Process Unload }
-    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
-    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
     Dismount-Images
     Remove-Container -Path $DISMLog
     Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
     $SaveFolder = New-OfflineDirectory -Directory Save
-    If ($Error.Count -gt 0) { $Error.ToArray() | Out-File -FilePath (Join-Path -Path $SaveFolder -ChildPath ErrorRecord.log) -Force }
+    If ($Error.Count -gt 0)
+    {
+        ($Error | ForEach-Object -Process {
+                [PSCustomObject] @{
+                    Line  = $_.InvocationInfo.ScriptLineNumber
+                    Error = $_.Exception.Message
+                }
+            } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveFolder -ChildPath ErrorRecord.log) -Force
+    }
     Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Move-Item -Destination $SaveFolder -Force
     Remove-Container -Path $TempDirectory
     $ErrorActionPreference = $DefaultErrorActionPreference
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
-    Write-Host "Terminating all optimization processes..." -ForegroundColor Yellow
-    Start-Sleep 3
-    @('cmd', 'powershell') | ForEach-Object { Get-Process | Where-Object -Property Name -EQ $_ | ForEach-Object { $_.Kill(); Start-Sleep -Seconds 1 } }
-    Exit
+    Return
 }
 #endregion Module Functions
 
-Export-ModuleMember -Function Import-Config,
-					Out-Log,
-					New-OfflineDirectory,
-					Get-WimFileInfo,
-					Get-OfflineHives,
-					New-Container,
-					Remove-Container,
-					Set-KeyProperty,
-					Set-RegistryTemplates,
-					New-ISOMedia,
-					Grant-FileOwnership,
-					Grant-FolderOwnership,
-					Stop-Optimize
+Export-ModuleMember -Function Import-Config, Out-Log, New-OfflineDirectory, Get-WimFileInfo, Get-OfflineHives, New-Container, Remove-Container, Set-KeyProperty, Set-RegistryTemplates, New-ISOMedia, Grant-FileOwnership, Grant-FolderOwnership, Dismount-Images, Invoke-Cleanup, Stop-Optimize
 # SIG # Begin signature block
 # MIILtAYJKoZIhvcNAQcCoIILpTCCC6ECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
