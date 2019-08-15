@@ -165,7 +165,8 @@ Function Set-Privacy
     Get-Service | Where-Object Name -In $ServiceList | Where-Object { $_.StartType -ne 'Disabled' } | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue | Out-Null
 
     # Disables Autologgers
-    Set-AutologgerConfig -Name AutoLogger-Diagtrack-Listener -Start 0
+    Update-AutologgerConfig -Name AutoLogger-Diagtrack-Listener -Start 0
+    Update-AutologgerConfig -Name SQMLogger -Start 0
     Set-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener" -Name "Start" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener" -Name "Start" -Value 0 -Type DWord
     Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\SQMLogger" -Name "Start" -Value 0 -Type DWord

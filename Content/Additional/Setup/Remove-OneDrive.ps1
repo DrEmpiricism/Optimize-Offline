@@ -22,6 +22,9 @@
         Start-Process -FilePath $OneDrive -ArgumentList ('/Uninstall') -Wait
         Start-Sleep 2
 
+        # Unregister any OneDrive schedued task.
+        Get-ScheduledTask -TaskName *OneDrive* | Unregister-ScheduledTask -Confirm:$false
+
         # Removes the OneDrive folder from the Navigation Pane.
         If (!(Test-Path -Path "HKCR:"))
         {
