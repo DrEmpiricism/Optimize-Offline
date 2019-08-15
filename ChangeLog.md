@@ -1,5 +1,14 @@
 # ChangeLog #
 
+## Build 3.2.6.7 (08-14-2019) ##
+
+- The Boot and Recovery images are now automatically mounted at the beginning of the script and remain mounted during the full runtime of the script. The Boot image will only be mounted if a Windows Installation Media ISO is used as the source image for optimization. If only an install.wim is provided, the Recovery image will only be mounted.
+- Drivers can now be added to the Boot and Recovery images.
+- In the 'Content\Additional\Drivers' directory are three new directories: Install, Boot and Recovery. Driver packages placed in the 'Install' directory will be added to the Install image, those placed in the 'Boot' directory will be added to the Boot image and those place in the 'Recovery' directory will be added to the Recovery image.
+- Updated the applied registry optimizations to accommodate the recent decoupling of the Windows Search and Cortana features which could have resulted in a non-functional search function.
+- Updated the functions module.
+- Optimized and updated additional script and module process code.
+
 ## Build 3.2.6.6 (08-09-2019) ##
 
 - Updated both the primary script and the functions module.
