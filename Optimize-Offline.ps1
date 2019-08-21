@@ -247,7 +247,7 @@ ElseIf ($SourcePath.Extension -eq '.WIM')
     }
     Else
     {
-        If (Test-Path -Path "Variable:\ISO") { Remove-Variable ISO }
+        If ($ISO) { Remove-Variable ISO }
         Try
         {
             Write-Host ('Copying WIM from "{0}"' -f $($SourcePath.DirectoryName)) -ForegroundColor Cyan
@@ -317,7 +317,7 @@ If ($InstallWimInfo.Build -ge '17134' -and $InstallWimInfo.Build -le '18362')
     If ($InstallWimInfo.Name -like "*LTSC*")
     {
         $IsLTSC = $true
-        If (Test-Path -Path "Variable:\WindowsApps") { Remove-Variable WindowsApps }
+        If ($WindowsApps) { Remove-Variable WindowsApps }
         If ($Win32Calc.IsPresent) { $Win32Calc = $false }
     }
     Else
@@ -423,7 +423,7 @@ Else
     Stop-Optimze; Break
 }
 
-If ((Test-Path -Path "Variable:\WindowsApps") -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt 0)
+If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt 0)
 {
     $Host.UI.RawUI.WindowTitle = "Removing Appx Provisioned Packages."
     $RemovedAppxPackages = [System.Collections.ArrayList]@()
@@ -2005,7 +2005,7 @@ If ($ISOMedia)
     @('.adml', '.mui', '.rtf', '.txt') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources\$($InstallWimInfo.Language)" -Filter *$($_) -Exclude 'setup.exe.mui' -Recurse | Remove-Container }
     @('.dll', '.gif', '.xsl', '.bmp', '.mof', '.ini', '.cer', '.exe', '.sdb', '.txt', '.nls', '.xml', '.cat', '.inf', '.sys', '.bin', '.ait', '.admx', '.dat', '.ttf', '.cfg', '.xsd', '.rtf', '.xrm-ms') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources" -Filter *$($_) -Exclude @('EI.cfg', 'gatherosstate.exe', 'setup.exe', 'lang.ini', 'pid.txt', '*.clg') -Recurse | Remove-Container }
     Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia)\sources" -Force
-    If (Test-Path -Path "Variable:\ISO")
+    If ($ISO)
     {
         If ($ISO -eq 'Prompt' -and (!(Test-Path -Path "$($ISOMedia)\efi\Microsoft\boot\efisys.bin")))
         {
