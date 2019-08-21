@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 3.2.6.8 (08-20-2019) ##
+
+- The -ISO switch has been changed to a parameter that will now accept two values: 'Prompt' and 'No-Prompt.' This allows for those who wish to create a final Windows Installation Media ISO to also set the binary bootcode the image will be created with. An ISO created with the No-Prompt bootcode will not require a keypress to begin Windows Setup allowing for a completely unattended Windows installation, while an ISO created with the Prompt bootcode will require a keypress before Windows Setup will start.
+- Registry optimizations have been updated to further accomodate the decoupling of the Search and Cortana features in builds 1903+. A few additional registry optimizations have been updated.
+- The Functions.psm1 module has been updated.
+- Additional primary script code modifications.
+
 ## Build 3.2.6.7 (08-14-2019) ##
 
 - The Boot and Recovery images are now automatically mounted at the beginning of the script and remain mounted during the full runtime of the script. The Boot image will only be mounted if a Windows Installation Media ISO is used as the source image for optimization. If only an install.wim is provided, the Recovery image will only be mounted.
