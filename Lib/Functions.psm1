@@ -3,7 +3,9 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
 	 Created on:   	7/22/2019 9:02 PM
 	 Created by:   	BenTheGreat
+	 Contact:       Ben@Omnic.Tech
 	 Filename:     	Functions.psm1
+	 Last updated:	08/20/2019
 	-------------------------------------------------------------------------
 	 Module Name: Functions
 	===========================================================================
@@ -161,7 +163,7 @@ Function New-OfflineDirectory
         }
         'Work'
         {
-            $WorkDirectory = New-Item -Path $TempDirectory -Name  WorkOffline -ItemType Directory -Force
+            $WorkDirectory = New-Item -Path $TempDirectory -Name WorkOffline -ItemType Directory -Force
             $WorkDirectory.FullName; Break
         }
         'InstallMount'
@@ -217,8 +219,8 @@ Function Get-WimFileInfo
         Modified         = $($WimImage.ModifiedTime)
         Language         = $($WimImage.Languages)
     }
-    If ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
-    ElseIf ($WimImage.Architecture -eq 0) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
+    If ($WimImage.Architecture -eq 0) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
+    ElseIf ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
     $WimObject
 }
 
@@ -240,7 +242,10 @@ Function Get-OfflineHives
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($InstallMount)\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($InstallMount)\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$($InstallMount)\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($InstallMount)\Windows\System32\config\software"),
+                ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($InstallMount)\Windows\System32\config\system"),
+                ('HKLM\WIM_HKCU "{0}"' -f "$($InstallMount)\Users\Default\NTUSER.DAT"),
+                ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
         }
         'Unload'
         {
@@ -359,32 +364,48 @@ Function Set-RegistryTemplates
     [CmdletBinding()]
     Param ()
 
-    Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *.reg -Recurse | ForEach-Object -Process {
-        $REGContent = Get-Content -Path $($_.FullName)
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
-        $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
-        $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
-        $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
-        $REGContent | Set-Content -Path "$($_.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
-    }
-    $Templates = Get-ChildItem -Path "$AdditionalPath\RegistryTemplates" -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-    $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
-    Get-OfflineHives -Load
-    ForEach ($Template In $Templates)
+    Begin
     {
-        Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
-        $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $Template.FullName) -WindowStyle Hidden -Wait -PassThru
-        If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
-        Remove-Item -Path $Template.FullName -Force
+        $RegistryTemplates = Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates
+        $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
+        Get-ChildItem -Path $RegistryTemplates -Filter *.reg -Recurse | ForEach-Object -Process {
+            $REGContent = Get-Content -Path $($_.FullName)
+            $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
+            $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM\ControlSet001'
+            $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
+            $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
+            $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
+            $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
+            $REGContent | Set-Content -Path "$($_.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
+        }
+        $Templates = Get-ChildItem -Path $RegistryTemplates -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        Get-OfflineHives -Load
     }
-    Get-OfflineHives -Unload
+    Process
+    {
+        ForEach ($Template In $Templates)
+        {
+            Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
+            $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $Template.FullName) -WindowStyle Hidden -Wait -PassThru
+            If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
+            Remove-Item -Path $Template.FullName -Force
+        }
+    }
+    End
+    {
+        Get-OfflineHives -Unload
+    }
 }
 
 Function New-ISOMedia
 {
     [CmdletBinding()]
-    Param ()
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Prompt', 'No-Prompt')]
+        [string]$BootType
+    )
 
     Begin
     {
@@ -420,7 +441,11 @@ namespace ComBuilder {
 }
 '@
         }
-        $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force
+        Switch ($BootType)
+        {
+            'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force }
+            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys_noprompt.bin" -Force }
+        }
         $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
@@ -674,7 +699,7 @@ Function Invoke-Cleanup
         Grant-FileOwnership -Path "$MountPath\Windows\WinSxS\ManifestCache\*.bin"
         Remove-Container -Path "$MountPath\Windows\WinSxS\ManifestCache\*.bin"
     }
-    @("$MountPath\Windows\INF\*.log", "$MountPath\Windows\CbsTemp\*", "$MountPath\PerfLogs", ("$MountPath\" + '$Recycle.Bin')) | ForEach-Object { Remove-Container -Path $($_) }
+    @("$MountPath\Windows\INF\*.log", "$MountPath\Windows\CbsTemp\*", "$MountPath\PerfLogs", ("$MountPath\" + '$Recycle.Bin')) | Remove-Container
 }
 
 Function Stop-Optimize
