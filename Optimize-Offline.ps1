@@ -85,7 +85,7 @@
 		Contact:        Ben@Omnic.Tech
 		Filename:     	Optimize-Offline.ps1
 		Version:        3.2.6.8
-		Last updated:	08/21/2019
+		Last updated:	08/28/2019
 		===========================================================================
 
 	.LINK
