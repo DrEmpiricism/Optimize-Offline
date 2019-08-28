@@ -358,7 +358,7 @@ Try
 Catch
 {
     Out-Log -Error ('Failed to Mount {0}' -f $($InstallWimInfo.Name)) -ErrorRecord $Error[0]
-    Stop-Optimze; Break
+    Stop-Optimize; Break
 }
 
 If ($BootWim)
@@ -381,7 +381,7 @@ If ($BootWim)
     Catch
     {
         Out-Log -Error ('Failed to Mount {0}' -f $($BootWimInfo.Name)) -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -408,7 +408,7 @@ If (Test-Path -Path (Join-Path -Path $InstallMount -ChildPath 'Windows\System32\
     Catch
     {
         Out-Log -Error ('Failed to Mount {0}' -f $($RecoveryWimInfo.Name)) -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -420,7 +420,7 @@ If ((Repair-WindowsImage -Path $InstallMount -CheckHealth).ImageHealthState -eq 
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Further servicing is required before the image can be optimized."
-    Stop-Optimze; Break
+    Stop-Optimize; Break
 }
 
 If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt 0)
@@ -502,7 +502,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
     Catch
     {
         Out-Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
     Finally
     {
@@ -560,7 +560,7 @@ If ($SystemApps.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
-            Stop-Optimze; Break
+            Stop-Optimize; Break
         }
         Finally
         {
@@ -603,7 +603,7 @@ If ($Packages.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Remove Windows Capability Packages." -ErrorRecord $Error[0]
-            Stop-Optimze; Break
+            Stop-Optimize; Break
         }
         Finally
         {
@@ -672,7 +672,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
-            Stop-Optimze; Break
+            Stop-Optimize; Break
         }
     }
 }
@@ -714,7 +714,7 @@ If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName *SMB1* | Where-O
     Catch
     {
         Out-Log -Error "Failed to Disable the SMBv1 Protocol Windows Feature." -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -751,7 +751,7 @@ If ($Features.IsPresent)
         Catch
         {
             Out-Log -Error "Failed to Disable Windows Features." -ErrorRecord $Error[0]
-            Stop-Optimze; Break
+            Stop-Optimize; Break
         }
         Finally
         {
@@ -790,7 +790,7 @@ If ($Features.IsPresent)
             Catch
             {
                 Out-Log -Error "Failed to Enable Windows Features." -ErrorRecord $Error[0]
-                Stop-Optimze; Break
+                Stop-Optimize; Break
             }
             Finally
             {
@@ -869,7 +869,7 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -912,7 +912,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
     Catch
     {
         Out-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -956,7 +956,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
         Catch
         {
             Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Stop-Optimze; Break
+            Stop-Optimize; Break
         }
     }
     Else
@@ -996,7 +996,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
             Catch
             {
                 Out-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-                Stop-Optimze; Break
+                Stop-Optimize; Break
             }
         }
     }
@@ -1105,7 +1105,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
     Catch
     {
         Out-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -1847,7 +1847,7 @@ $(Get-Date -UFormat "%m/%d/%Y at %r")
 Else
 {
     Out-Log -Error "The image has been flagged for corruption. Discarding optimizations."
-    Stop-Optimze; Break
+    Stop-Optimize; Break
 }
 
 If ($BootMount)
@@ -1887,7 +1887,7 @@ If ($BootMount)
     Catch
     {
         Out-Log -Error "Failed to Save and Dismount $($BootWimInfo.Name)" -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -1925,7 +1925,7 @@ If ($RecoveryMount)
     Catch
     {
         Out-Log -Error "Failed to Save and Dismount $($RecoveryWimInfo.Name)" -ErrorRecord $Error[0]
-        Stop-Optimze; Break
+        Stop-Optimize; Break
     }
 }
 
@@ -1948,7 +1948,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Save and Dismount $($InstallWimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimze; Break
+    Stop-Optimize; Break
 }
 
 Do
@@ -1991,7 +1991,7 @@ Try
 Catch
 {
     Out-Log -Error "Failed to Export $($InstallWimInfo.Name)" -ErrorRecord $Error[0]
-    Stop-Optimze; Break
+    Stop-Optimize; Break
 }
 
 If ($ISOMedia)
