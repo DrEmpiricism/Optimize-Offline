@@ -17,6 +17,7 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 
 ## Script Disclaimer ##
 
+- Latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases)
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Not all integrations are available for languages outside of en-US.
