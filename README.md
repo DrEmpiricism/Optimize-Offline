@@ -57,7 +57,7 @@ The following System Applications are safe to remove:
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
-**Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of it's effect on a live system.**
+**Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its effect on a live system.**
 
 ### About Registry Optimizations ###
 
