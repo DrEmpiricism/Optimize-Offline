@@ -15,14 +15,14 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Setup content, Data Deduplication and more.
 - All optimization processes are done silently and properly with proper error-handling.
 
-## Script disclaimer ##
+## Script Disclaimer ##
 
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Not all integrations are available for languages outside of en-US.
 - Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before.
-- Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause erros during Windows 10 setup.
-- Help will not be given to users who attempt to optimize unsupported builds.
+- Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause errors during Windows 10 setup.
+- Support will not be given to users who attempt to optimize unsupported builds or previously modified images.
 
 ## Switches and Parameters ##
 
@@ -39,9 +39,22 @@ Four System Applications use a GUID namespace instead of an identifiable package
 - E2A4F912-2574-4A75-9BB0-0D023378592B = Microsoft.Windows.AppResolverUX
 - F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE = Microsoft.Windows.AddSuggestedFoldersToLibraryDialog
 
-#### System Applications universally safe, and recommended, to remove ####
+#### System Applications universally safe to remove ####
 
-This can vary, depending on the end-user's final image requirements, but SecHealthUI (Windows Defender), ParentalControls, ContentDeliveryManager, MicrosoftEdge, MicrosoftEdgeDevelopmentTools, PPIProjection, HolographicFirstRun, BioEnrollment (if no Biometrics will be used), SecureAssessmentBrowser and (optionally) XboxGameCallableUI are all safe to remove. XboxGameCallableUI should only be removed if all Xbox Provisioned Application Packages are also removed and will not be used. Moreover, Cortana can also be removed; however, doing so will render the default search feature inoperable so its removal is only recommended if the end-user will be using a 3rd party search program like ClassicShell.
+The following System Applications are safe to remove:
+
+- BioEnrollment (providing no biometrics will be used)
+- CallingShellApp
+- MicrosoftEdge
+- MicrosoftEdgeDevToolsClient
+- SecHealthUI
+- ContentDeliveryManager
+- ParentalControls
+- SecureAssessmentBrowser
+- XGpuEjectDialog
+- XboxGameCallableUI
+
+Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
 **Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of it's effect on a live system.**
 
@@ -57,7 +70,7 @@ A short list of some of the optimizations include:
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system location sensor access.
-- Disables background error reporting and automatic syncronization to Microsoft.
+- Disables background error reporting and automatic synchronization to Microsoft.
 - Disables the automatic creation of tabs and icons for Microsoft Edge.
 - Disables intrusive Microsoft feedback and notification queries.
 - Cleans-up the default Context Menu.
@@ -88,7 +101,7 @@ When an unattend.xml answer file is added to the '\Content\Additional\Unattend' 
 
 During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther and the installation media are the first locations checked for an answer file. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used. Moreover, you can also use multiple answer files by applying one to the image and adding an autounattend.xml to the bootable media. For example, the unattend.xml applied to the image can contain OOBE and Windows Setup parameters while the autounattend.xml can contain only parameters for the WindowsPE pass that sets up the partitions and disks for installation.
 
-It is recommended to create an unattend.xml using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an unattend.xml for you, just like with Windows 10 features, answer file variables can change between builds. Likewise, having faulty or unsuppored variables in an answer file can prevent Windows Setup from completing.
+It is recommended to create an unattend.xml using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an unattend.xml for you, just like with Windows 10 features, answer file variables can change between builds. Likewise, having faulty or unsupported variables in an answer file can prevent Windows Setup from completing.
 
 It is also in good practice to have a good idea what each Configuration Pass does and what actions its child parameters takes during the Windows setup process. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
 
@@ -124,9 +137,9 @@ For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Ed
 
 Solid image compression uses the undocumented LZMS compression format to concatenate all file data within a regular WIM file into a solid WIM archive (ESD file). By doing this, a 4GB WIM file is able to be compressed to a size of 2GB or less. However, as with other forms of high-ratio compression, LZMS compression can take quite a while to complete and should NOT be selected as the final image compression type if the end-user is impatient or requires the optimized image quickly.
 
-### ISO File Strucuture Optimization ###
+### ISO File Structure Optimization ###
 
-This is a process that occurrs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The order in which files are removed and moved is critical to proper file structure optimization for bootup installation.
+This is a process that occurs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The order in which files are removed and moved is critical for proper file structuring.
 
 ### ISO Remastering and Creation ###
 
@@ -153,7 +166,7 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 ## Calling Optimize-Offline ##
 
-The easist way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Start.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
+The easiest way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Start.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
