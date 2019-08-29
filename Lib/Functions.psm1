@@ -1,19 +1,19 @@
 ﻿<#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2018 v5.5.150
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
 	 Created on:   	7/22/2019 9:02 PM
 	 Created by:   	BenTheGreat
 	 Contact:       Ben@Omnic.Tech
 	 Filename:     	Functions.psm1
-	 Last updated:	08/20/2019
+	 Last updated:	08/29/2019
 	-------------------------------------------------------------------------
 	 Module Name: Functions
 	===========================================================================
 #>
 
-#region Module Variables
+#region Variables
+$ProgressPreference = 'SilentlyContinue'
 $ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
-$TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OptimizeOfflineTemp_$(Get-Random)"
 $DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
 $EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
@@ -23,7 +23,19 @@ $AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional
 $ConfigFilePath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
 $AppxWhitelistPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.xml'
 $AppAssocPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\CustomAppAssociations.xml'
-#endregion Module Variables
+$TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OptimizeOfflineTemp_$(Get-Random)"
+$LogDirectory = Join-Path -Path $TempDirectory -ChildPath LogOffline
+$WorkDirectory = Join-Path -Path $TempDirectory -ChildPath WorkOffline
+$ScratchDirectory = Join-Path -Path $TempDirectory -ChildPath ScratchOffline
+$ImageDirectory = Join-Path -Path $TempDirectory -ChildPath ImageOffline
+$InstallMount = Join-Path -Path $TempDirectory -ChildPath InstallMountOffline
+$BootMount = Join-Path -Path $TempDirectory -ChildPath BootMountOffline
+$RecoveryMount = Join-Path -Path $TempDirectory -ChildPath RecoveryMountOffline
+$SaveDirectory = Join-Path -Path $ScriptRootPath -ChildPath Optimize-Offline"_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))"
+$ScriptLog = Join-Path -Path $LogDirectory -ChildPath Optimize-Offline.log
+$PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageList.log
+$DISMLog = Join-Path -Path $LogDirectory -ChildPath DISM.log
+#endregion Variables
 
 Export-ModuleMember -Variable *
 
@@ -46,7 +58,7 @@ Function Import-Config
     $ConfigObj
 }
 
-Function Out-Log
+Function Write-Log
 {
     [CmdletBinding(DefaultParameterSetName = 'Info')]
     Param
@@ -69,7 +81,6 @@ Function Out-Log
 
     Begin
     {
-        $ScriptLog = Join-Path -Path $WorkFolder -ChildPath Optimize-Offline.log
         $Timestamp = (Get-Date -Format 's')
         $LogMutex = New-Object System.Threading.Mutex($false, "SyncLogMutex")
         [void]$LogMutex.WaitOne()
@@ -83,7 +94,7 @@ Function Out-Log
                 @"
 ***************************************************************************************************
 
-$ScriptName v$ScriptVersion starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+$($ScriptInfo.Name) v$($ScriptInfo.Version) starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
 
 ***************************************************************************************************
 Optimizing image: $($InstallWimInfo.Name)
@@ -137,58 +148,6 @@ Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
     }
 }
 
-Function New-OfflineDirectory
-{
-    [CmdletBinding()]
-    [OutputType([IO.DirectoryInfo])]
-    Param
-    (
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Scratch', 'Image', 'Work', 'InstallMount', 'BootMount', 'RecoveryMount', 'Save')]
-        [ValidateNotNullOrEmpty()]
-        [string]$Directory
-    )
-
-    Switch ($Directory)
-    {
-        'Scratch'
-        {
-            $ScratchDirectory = New-Item -Path $TempDirectory -Name ScratchOffline -ItemType Directory -Force
-            $ScratchDirectory.FullName; Break
-        }
-        'Image'
-        {
-            $ImageDirectory = New-Item -Path $TempDirectory -Name ImageOffline -ItemType Directory -Force
-            $ImageDirectory.FullName; Break
-        }
-        'Work'
-        {
-            $WorkDirectory = New-Item -Path $TempDirectory -Name WorkOffline -ItemType Directory -Force
-            $WorkDirectory.FullName; Break
-        }
-        'InstallMount'
-        {
-            $InstallMountDirectory = New-Item -Path $TempDirectory -Name InstallMountOffline -ItemType Directory -Force
-            $InstallMountDirectory.FullName; Break
-        }
-        'BootMount'
-        {
-            $BootMountDirectory = New-Item -Path $TempDirectory -Name BootMountOffline -ItemType Directory -Force
-            $BootMountDirectory.FullName; Break
-        }
-        'RecoveryMount'
-        {
-            $RecoveryMountDirectory = New-Item -Path $TempDirectory -Name RecoveryMountOffline -ItemType Directory -Force
-            $RecoveryMountDirectory.FullName; Break
-        }
-        'Save'
-        {
-            $SaveDirectory = New-Item -Path $ScriptRootPath -Name Optimize-Offline"_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -ItemType Directory -Force
-            $SaveDirectory.FullName; Break
-        }
-    }
-}
-
 Function Get-WimFileInfo
 {
     [CmdletBinding()]
@@ -202,7 +161,7 @@ Function Get-WimFileInfo
         [Int]$Index = 1
     )
 
-    $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index)
+    $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index -ErrorAction SilentlyContinue)
     $WimObject = [PSCustomObject]@{
         Name             = $($WimImage.ImageName)
         Description      = $($WimImage.ImageDescription)
@@ -210,18 +169,60 @@ Function Get-WimFileInfo
         Edition          = $($WimImage.EditionID)
         Version          = $($WimImage.Version)
         Build            = $($WimImage.Build).ToString()
-        SPBuild          = $($WimImage.SPBuild).ToString()
-        SPLevel          = $($WimImage.SPLevel).ToString()
         InstallationType = $($WimImage.InstallationType)
-        DirectoryCount   = $($WimImage.DirectoryCount)
-        FileCount        = $($WimImage.FileCount)
-        Created          = $($WimImage.CreatedTime)
-        Modified         = $($WimImage.ModifiedTime)
         Language         = $($WimImage.Languages)
     }
     If ($WimImage.Architecture -eq 0) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
     ElseIf ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
     $WimObject
+}
+
+Function Start-Executable
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            Position = 0)]
+        [IO.FileInfo]$Executable,
+        [string[]]$Arguments,
+        [switch]$PassThru
+    )
+
+    Begin
+    {
+        $StandardOutFile = "$Env:TEMP\$($Executable.Name)-StandardOutput.txt"
+        $StandardErrFile = "$Env:TEMP\$($Executable.Name)-StandardError.txt"
+        $ExeParams = @{
+            FilePath               = $($Executable.FullName)
+            RedirectStandardError  = $StandardErrFile
+            RedirectStandardOutput = $StandardOutFile
+            Wait                   = $true
+            WindowStyle            = 'Hidden'
+            PassThru               = $true
+        }
+        If ($Arguments) { $ExeParams.Add('ArgumentList', $Arguments) }
+    }
+    Process
+    {
+        $RunExe = Start-Process @ExeParams
+        If ($PassThru.IsPresent)
+        {
+            $Result = New-Object -TypeName PSObject -Property @{ ExitCode = $RunExe.ExitCode }
+            $RunOutput = Get-Content -Path $StandardOutFile -Raw -ErrorAction Ignore
+            $RunError = Get-Content -Path $StandardErrFile -Raw -ErrorAction Ignore
+            If ($RunExe.ExitCode -ne 0)
+            {
+                If ($RunOutput) { $Result | Add-Member -MemberType NoteProperty StdOut -Value $RunOutput.Trim() }
+                If ($RunError) { $Result | Add-Member -MemberType NoteProperty StdErr -Value $RunError.Trim() }
+            }
+            $Result
+        }
+    }
+    End
+    {
+        $StandardOutFile, $StandardErrFile | Remove-Container
+    }
 }
 
 
@@ -245,12 +246,12 @@ Function Get-OfflineHives
             @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($InstallMount)\Windows\System32\config\software"),
                 ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($InstallMount)\Windows\System32\config\system"),
                 ('HKLM\WIM_HKCU "{0}"' -f "$($InstallMount)\Users\Default\NTUSER.DAT"),
-                ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Process -FilePath REG -ArgumentList ("LOAD $($_)") -WindowStyle Hidden -Wait }; Break
+                ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ("LOAD $($_)") }; Break
         }
         'Unload'
         {
             [System.GC]::Collect()
-            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait }; Break
+            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('UNLOAD {0}' -f $($_)) }; Break
         }
         'Test'
         {
@@ -359,7 +360,7 @@ Function Set-KeyProperty
     }
 }
 
-Function Set-RegistryTemplates
+Function Import-RegistryTemplates
 {
     [CmdletBinding()]
     Param ()
@@ -367,7 +368,7 @@ Function Set-RegistryTemplates
     Begin
     {
         $RegistryTemplates = Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates
-        $RegLog = Join-Path -Path $WorkFolder -ChildPath Registry-Optimizations.log
+        $RegLog = Join-Path -Path $LogDirectory -ChildPath Registry-Optimizations.log
         Get-ChildItem -Path $RegistryTemplates -Filter *.reg -Recurse | ForEach-Object -Process {
             $REGContent = Get-Content -Path $($_.FullName)
             $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
@@ -386,9 +387,9 @@ Function Set-RegistryTemplates
         ForEach ($Template In $Templates)
         {
             Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
-            $RunProcess = Start-Process -FilePath REGEDIT -ArgumentList ('/S "{0}"' -f $Template.FullName) -WindowStyle Hidden -Wait -PassThru
-            If ($RunProcess.ExitCode -ne 0) { Out-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
-            Remove-Item -Path $Template.FullName -Force
+            $RegEdit = Start-Executable -Executable "$Env:SystemRoot\REGEDIT.EXE" -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
+            If ($RegEdit.ExitCode -ne 0) { Write-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
+            Remove-Container -Path $Template.FullName
         }
     }
     End
@@ -443,14 +444,14 @@ namespace ComBuilder {
         }
         Switch ($BootType)
         {
-            'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys.bin" -Force }
-            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia)\efi\Microsoft\boot\efisys_noprompt.bin" -Force }
+            'Prompt' { $BootCode = 'efisys.bin' }
+            'No-Prompt' { $BootCode = 'efisys_noprompt.bin' }
         }
-        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
+        $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
-        $BootStream.LoadFromFile($BootFile.FullName)
+        $BootStream.LoadFromFile((Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\$BootCode").FullName)
         ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
         ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name) }).ChooseImageDefaultsForMediaType(8)
     }
@@ -656,7 +657,7 @@ Function Dismount-Images
 
     If (Get-OfflineHives -Test) { Get-OfflineHives -Unload }
     $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
-    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Process -FilePath REG -ArgumentList ('UNLOAD {0}' -f $($_)) -WindowStyle Hidden -Wait } }
+    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('UNLOAD {0}' -f $($_)) } }
     $MountPath = @()
     If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Recovery*" } }
     If ((Get-WindowsImage -Mounted).ImagePath -match "install.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Install*" } }
@@ -708,11 +709,10 @@ Function Stop-Optimize
     Param ()
 
     $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
-    Out-Log -Info "Dismounting and discarding the image."; Out-Log -Failed
+    Write-Log -Info "Dismounting and discarding the image."; Write-Log -Failed
     Dismount-Images
-    Remove-Container -Path $DISMLog
-    Remove-Container -Path "$Env:SystemRoot\Logs\DISM\dism.log"
-    $SaveFolder = New-OfflineDirectory -Directory Save
+    @("$DISMLog", "$Env:SystemRoot\Logs\DISM\dism.log") | Remove-Container
+    $SaveDirectory | New-Container
     If ($Error.Count -gt 0)
     {
         ($Error | ForEach-Object -Process {
@@ -720,17 +720,17 @@ Function Stop-Optimize
                     Line  = $_.InvocationInfo.ScriptLineNumber
                     Error = $_.Exception.Message
                 }
-            } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveFolder -ChildPath ErrorRecord.log) -Force
+            } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory -ChildPath ErrorRecord.log) -Force
     }
-    Get-ChildItem -Path $WorkFolder -Include *.txt, *.log -Recurse | Move-Item -Destination $SaveFolder -Force
+    Get-ChildItem -Path $LogDirectory -Filter *.log -Recurse | Move-Item -Destination $SaveDirectory -Force
     Remove-Container -Path $TempDirectory
-    $ErrorActionPreference = $DefaultErrorActionPreference
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     Return
 }
+
 #endregion Module Functions
 
-Export-ModuleMember -Function Import-Config, Out-Log, New-OfflineDirectory, Get-WimFileInfo, Get-OfflineHives, New-Container, Remove-Container, Set-KeyProperty, Set-RegistryTemplates, New-ISOMedia, Grant-FileOwnership, Grant-FolderOwnership, Dismount-Images, Invoke-Cleanup, Stop-Optimize
+Export-ModuleMember -Function Import-Config, Write-Log, Get-WimFileInfo, Start-Executable, Get-OfflineHives, New-Container, Remove-Container, Set-KeyProperty, Import-RegistryTemplates, New-ISOMedia, Grant-FileOwnership, Grant-FolderOwnership, Dismount-Images, Invoke-Cleanup, Stop-Optimize
 # SIG # Begin signature block
 # MIILtAYJKoZIhvcNAQcCoIILpTCCC6ECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
