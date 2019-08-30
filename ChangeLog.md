@@ -1,14 +1,14 @@
 # ChangeLog #
 
-## Build 3.2.6.9 (08-29-2019) ##
+## Build 3.2.6.9 (08-30-2019) ##
 
 - When supplying a WIM as the source image, it no longer has to be named as 'install.wim' as to accommodate users who catalog their individual WIM files by version, build, edition, etc.
 - The mounting and dismounting order of any images has been optimized.
 - All additional primary script variables have been moved to the Functions module.
-- If the CallingShellApp System Application is removed, its associated Immersive Control Panel Settings Page will be removed like Windows Defender and Xbox are.
+- If the CallingShellApp System Application or YourPhone Appx Package is removed, its associated Immersive Control Panel Settings link will also be removed.
 - Enabled .NET strong cryptography in the Registry Optimizations that ensures current SSL protocols are used for .NET application communication and not outdated and vulnerable SSL protocols.
 - Optimized how logs are generated and saved.
-- Updated and appended the Functions module.
+- Updated the C# code in the Functions module for access token privileges and ISO creation.
 - Updated the Windows Store bundle packages with their latest versions.
 - Additional script and module code enhancements and changes.
 

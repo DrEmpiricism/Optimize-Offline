@@ -1,25 +1,22 @@
 ﻿<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
-	 Created on:   	7/22/2019 9:02 PM
 	 Created by:   	BenTheGreat
-	 Contact:       Ben@Omnic.Tech
 	 Filename:     	Functions.psm1
-	 Last updated:	08/29/2019
-	-------------------------------------------------------------------------
-	 Module Name: Functions
+	 Last updated:	08/30/2019
 	===========================================================================
 #>
 
-#region Variables
+#region Module Variables
 $ProgressPreference = 'SilentlyContinue'
 $ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
-$DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
-$DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
-$EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
-$StoreAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\WindowsStore'
-$Win32CalcPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Win32Calc'
+$ResourcesPath = Join-Path -Path $ScriptRootPath -ChildPath Resources
 $AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional'
+$DaRTPath = Join-Path -Path $ResourcesPath -ChildPath DaRT
+$DedupPath = Join-Path -Path $ResourcesPath -ChildPath Deduplication
+$EdgeAppPath = Join-Path -Path $ResourcesPath -ChildPath MicrosoftEdge
+$StoreAppPath = Join-Path -Path $ResourcesPath -ChildPath WindowsStore
+$Win32CalcPath = Join-Path -Path $ResourcesPath -ChildPath Win32Calc
 $ConfigFilePath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
 $AppxWhitelistPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.xml'
 $AppAssocPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\CustomAppAssociations.xml'
@@ -35,9 +32,7 @@ $SaveDirectory = Join-Path -Path $ScriptRootPath -ChildPath Optimize-Offline"_$(
 $ScriptLog = Join-Path -Path $LogDirectory -ChildPath Optimize-Offline.log
 $PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageList.log
 $DISMLog = Join-Path -Path $LogDirectory -ChildPath DISM.log
-#endregion Variables
-
-Export-ModuleMember -Variable *
+#endregion Module Variables
 
 #region Module Functions
 Function Import-Config
@@ -191,8 +186,8 @@ Function Start-Executable
 
     Begin
     {
-        $StandardOutFile = "$Env:TEMP\$($Executable.Name)-StandardOutput.txt"
-        $StandardErrFile = "$Env:TEMP\$($Executable.Name)-StandardError.txt"
+        $StandardOutFile = "$WorkDirectory\$($Executable.Name)-StandardOutput.txt"
+        $StandardErrFile = "$WorkDirectory\$($Executable.Name)-StandardError.txt"
         $ExeParams = @{
             FilePath               = $($Executable.FullName)
             RedirectStandardError  = $StandardErrFile
@@ -421,22 +416,24 @@ Function New-ISOMedia
 using System;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
-namespace ComBuilder {
-    public class ISOWriter {
-        public unsafe static void Create (string Path, object Stream, int BlockSize, int TotalBlocks) {
-            int BytesRead = 0;
-            byte[] Buffer = new byte[BlockSize];
-            int * Pointer = & BytesRead;
-            var OpenFile = System.IO.File.OpenWrite (Path);
-            var IStream = Stream as System.Runtime.InteropServices.ComTypes.IStream;
-            if (OpenFile != null) {
-                while (TotalBlocks-- > 0) {
-                    IStream.Read (Buffer, BlockSize, (IntPtr) Pointer);
-                    OpenFile.Write (Buffer, 0, BytesRead);
-                }
-                OpenFile.Flush ();
-                OpenFile.Close ();
+public class ISOWriter
+{
+    public unsafe static void Create(string Path, object Stream, int BlockSize, int TotalBlocks)
+    {
+        int BytesRead = 0;
+        byte[] Buffer = new byte[BlockSize];
+        int* Pointer = &BytesRead;
+        var OpenFile = System.IO.File.OpenWrite(Path);
+        var IStream = Stream as System.Runtime.InteropServices.ComTypes.IStream;
+        if (OpenFile != null)
+        {
+            while (TotalBlocks-- > 0)
+            {
+                IStream.Read(Buffer, BlockSize, (IntPtr)Pointer);
+                OpenFile.Write(Buffer, 0, BytesRead);
             }
+            OpenFile.Flush();
+            OpenFile.Close();
         }
     }
 }
@@ -467,7 +464,7 @@ namespace ComBuilder {
     {
         $FSImage.BootImageOptions = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
-        [ComBuilder.ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
+        [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
         [PSCustomObject]@{ Path = $ISOFile.FullName }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
@@ -485,7 +482,7 @@ Function Grant-Privilege
     (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true)]
-        [string]$Privilege,
+        [string[]]$Privilege,
         [switch]$Disable
     )
 
@@ -495,34 +492,19 @@ Function Grant-Privilege
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-public class AccessToken {
-    [DllImport ("advapi32.dll", SetLastError = true)]
-    static extern bool LookupPrivilegeValue (
-        string host,
-        string name,
-        ref long luid
-    );
-    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)]
-    static extern bool AdjustTokenPrivileges (
-        IntPtr token,
-        bool disall,
-        ref TOKEN_PRIVILEGES newst,
-        int len,
-        IntPtr prev,
-        IntPtr relen
-    );
-    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)]
-    static extern bool OpenProcessToken (
-        IntPtr curProcess,
-        int acc,
-        ref IntPtr processToken
-    );
-    [DllImport ("kernel32.dll", SetLastError = true)]
-    static extern bool CloseHandle (
-        IntPtr handle
-    );
-    [StructLayout (LayoutKind.Sequential, Pack = 1)]
-    struct TOKEN_PRIVILEGES {
+public class AccessToken
+{
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool LookupPrivilegeValue(string host, string name, ref long luid);
+    [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+    static extern bool AdjustTokenPrivileges(IntPtr token, bool disall, ref TOKEN_PRIVILEGES newst, int len, IntPtr prev, IntPtr relen);
+    [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+    static extern bool OpenProcessToken(IntPtr curProcess, int acc, ref IntPtr processToken);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool CloseHandle(IntPtr handle);
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    struct TOKEN_PRIVILEGES
+    {
         public int Count;
         public long Luid;
         public int Attr;
@@ -531,36 +513,38 @@ public class AccessToken {
     internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
     internal const int TOKEN_QUERY = 0x00000008;
     internal const int TOKEN_ADJUST_PRIVILEGES = 0x00000020;
-    public static void AdjustPrivilege (IntPtr curProcess, string privilege, bool enable) {
+    public static void AdjustPrivilege(IntPtr curProcess, string privilege, bool enable)
+    {
         var processToken = IntPtr.Zero;
-        if (!OpenProcessToken (curProcess, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref processToken)) {
-            throw new Win32Exception ();
+        if (!OpenProcessToken(curProcess, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref processToken))
+        {
+            throw new Win32Exception();
         }
-        try {
-            var privileges = new TOKEN_PRIVILEGES {
+        try
+        {
+            var privileges = new TOKEN_PRIVILEGES
+            {
                 Count = 1,
                 Luid = 0,
                 Attr = enable ? SE_PRIVILEGE_ENABLED : SE_PRIVILEGE_DISABLED,
             };
-            if (!LookupPrivilegeValue (
+            if (!LookupPrivilegeValue(
                     null,
                     privilege,
-                    ref privileges.Luid)) {
-                throw new Win32Exception ();
-            }
-            if (!AdjustTokenPrivileges (
+                    ref privileges.Luid) || !AdjustTokenPrivileges(
                     processToken,
                     false,
                     ref privileges,
                     0,
                     IntPtr.Zero,
-                    IntPtr.Zero)) {
-                throw new Win32Exception ();
+                    IntPtr.Zero))
+            {
+                throw new Win32Exception();
             }
-        } finally {
-            CloseHandle (
-                processToken
-            );
+        }
+        finally
+        {
+            CloseHandle(processToken);
         }
     }
 }
@@ -569,7 +553,7 @@ public class AccessToken {
     }
     Process
     {
-        [AccessToken]::AdjustPrivilege($CurrentProcess.Handle, $Privilege, !$Disable)
+        $Privilege | ForEach-Object { [AccessToken]::AdjustPrivilege($CurrentProcess.Handle, $_, !$Disable) }
     }
     End
     {
@@ -591,9 +575,7 @@ Function Grant-FileOwnership
 
     Begin
     {
-        "SeTakeOwnershipPrivilege" | Grant-Privilege
-        "SeBackupPrivilege" | Grant-Privilege
-        "SeRestorePrivilege" | Grant-Privilege
+        'SeTakeOwnershipPrivilege', 'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege
         $Admin = ((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]))
         $Rights = [System.Security.AccessControl.FileSystemRights]::FullControl
         $Inheritance = [System.Security.AccessControl.InheritanceFlags]::None
@@ -612,9 +594,7 @@ Function Grant-FileOwnership
     }
     End
     {
-        "SeTakeOwnershipPrivilege" | Grant-Privilege -Disable
-        "SeBackupPrivilege" | Grant-Privilege -Disable
-        "SeRestorePrivilege" | Grant-Privilege -Disable
+        'SeTakeOwnershipPrivilege', 'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege -Disable
     }
 }
 
@@ -722,15 +702,18 @@ Function Stop-Optimize
                 }
             } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory -ChildPath ErrorRecord.log) -Force
     }
-    Get-ChildItem -Path $LogDirectory -Filter *.log -Recurse | Move-Item -Destination $SaveDirectory -Force
+    Get-ChildItem -Path $LogDirectory -Filter *.log | Move-Item -Destination $SaveDirectory -Force
     Remove-Container -Path $TempDirectory
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     Return
 }
-
 #endregion Module Functions
 
-Export-ModuleMember -Function Import-Config, Write-Log, Get-WimFileInfo, Start-Executable, Get-OfflineHives, New-Container, Remove-Container, Set-KeyProperty, Import-RegistryTemplates, New-ISOMedia, Grant-FileOwnership, Grant-FolderOwnership, Dismount-Images, Invoke-Cleanup, Stop-Optimize
+$ExportModuleParams = @{
+    Function = 'Import-Config', 'Write-Log', 'Get-WimFileInfo', 'Start-Executable', 'Get-OfflineHives', 'New-Container', 'Remove-Container', 'Set-KeyProperty', 'Import-RegistryTemplates', 'New-ISOMedia', 'Grant-FileOwnership', 'Grant-FolderOwnership', 'Dismount-Images', 'Invoke-Cleanup', 'Stop-Optimize'
+    Variable = '*'
+}
+Export-ModuleMember @ExportModuleParams
 # SIG # Begin signature block
 # MIILtAYJKoZIhvcNAQcCoIILpTCCC6ECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
