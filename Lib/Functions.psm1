@@ -3,12 +3,13 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
 	 Created by:   	BenTheGreat
 	 Filename:     	Functions.psm1
-	 Last updated:	08/30/2019
+	 Last updated:	09/03/2019
 	===========================================================================
 #>
 
 #region Module Variables
 $ProgressPreference = 'SilentlyContinue'
+$DynamicParams = [Hashtable]@{ }
 $ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
 $ResourcesPath = Join-Path -Path $ScriptRootPath -ChildPath Resources
 $AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional'
@@ -208,8 +209,8 @@ Function Start-Executable
             $RunError = Get-Content -Path $StandardErrFile -Raw -ErrorAction Ignore
             If ($RunExe.ExitCode -ne 0)
             {
-                If ($RunOutput) { $Result | Add-Member -MemberType NoteProperty StdOut -Value $RunOutput.Trim() }
-                If ($RunError) { $Result | Add-Member -MemberType NoteProperty StdErr -Value $RunError.Trim() }
+                If ($RunOutput) { $Result | Add-Member -MemberType NoteProperty StandardOutput -Value $RunOutput.Trim() }
+                If ($RunError) { $Result | Add-Member -MemberType NoteProperty StandardError -Value $RunError.Trim() }
             }
             $Result
         }
@@ -258,6 +259,7 @@ Function Get-OfflineHives
 Function New-Container
 {
     [CmdletBinding()]
+    [OutputType([IO.FileSystemInfo])]
     Param
     (
         [Parameter(Mandatory = $true,
@@ -265,7 +267,8 @@ Function New-Container
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
         [ValidateNotNullOrEmpty()]
-        [string[]]$Path
+        [string[]]$Path,
+        [switch]$PassThru
     )
 
     Process
@@ -274,7 +277,8 @@ Function New-Container
         {
             If (!(Test-Path -LiteralPath $Item))
             {
-                [void](New-Item -Path $Item -ItemType Directory -Force)
+                $Container = New-Item -Path $Item -ItemType Directory -Force
+                If ($PassThru.IsPresent) { $Container }
             }
         }
     }
@@ -441,16 +445,15 @@ public class ISOWriter
         }
         Switch ($BootType)
         {
-            'Prompt' { $BootCode = 'efisys.bin' }
-            'No-Prompt' { $BootCode = 'efisys_noprompt.bin' }
+            'Prompt' { $BootFile = Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\efisys.bin" }
+            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\efisys_noprompt.bin" }
         }
-        $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
-        $BootStream.LoadFromFile((Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\$BootCode").FullName)
+        $BootStream.LoadFromFile($BootFile.FullName)
         ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
-        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name) }).ChooseImageDefaultsForMediaType(8)
+        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name) }).ChooseImageDefaultsForMediaType(13)
     }
     Process
     {
@@ -464,6 +467,7 @@ public class ISOWriter
     {
         $FSImage.BootImageOptions = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
+        $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
         [PSCustomObject]@{ Path = $ISOFile.FullName }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }

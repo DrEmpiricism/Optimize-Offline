@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 3.2.7.0 (09-03-2019) ##
+
+- Corrected an issue that affected users who only supplied a WIM file for optimizing. An error occurred when the variable assigned to the mount path of the boot image was being returned to the main script despite a boot image not even being present. This would have resulted in failed DaRT integration and image dismount.
+- Converted certain variables to dynamic parameters.
+- Improved string creation by incorporating the StringBuilder .NET class which significantly reduces script overhead and load.
+- Made some minor adjustments and optimizations to both the primary script and the functions module.
+
 ## Build 3.2.6.9 (08-30-2019) ##
 
 - When supplying a WIM as the source image, it no longer has to be named as 'install.wim' as to accommodate users who catalog their individual WIM files by version, build, edition, etc.
