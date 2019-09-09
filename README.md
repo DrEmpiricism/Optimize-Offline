@@ -44,7 +44,7 @@ Four System Applications use a GUID namespace instead of an identifiable package
 
 The following System Applications are safe to remove:
 
-- BioEnrollment (providing no biometrics will be used)
+- BioEnrollment (provided no biometrics will be used)
 - CallingShellApp
 - MicrosoftEdge
 - MicrosoftEdgeDevToolsClient
@@ -164,6 +164,7 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 - If maintaining fully updated OEM images, it's best to integrate offline updates into the image and then run Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
 - Do not manually meddle in either the working directories nor the registry while it's optimizing an image.
+- Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
 
 ## Calling Optimize-Offline ##
 
