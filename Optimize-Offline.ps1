@@ -82,8 +82,8 @@
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
 		Created by:     BenTheGreat
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.7.0
-		Last updated:	09/03/2019
+		Version:        3.2.7.1
+		Last updated:	09/09/2019
 		===========================================================================
 
 	.INPUTS
@@ -137,7 +137,7 @@ Param
 #region Script Variables
 $DefaultVariables = (Get-Variable).Name
 $Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host
-$ScriptInfo = [PSCustomObject]@{ Name = 'Optimize-Offline'; Version = '3.2.7.0' }
+$ScriptInfo = [PSCustomObject]@{ Name = 'Optimize-Offline'; Version = '3.2.7.1' }
 #endregion Script Variables
 
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
@@ -180,7 +180,7 @@ Try
     Set-Location -Path $PSScriptRoot
     [void](Clear-WindowsCorruptMountPoint)
     Get-ChildItem -Path $PSScriptRoot -Filter "OptimizeOfflineTemp_*" -Directory | Remove-Container
-    @("$TempDirectory", $InstallMount, $ImageDirectory, $WorkDirectory, $ScratchDirectory, $LogDirectory) | New-Container
+    @($TempDirectory, $InstallMount, $ImageDirectory, $WorkDirectory, $ScratchDirectory, $LogDirectory) | New-Container
     $Timer = New-Object System.Diagnostics.Stopwatch
 }
 Catch
@@ -192,12 +192,12 @@ Catch
 
 If ($SourcePath.Extension -eq '.ISO')
 {
-    $ISOMount = (Mount-DiskImage -ImagePath $($SourcePath.FullName) -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
+    $ISOMount = (Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
     [void](Get-PSDrive)
-    If (!(Test-Path -Path "$($ISOMount)\sources\install.wim"))
+    If (!(Test-Path -Path "$ISOMount\sources\install.wim"))
     {
-        Write-Warning ('"{0}" does not contain valid Windows Installation media.' -f $($SourcePath.Name))
-        [void](Dismount-DiskImage -ImagePath $($SourcePath.FullName) -StorageType ISO)
+        Write-Warning ('"{0}" does not contain valid Windows Installation media.' -f $SourcePath.Name)
+        [void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
         $TempDirectory | Remove-Container
         Break
     }
@@ -206,16 +206,17 @@ If ($SourcePath.Extension -eq '.ISO')
         $ISOMedia = New-Container -Path (Join-Path -Path $TempDirectory -ChildPath $SourcePath.BaseName) -PassThru
         Try
         {
-            Write-Host ('Exporting media from "{0}"' -f $($SourcePath.Name)) -ForegroundColor Cyan
+            Write-Host ('Exporting media from "{0}"' -f $SourcePath.Name) -ForegroundColor Cyan
             ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
             {
                 $ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
-                Copy-Item -Path $($Item.FullName) -Destination $ISOExport
+                Copy-Item -Path $Item.FullName -Destination $ISOExport
             }
-            Get-ChildItem -Path "$($ISOMedia)\sources" -Include install.wim, boot.wim -Recurse | Move-Item -Destination $ImageDirectory
+            Get-ChildItem -Path "$($ISOMedia.FullName)\sources" -Include install.wim, boot.wim -Recurse | Move-Item -Destination $ImageDirectory
             $InstallWim = Get-ChildItem -Path $ImageDirectory -Filter install.wim | Select-Object -ExpandProperty FullName
             $BootWim = Get-ChildItem -Path $ImageDirectory -Filter boot.wim | Select-Object -ExpandProperty FullName
             @($InstallWim, $BootWim) | ForEach-Object { Set-ItemProperty -Path $($_) -Name IsReadOnly -Value $false }
+            If (Test-Path -Path $BootWim) { $DynamicParams.Add('Boot', $true) }
         }
         Catch
         {
@@ -225,7 +226,7 @@ If ($SourcePath.Extension -eq '.ISO')
         }
         Finally
         {
-            [void](Dismount-DiskImage -ImagePath $($SourcePath.FullName) -StorageType ISO)
+            [void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
         }
     }
 }
@@ -233,9 +234,9 @@ ElseIf ($SourcePath.Extension -eq '.WIM')
 {
     Try
     {
-        Write-Host ('Copying WIM from "{0}"' -f $($SourcePath.DirectoryName)) -ForegroundColor Cyan
-        Copy-Item -Path $($SourcePath.FullName) -Destination $ImageDirectory
-        Get-ChildItem -Path $ImageDirectory -Filter $($SourcePath.Name) | Rename-Item -NewName install.wim
+        Write-Host ('Copying WIM from "{0}"' -f $SourcePath.DirectoryName) -ForegroundColor Cyan
+        Copy-Item -Path $SourcePath.FullName -Destination $ImageDirectory
+        Get-ChildItem -Path $ImageDirectory -Filter $SourcePath.Name | Rename-Item -NewName install.wim
         $InstallWim = Get-ChildItem -Path $ImageDirectory -Filter install.wim | Select-Object -ExpandProperty FullName
         Set-ItemProperty -Path $InstallWim -Name IsReadOnly -Value $false
     }
@@ -344,11 +345,7 @@ Catch
 
 Try
 {
-    If ($BootWim)
-    {
-        $BootWimInfo = Get-WimFileInfo -WimFile $BootWim -Index 2 -ErrorAction Stop
-        $DynamicParams.Add('Boot', $true)
-    }
+    If ($DynamicParams.Boot) { $BootWimInfo = Get-WimFileInfo -WimFile $BootWim -Index 2 -ErrorAction Stop }
     If (Test-Path -Path (Join-Path -Path $InstallMount -ChildPath 'Windows\System32\Recovery\winre.wim'))
     {
         $WinREPath = Join-Path -Path $InstallMount -ChildPath 'Windows\System32\Recovery\winre.wim'
@@ -364,7 +361,7 @@ Catch
     Stop-Optimize; Break
 }
 
-If ($DynamicParams['Boot'])
+If ($DynamicParams.Boot)
 {
     Try
     {
@@ -387,7 +384,7 @@ If ($DynamicParams['Boot'])
     }
 }
 
-If ($DynamicParams['Recovery'])
+If ($DynamicParams.Recovery)
 {
     Try
     {
@@ -521,8 +518,8 @@ If (Test-Path -Path $AppAssocPath)
 {
     $Host.UI.RawUI.WindowTitle = "Importing Custom App Associations."
     Write-Log -Info "Importing Custom App Associations."
-    $RunDism = Start-Executable -Executable "$Env:SystemRoot\System32\DISM.EXE" -Arguments ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $InstallMount, $AppAssocPath) -PassThru
-    If ($RunDism.ExitCode -ne 0) { Write-Log -Error "Failed to Import Custom App Associations."; Start-Sleep 3 }
+    $RET = Start-Executable -Executable "$Env:SystemRoot\System32\DISM.EXE" -Arguments ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}"' -f $InstallMount, $AppAssocPath) -PassThru
+    If ($RET -ne 0) { Write-Log -Error "Failed to Import Custom App Associations."; Start-Sleep 3 }
 }
 
 If ($SystemApps.IsPresent)
@@ -545,8 +542,8 @@ If ($SystemApps.IsPresent)
                 $FullKeyPath = Join-Path -Path $InboxAppsKey -ChildPath $($_)
                 $FullKeyPath = $FullKeyPath -replace 'HKLM:', 'HKLM'
                 Write-Log -Info "Removing System Application: $($_.Split('_')[0])"
-                $RunReg = Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('DELETE "{0}" /F' -f $FullKeyPath) -PassThru
-                If ($RunReg.ExitCode -eq 1) { Write-Log -Error "Failed to Remove System Application: $($_.Split('_')[0])"; Break }
+                $RET = Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('DELETE "{0}" /F' -f $FullKeyPath) -PassThru
+                If ($RET -eq 1) { Write-Log -Error "Failed to Remove System Application: $($_.Split('_')[0])"; Return }
                 [void]$RemovedSystemApps.Add($_.Split('_')[0])
                 Start-Sleep 2
             }
@@ -607,8 +604,9 @@ If ($Packages.IsPresent)
 
 If ($RemovedAppxPackages -or $RemovedSystemApps)
 {
-    $Visibility = [System.Text.StringBuilder]::New()
-    [void]$Visibility.Append('hide:')
+    $SB = [System.Text.StringBuilder]::New(); [void]$SB.Append('hide:')
+    If ($RemovedAppxPackages -contains 'Microsoft.WindowsMaps') { [void]$SB.Append('maps;maps-downloadmaps;') }
+    If ($RemovedAppxPackages -contains 'Microsoft.YourPhone' -or $RemovedSystemApps -contains 'Microsoft.Windows.CallingShellApp') { [void]$SB.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;') }
 }
 
 If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
@@ -649,7 +647,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
     Remove-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger"
     Remove-Container -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger"
     Remove-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth" -Force
-    If (!$DynamicParams['LTSC']) { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord }
+    If (!$DynamicParams.LTSC) { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord }
     If ($InstallWimInfo.Build -ge '17763')
     {
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControlEnabled" -Value 1 -Type DWord
@@ -669,6 +667,7 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
             Stop-Optimize; Break
         }
     }
+    [void]$SB.Append('windowsdefender;')
 }
 
 If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI')
@@ -687,6 +686,17 @@ If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Micros
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
     @("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($_)" -Name "Start" -Value 4 -Type DWord } }
+    Get-OfflineHives -Unload
+    [void]$SB.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
+    If ($InstallWimInfo.Build -lt '17763') { [void]$SB.Append('gaming-trueplay;') }
+}
+
+If ($SB.Length -gt 5)
+{
+    $Visibility = $SB.ToString().TrimEnd(';')
+    Get-OfflineHives -Load
+    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility -Type String
+    Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility -Type String
     Get-OfflineHives -Unload
 }
 
@@ -791,23 +801,23 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
 {
     $Host.UI.RawUI.WindowTitle = "Integrating the Microsoft Store Application Packages."
     Write-Log -Info "Integrating the Microsoft Store Application Packages."
+    $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -File | Select-Object -ExpandProperty FullName
+    $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -File | Select-Object -ExpandProperty FullName
+    $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -File | Select-Object -ExpandProperty FullName
+    $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -File | Select-Object -ExpandProperty FullName
+    $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -File | Select-Object -ExpandProperty FullName
+    $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -File | Select-Object -ExpandProperty FullName
+    $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -File | Select-Object -ExpandProperty FullName
+    $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -File | Select-Object -ExpandProperty FullName
+    $DepAppx = @()
+    $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
+    $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
+    $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
+    Get-OfflineHives -Load
+    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
+    Get-OfflineHives -Unload
     Try
     {
-        $StoreBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.appxbundle -File | Select-Object -ExpandProperty FullName
-        $PurchaseBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.appxbundle -File | Select-Object -ExpandProperty FullName
-        $XboxBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.appxbundle -File | Select-Object -ExpandProperty FullName
-        $InstallerBundle = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.appxbundle -File | Select-Object -ExpandProperty FullName
-        $StoreLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.WindowsStore*.xml -File | Select-Object -ExpandProperty FullName
-        $PurchaseLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.StorePurchaseApp*.xml -File | Select-Object -ExpandProperty FullName
-        $IdentityLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.XboxIdentityProvider*.xml -File | Select-Object -ExpandProperty FullName
-        $InstallerLicense = Get-ChildItem -Path $StoreAppPath -Filter Microsoft.DesktopAppInstaller*.xml -File | Select-Object -ExpandProperty FullName
-        $DepAppx = @()
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
-        $DepAppx += Get-ChildItem -Path $StoreAppPath -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
-        Get-OfflineHives -Load
-        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
-        Get-OfflineHives -Unload
         $StorePackage = @{
             Path                  = $InstallMount
             PackagePath           = $StoreBundle
@@ -854,7 +864,13 @@ If ($WindowsStore.IsPresent -and (Test-Path -Path $StoreAppPath -Filter Microsof
     Catch
     {
         Write-Log -Error "Failed to Integrate the Microsoft Store Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Break
+        Start-Sleep 3
+    }
+    Finally
+    {
+        Get-OfflineHives -Load
+        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 0 -Type DWord
+        Get-OfflineHives -Unload
     }
 }
 
@@ -866,7 +882,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
         Write-Log -Info "Integrating the Microsoft Edge Browser Application Packages."
         $EdgeBasePackage = @{
             Path             = $InstallMount
-            PackagePath      = "$($EdgeAppPath)\Microsoft-Windows-Internet-Browser-Package~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -875,7 +891,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
         [void](Add-WindowsPackage @EdgeBasePackage)
         $EdgeLanguagePackage = @{
             Path             = $InstallMount
-            PackagePath      = "$($EdgeAppPath)\Microsoft-Windows-Internet-Browser-Package~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$EdgeAppPath\Microsoft-Windows-Internet-Browser-Package~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -895,7 +911,7 @@ If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $EdgeAppPath -Filter Microsof
     Catch
     {
         Write-Log -Error "Failed to Integrate the Microsoft Edge Browser Application Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Break
+        Start-Sleep 3
     }
 }
 
@@ -909,7 +925,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
         {
             $CalcBasePackage = @{
                 Path             = $InstallMount
-                PackagePath      = "$($Win32CalcPath)\Microsoft-Windows-win32calc-Package~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
+                PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
                 IgnoreCheck      = $true
                 ScratchDirectory = $ScratchDirectory
                 LogPath          = $DISMLog
@@ -918,7 +934,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
             [void](Add-WindowsPackage @CalcBasePackage)
             $CalcLanguagePackage = @{
                 Path             = $InstallMount
-                PackagePath      = "$($Win32CalcPath)\Microsoft-Windows-win32calc-Package~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
+                PackagePath      = "$Win32CalcPath\Microsoft-Windows-win32calc-Package~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
                 IgnoreCheck      = $true
                 ScratchDirectory = $ScratchDirectory
                 LogPath          = $DISMLog
@@ -938,7 +954,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
         Catch
         {
             Write-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-            Stop-Optimize; Break
+            Start-Sleep 3
         }
     }
     Else
@@ -948,7 +964,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
             Try
             {
                 $CalcPackage = @{
-                    ImagePath        = "$($Win32CalcPath)\Win32Calc.wim"
+                    ImagePath        = "$Win32CalcPath\Win32Calc.wim"
                     Index            = 1
                     ApplyPath        = $InstallMount
                     CheckIntegrity   = $true
@@ -959,8 +975,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
                 }
                 [void](Expand-WindowsImage @CalcPackage)
                 $IniFile = "$InstallMount\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini"
-                $CalcString = "Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019"
-                Add-Content -Path $IniFile -Value $CalcString -Encoding Unicode -Force
+                Add-Content -Path $IniFile -Value 'Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019' -Encoding Unicode -Force
                 Get-OfflineHives -Load
                 Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Applets\\Calculator\\Capabilities" -Type String
                 Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\calculator" -Name "(default)" -Value "URL:calculator" -Type String
@@ -978,7 +993,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
             Catch
             {
                 Write-Log -Error "Failed to Integrate the Win32 Calculator Packages." -ErrorRecord $Error[0]
-                Stop-Optimize; Break
+                Start-Sleep 3
             }
         }
     }
@@ -992,7 +1007,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
     {
         $FileServerCore = @{
             Path             = $InstallMount
-            PackagePath      = "$($DedupPath)\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -1001,7 +1016,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
         [void](Add-WindowsPackage @FileServerCore)
         $FileServerLang = @{
             Path             = $InstallMount
-            PackagePath      = "$($DedupPath)\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$DedupPath\Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -1010,7 +1025,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
         [void](Add-WindowsPackage @FileServerLang)
         $DedupCore = @{
             Path             = $InstallMount
-            PackagePath      = "$($DedupPath)\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -1019,7 +1034,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
         [void](Add-WindowsPackage @DedupCore)
         $DedupLang = @{
             Path             = $InstallMount
-            PackagePath      = "$($DedupPath)\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
+            PackagePath      = "$DedupPath\Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($InstallWimInfo.Architecture)~$($InstallWimInfo.Language)~10.0.$($InstallWimInfo.Build).1.cab"
             IgnoreCheck      = $true
             ScratchDirectory = $ScratchDirectory
             LogPath          = $DISMLog
@@ -1028,7 +1043,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
         [void](Add-WindowsPackage @DedupLang)
         $EnableDedup = @{
             Path             = $InstallMount
-            FeatureName      = "Dedup-Core"
+            FeatureName      = 'Dedup-Core'
             All              = $true
             LimitAccess      = $true
             NoRestart        = $true
@@ -1085,7 +1100,7 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
     Catch
     {
         Write-Log -Error "Failed to Integrate the Data Deduplication Packages." -ErrorRecord $Error[0]
-        Stop-Optimize; Break
+        Start-Sleep 3
     }
 }
 
@@ -1095,13 +1110,13 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
     If ($InstallWimInfo.Build -eq '17134') { $CodeName = 'RS4' }
     ElseIf ($InstallWimInfo.Build -eq '17763') { $CodeName = 'RS5' }
     ElseIf ($InstallWimInfo.Build -eq '18362') { $CodeName = 'RS6' }
-    If ($DynamicParams['Boot'])
+    If ($DynamicParams.Boot)
     {
         Try
         {
             Write-Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($BootWimInfo.Name)"
             $MSDaRT10Boot = @{
-                ImagePath        = "$($DaRTPath)\MSDaRT10_$($CodeName).wim"
+                ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
                 Index            = 1
                 ApplyPath        = $BootMount
                 CheckIntegrity   = $true
@@ -1128,13 +1143,13 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
             Start-Sleep 3
         }
     }
-    If ($DynamicParams['Recovery'])
+    If ($DynamicParams.Recovery)
     {
         Try
         {
             Write-Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($RecoveryWimInfo.Name)"
             $MSDaRT10Recovery = @{
-                ImagePath        = "$($DaRTPath)\MSDaRT10_$($CodeName).wim"
+                ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
                 Index            = 1
                 ApplyPath        = $RecoveryMount
                 CheckIntegrity   = $true
@@ -1235,7 +1250,7 @@ If ($Registry.IsPresent)
     #****************************************************************#
     Write-Output "Disabling System Telemetry, Data Collecting and Advertisements." >> $RegLog
     #****************************************************************#
-    If ($DynamicParams['LTSC'] -or $InstallWimInfo.Name -like "*Enterprise*" -or $InstallWimInfo.Name -like "*Education*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
+    If ($DynamicParams.LTSC -or $InstallWimInfo.Name -like "*Enterprise*" -or $InstallWimInfo.Name -like "*Education*") { $TelemetryLevel = 0 } Else { $TelemetryLevel = 1 }
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value $TelemetryLevel -Type DWord
@@ -1273,7 +1288,7 @@ If ($Registry.IsPresent)
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0 -Type DWord
     Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 -Type DWord
-    If (!$DynamicParams['LTSC'] -and !$DynamicParams['Edge']) { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord }
+    If (!$DynamicParams.LTSC -and !$DynamicParams.Edge) { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord }
     #****************************************************************#
     Write-Output "Disabling System Location Sensors." >> $RegLog
     #****************************************************************#
@@ -1299,7 +1314,6 @@ If ($Registry.IsPresent)
         Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "AllowCrossDeviceClipboard" -Value 0 -Type DWord
         Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Clipboard" -Name "EnableClipboardHistory" -Value 0 -Type DWord
         If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\cbdhsvc") { Set-KeyProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\cbdhsvc" -Name "Start" -Value 4 -Type DWord }
-        [void]$Visibility.Append('clipboard;')
     }
     #****************************************************************#
     Write-Output "Disabling WiFi Sense." >> $RegLog
@@ -1431,7 +1445,7 @@ If ($Registry.IsPresent)
     #****************************************************************#
     Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "link" -Value (0, 0, 0, 0) -Type Binary
     #****************************************************************#
-    If (!$DynamicParams['LTSC'] -and !$DynamicParams['Edge'])
+    If (!$DynamicParams.LTSC -and !$DynamicParams.Edge)
     {
         #****************************************************************#
         Write-Output "Disabling the Microsoft Edge Desktop Shortcut Creation." >> $RegLog
@@ -1505,19 +1519,23 @@ If ($Registry.IsPresent)
     @('.3mf', '.bmp', '.fbx', '.gif', '.jfif', '.jpe', '.jpeg', '.jpg', '.png', '.tif', '.tiff') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\shell\3D Edit" }
     @('.3ds', '.3mf', '.dae', '.dxf', '.obj', '.ply', '.stl', '.wrl') | ForEach-Object { Remove-Container -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($_)\shell\3D Print" }
     #****************************************************************#
-    Write-Output "Restoring Windows Photo Viewer." >> $RegLog
-    #****************************************************************#
-    @(".bmp", ".cr2", ".dib", ".gif", ".ico", ".jfif", ".jpe", ".jpeg", ".jpg", ".jxr", ".png", ".tif", ".tiff", ".wdp") | ForEach-Object {
-        Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$($_)" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
-        Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($_)\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value 0 -Type Binary
+    If ($RemovedAppxPackages -contains 'Microsoft.Windows.Photos')
+    {
+        #****************************************************************#
+        Write-Output "Restoring Windows Photo Viewer." >> $RegLog
+        #****************************************************************#
+        @(".bmp", ".cr2", ".dib", ".gif", ".ico", ".jfif", ".jpe", ".jpeg", ".jpg", ".jxr", ".png", ".tif", ".tiff", ".wdp") | ForEach-Object {
+            Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$($_)" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
+            Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($_)\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value 0 -Type Binary
+        }
+        @("Paint.Picture", "giffile", "jpegfile", "pngfile") | ForEach-Object {
+            Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043" -Type ExpandString
+            Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type ExpandString
+        }
+        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open" -Name "MuiVerb" -Value "@photoviewer.dll,-3043" -Type String
+        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type ExpandString
+        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Type String
     }
-    @("Paint.Picture", "giffile", "jpegfile", "pngfile") | ForEach-Object {
-        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043" -Type ExpandString
-        Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type ExpandString
-    }
-    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open" -Name "MuiVerb" -Value "@photoviewer.dll,-3043" -Type String
-    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type ExpandString
-    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Type String
     #****************************************************************#
     Write-Output "Removing User Folders from This PC and Explorer." >> $RegLog
     #****************************************************************#
@@ -1600,28 +1618,11 @@ If ($Registry.IsPresent)
 }
 #endregion Registry Optimizations
 
-If ($Visibility)
-{
-    If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI') { [void]$Visibility.Append('windowsdefender;') }
-    If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI')
-    {
-        [void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
-        If ($InstallWimInfo.Build -lt '17763') { [void]$Visibility.Append('gaming-trueplay;') }
-    }
-    If ($RemovedAppxPackages -contains 'Microsoft.WindowsMaps') { [void]$Visibility.Append('maps;maps-downloadmaps;') }
-    If ($RemovedAppxPackages -contains 'Microsoft.YourPhone' -or $RemovedSystemApps -contains 'Microsoft.Windows.CallingShellApp') { [void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;') }
-    $Visibility = $Visibility.ToString().TrimEnd(';')
-    Get-OfflineHives -Load
-    Set-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility -Type String
-    Set-KeyProperty -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility -Type String
-    Get-OfflineHives -Unload
-}
-
 If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 {
     Clear-Host
     $AdditionalParams = Import-Config
-    If ($AdditionalParams.Unattend -eq $true -and (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml"))
+    If ($AdditionalParams.Unattend.IsPresent -and (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml"))
     {
         Try
         {
@@ -1646,7 +1647,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
             Start-Sleep 3
         }
     }
-    If ($AdditionalParams.Setup -eq $true -and (Test-Path -Path "$AdditionalPath\Setup\*"))
+    If ($AdditionalParams.Setup.IsPresent -and (Test-Path -Path "$AdditionalPath\Setup\*"))
     {
         $Host.UI.RawUI.WindowTitle = "Applying Setup Content."
         Write-Log -Info "Applying Setup Content."
@@ -1654,7 +1655,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
         Get-ChildItem -Path "$AdditionalPath\Setup" -Exclude README.md | Copy-Item -Destination "$InstallMount\Windows\Setup\Scripts" -Recurse
         Start-Sleep 3
     }
-    If ($AdditionalParams.Wallpaper -eq $true -and (Test-Path -Path "$AdditionalPath\Wallpaper\*"))
+    If ($AdditionalParams.Wallpaper.IsPresent -and (Test-Path -Path "$AdditionalPath\Wallpaper\*"))
     {
         $Host.UI.RawUI.WindowTitle = "Applying Wallpaper."
         Write-Log -Info "Applying Wallpaper."
@@ -1662,7 +1663,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
         Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File | Copy-Item -Destination "$InstallMount\Windows\Web\Wallpaper"
         Start-Sleep 3
     }
-    If ($AdditionalParams.SystemLogo -eq $true -and (Test-Path -Path "$AdditionalPath\SystemLogo\*.bmp"))
+    If ($AdditionalParams.SystemLogo.IsPresent -and (Test-Path -Path "$AdditionalPath\SystemLogo\*.bmp"))
     {
         $Host.UI.RawUI.WindowTitle = "Applying System Logo."
         Write-Log -Info "Applying System Logo."
@@ -1670,13 +1671,13 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
         Copy-Item -Path "$AdditionalPath\SystemLogo\*.bmp" -Destination "$InstallMount\Windows\System32\oobe\info\logo" -Recurse
         Start-Sleep 3
     }
-    If ($AdditionalParams.RegistryTemplates -eq $true -and (Test-Path -Path "$AdditionalPath\RegistryTemplates\*.reg"))
+    If ($AdditionalParams.RegistryTemplates.IsPresent -and (Test-Path -Path "$AdditionalPath\RegistryTemplates\*.reg"))
     {
         $Host.UI.RawUI.WindowTitle = "Importing Registry Templates."
         Write-Log -Info "Importing Registry Templates."
         Import-RegistryTemplates
     }
-    If ($AdditionalParams.Drivers -eq $true)
+    If ($AdditionalParams.Drivers.IsPresent)
     {
         If (Get-ChildItem -Path "$AdditionalPath\Drivers\Install" -Filter *.inf -Recurse)
         {
@@ -1702,7 +1703,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
                 Start-Sleep 3
             }
         }
-        If ($DynamicParams['Boot'] -and (Get-ChildItem -Path "$AdditionalPath\Drivers\Boot" -Filter *.inf -Recurse))
+        If ($DynamicParams.Boot -and (Get-ChildItem -Path "$AdditionalPath\Drivers\Boot" -Filter *.inf -Recurse))
         {
             Try
             {
@@ -1726,7 +1727,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
                 Start-Sleep 3
             }
         }
-        If ($DynamicParams['Recovery'] -and (Get-ChildItem -Path "$AdditionalPath\Drivers\Recovery" -Filter *.inf -Recurse))
+        If ($DynamicParams.Recovery -and (Get-ChildItem -Path "$AdditionalPath\Drivers\Recovery" -Filter *.inf -Recurse))
         {
             Try
             {
@@ -1751,7 +1752,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
             }
         }
     }
-    If ($AdditionalParams.NetFx3 -eq $true -and $ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$ISOMedia\sources\sxs" -Filter *netfx3*.cab -Recurse))
+    If ($AdditionalParams.NetFx3.IsPresent -and $ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$($ISOMedia.FullName)\sources\sxs" -Filter *netfx3*.cab -Recurse))
     {
         Try
         {
@@ -1760,7 +1761,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
             $NetFx3Params = @{
                 Path             = $InstallMount
                 FeatureName      = 'NetFx3'
-                Source           = "$ISOMedia\sources\sxs"
+                Source           = "$($ISOMedia.FullName)\sources\sxs"
                 All              = $true
                 LimitAccess      = $true
                 NoRestart        = $true
@@ -1769,6 +1770,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
                 ErrorAction      = 'Stop'
             }
             [void](Enable-WindowsOptionalFeature @NetFx3Params)
+            $DynamicParams.Add('NetFx3', $true)
         }
         Catch
         {
@@ -1835,25 +1837,20 @@ Try
     Write-Log -Info "Creating a Package Summary Log."
     If ($WindowsStore.IsPresent) { "`tIntegrated Appx Provisioned Packages:", (Get-AppxProvisionedPackage -Path $InstallMount | Select-Object -Property DisplayName) | Out-File -FilePath $PackageLog -Append }
     Else { If ($WindowsApps -eq 'Select' -or $WindowsApps -eq 'Whitelist') { "`tAppx Provisioned Packages:", (Get-AppxProvisionedPackage -Path $InstallMount | Select-Object -Property DisplayName) | Out-File -FilePath $PackageLog -Append } }
-    If ($MicrosoftEdge.IsPresent -or $Dedup.IsPresent -or $DynamicParams['Win32Calc']) { "`tIntegrated Windows Packages:", (Get-WindowsPackage -Path $InstallMount | Where-Object { $_.PackageName -like "*win32calc*" -or $_.PackageName -like "*Internet-Browser*" -or $_.PackageName -like "*Windows-FileServer-ServerCore*" -or $_.PackageName -like "*Windows-Dedup*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog -Append }
+    If ($MicrosoftEdge.IsPresent -or $Dedup.IsPresent -or $DynamicParams.Win32Calc) { "`tIntegrated Windows Packages:", (Get-WindowsPackage -Path $InstallMount | Where-Object { $_.PackageName -like "*win32calc*" -or $_.PackageName -like "*Internet-Browser*" -or $_.PackageName -like "*Windows-FileServer-ServerCore*" -or $_.PackageName -like "*Windows-Dedup*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog -Append }
     If ($Packages.IsPresent) { "`tCapability Packages:", (Get-WindowsCapability -Path $InstallMount | Where-Object -Property State -EQ Installed | Select-Object -Property Name, State) | Out-File -FilePath $PackageLog -Append }
     If ($Features.IsPresent)
     {
         "`tEnabled Optional Features:", (Get-WindowsOptionalFeature -Path $InstallMount | Where-Object -Property State -EQ Enabled | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName) | Out-File -FilePath $PackageLog -Append
         "`tDisabled Optional Features:", (Get-WindowsOptionalFeature -Path $InstallMount | Where-Object -Property State -EQ Disabled | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName) | Out-File -FilePath $PackageLog -Append
     }
-    If ($DynamicParams['InstallDrivers']) { "`tIntegrated Driver Packages (Install):", (Get-WindowsDriver -Path $InstallMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
-    If ($DynamicParams['BootDrivers']) { "`tIntegrated Driver Packages (Boot):", (Get-WindowsDriver -Path $BootMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
-    If ($DynamicParams['RecoveryDrivers']) { "`tIntegrated Driver Packages (Recovery):", (Get-WindowsDriver -Path $RecoveryMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
+    If ($DynamicParams.InstallDrivers) { "`tIntegrated Driver Packages (Install):", (Get-WindowsDriver -Path $InstallMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
+    If ($DynamicParams.BootDrivers) { "`tIntegrated Driver Packages (Boot):", (Get-WindowsDriver -Path $BootMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
+    If ($DynamicParams.RecoveryDrivers) { "`tIntegrated Driver Packages (Recovery):", (Get-WindowsDriver -Path $RecoveryMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog -Append }
 }
 Catch
 {
     Write-Log -Error "Failed to Compile Package Log." -ErrorRecord $Error[0]
-}
-Finally
-{
-    Start-Sleep 3
-    If (Get-OfflineHives -Test) { Get-OfflineHives -Unload }
 }
 
 If ((Repair-WindowsImage -Path $InstallMount -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -1871,7 +1868,7 @@ Else
     Stop-Optimize; Break
 }
 
-If ($DynamicParams['Boot'])
+If ($DynamicParams.Boot)
 {
     Try
     {
@@ -1895,7 +1892,7 @@ If ($DynamicParams['Boot'])
     }
 }
 
-If ($DynamicParams['Recovery'])
+If ($DynamicParams.Recovery)
 {
     Try
     {
@@ -1919,7 +1916,7 @@ If ($DynamicParams['Recovery'])
     }
 }
 
-If ($DynamicParams['Boot'])
+If ($DynamicParams.Boot)
 {
     Try
     {
@@ -1929,7 +1926,7 @@ If ($DynamicParams['Boot'])
             $ExportBootParams = @{
                 SourceImagePath      = $BootWim
                 SourceIndex          = $_.ImageIndex
-                DestinationImagePath = "$($WorkDirectory)\boot.wim"
+                DestinationImagePath = "$WorkDirectory\boot.wim"
                 CompressionType      = 'Maximum'
                 CheckIntegrity       = $true
                 ScratchDirectory     = $ScratchDirectory
@@ -1939,7 +1936,7 @@ If ($DynamicParams['Boot'])
             [void](Export-WindowsImage @ExportBootParams)
         }
         Remove-Container -Path $BootWim
-        Move-Item -Path "$($WorkDirectory)\boot.wim" -Destination $BootWim -Force
+        Move-Item -Path "$WorkDirectory\boot.wim" -Destination $BootWim -Force
     }
     Catch
     {
@@ -1948,7 +1945,7 @@ If ($DynamicParams['Boot'])
     }
 }
 
-If ($DynamicParams['Recovery'])
+If ($DynamicParams.Recovery)
 {
     Try
     {
@@ -1957,7 +1954,7 @@ If ($DynamicParams['Recovery'])
         $ExportRecovery = @{
             SourceImagePath      = $RecoveryWim
             SourceIndex          = 1
-            DestinationImagePath = "$($WorkDirectory)\winre.wim"
+            DestinationImagePath = "$WorkDirectory\winre.wim"
             CompressionType      = 'Maximum'
             CheckIntegrity       = $true
             ScratchDirectory     = $ScratchDirectory
@@ -1966,7 +1963,7 @@ If ($DynamicParams['Recovery'])
         }
         [void](Export-WindowsImage @ExportRecovery)
         Remove-Container -Path $WinREPath
-        Move-Item -Path "$($WorkDirectory)\winre.wim" -Destination $WinREPath -Force
+        Move-Item -Path "$WorkDirectory\winre.wim" -Destination $WinREPath -Force
     }
     Catch
     {
@@ -2007,20 +2004,20 @@ If ($CompressionType -eq 'Solid') { Write-Warning "Solid compression can take qu
 
 Try
 {
-    $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting $($InstallWimInfo.Name) using $($CompressionType) compression."
-    Write-Log -Info "Rebuilding and Exporting $($InstallWimInfo.Name) using $($CompressionType) compression."
+    $Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting $($InstallWimInfo.Name) using $CompressionType compression."
+    Write-Log -Info "Rebuilding and Exporting $($InstallWimInfo.Name) using $CompressionType compression."
     If ($CompressionType -eq 'Solid')
     {
-        $RunDism = Start-Executable -Executable "$Env:SystemRoot\System32\DISM.EXE" -Arguments @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$($ImageDirectory)\install.esd") -PassThru
-        If ($RunDism.ExitCode -eq 0) { Remove-Container -Path $InstallWim; $ImageFiles = @('install.esd', 'boot.wim') }
-        Else { Write-Log -Error "Failed to export $($InstallWimInfo.Name) using $($CompressionType) compression."; $ImageFiles = @('install.wim', 'boot.wim') }
+        $RET = Start-Executable -Executable "$Env:SystemRoot\System32\DISM.EXE" -Arguments @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /CheckIntegrity' -f $InstallWim, $ImageIndex, "$ImageDirectory\install.esd") -PassThru
+        If ($RET -eq 0) { Remove-Container -Path $InstallWim; $ImageFiles = @('install.esd', 'boot.wim') }
+        Else { Write-Log -Error "Failed to export $($InstallWimInfo.Name) using $CompressionType compression."; $ImageFiles = @('install.wim', 'boot.wim') }
     }
     Else
     {
         $ExportInstall = @{
             SourceImagePath      = $InstallWim
             SourceIndex          = $ImageIndex
-            DestinationImagePath = "$($WorkDirectory)\install.wim"
+            DestinationImagePath = "$WorkDirectory\install.wim"
             CompressionType      = $CompressionType
             CheckIntegrity       = $true
             ScratchDirectory     = $ScratchDirectory
@@ -2029,7 +2026,7 @@ Try
         }
         [void](Export-WindowsImage @ExportInstall)
         Remove-Container -Path $InstallWim
-        Move-Item -Path "$($WorkDirectory)\install.wim" -Destination $InstallWim -Force
+        Move-Item -Path "$WorkDirectory\install.wim" -Destination $InstallWim -Force
         $ImageFiles = @('install.wim', 'boot.wim')
     }
 }
@@ -2043,24 +2040,23 @@ If ($ISOMedia)
 {
     $Host.UI.RawUI.WindowTitle = "Optimizing the Windows Media File Structure."
     Write-Log -Info "Optimizing the Windows Media File Structure."
-    Get-ChildItem -Path $ISOMedia -Filter *.dll | Remove-Container
-    @("$ISOMedia\autorun.inf", "$ISOMedia\setup.exe", "$ISOMedia\ca", "$ISOMedia\NanoServer", "$ISOMedia\support", "$ISOMedia\upgrade", "$ISOMedia\sources\dlmanifests", "$ISOMedia\sources\etwproviders",
-        "$ISOMedia\sources\inf", "$ISOMedia\sources\hwcompat", "$ISOMedia\sources\migration", "$ISOMedia\sources\replacementmanifests", "$ISOMedia\sources\servicing", "$ISOMedia\sources\servicingstackmisc",
-        "$ISOMedia\sources\sxs", "$ISOMedia\sources\uup", "$ISOMedia\sources\vista", "$ISOMedia\sources\xp") | Remove-Container
-    @('.adml', '.mui', '.rtf', '.txt') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources\$($InstallWimInfo.Language)" -Filter *$($_) -Exclude 'setup.exe.mui' -Recurse | Remove-Container }
-    @('.dll', '.gif', '.xsl', '.bmp', '.mof', '.ini', '.cer', '.exe', '.sdb', '.txt', '.nls', '.xml', '.cat', '.inf', '.sys', '.bin', '.ait', '.admx', '.dat', '.ttf', '.cfg', '.xsd', '.rtf', '.xrm-ms') | ForEach-Object { Get-ChildItem -Path "$ISOMedia\sources" -Filter *$($_) -Exclude @('EI.cfg', 'gatherosstate.exe', 'setup.exe', 'lang.ini', 'pid.txt', '*.clg') -Recurse | Remove-Container }
-    Get-ChildItem -Path $ImageDirectory -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia)\sources" -Force
+    Get-ChildItem -Path $ISOMedia.FullName -Filter *.dll | Remove-Container
+    @("$($ISOMedia.FullName)\autorun.inf", "$($ISOMedia.FullName)\setup.exe", "$($ISOMedia.FullName)\ca", "$($ISOMedia.FullName)\NanoServer", "$($ISOMedia.FullName)\support", "$($ISOMedia.FullName)\upgrade", "$($ISOMedia.FullName)\sources\dlmanifests",
+        "$($ISOMedia.FullName)\sources\etwproviders", "$($ISOMedia.FullName)\sources\inf", "$($ISOMedia.FullName)\sources\hwcompat", "$($ISOMedia.FullName)\sources\migration", "$($ISOMedia.FullName)\sources\replacementmanifests",
+        "$($ISOMedia.FullName)\sources\servicing", "$($ISOMedia.FullName)\sources\servicingstackmisc", "$($ISOMedia.FullName)\sources\uup", "$($ISOMedia.FullName)\sources\vista", "$($ISOMedia.FullName)\sources\xp") | Remove-Container
+    If ($DynamicParams.NetFx3) { Remove-Container -Path "$($ISOMedia.FullName)\sources\sxs" }
+    @('.adml', '.mui', '.rtf', '.txt') | ForEach-Object { Get-ChildItem -Path "$($ISOMedia.FullName)\sources\$($InstallWimInfo.Language)" -Filter *$($_) -Exclude 'setup.exe.mui' -Recurse | Remove-Container }
+    @('.dll', '.gif', '.xsl', '.bmp', '.mof', '.ini', '.cer', '.exe', '.sdb', '.txt', '.nls', '.xml', '.cat', '.inf', '.sys', '.bin', '.ait', '.admx', '.dat', '.ttf', '.cfg', '.xsd', '.rtf', '.xrm-ms') | ForEach-Object { Get-ChildItem -Path "$($ISOMedia.FullName)\sources" -Filter *$($_) -Exclude @('EI.cfg', 'gatherosstate.exe', 'setup.exe', 'lang.ini', 'pid.txt', '*.clg') -Recurse | Remove-Container }
+    Get-ChildItem -Path $ImageDirectory -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia.FullName)\sources" -Force
     If ($ISO)
     {
-        If ($ISO -eq 'Prompt' -and (!(Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys.bin"))) { Write-Log -Error "Missing the required efisys.bin bootfile for ISO creation."; Start-Sleep 3 }
-        ElseIf ($ISO -eq 'No-Prompt' -and (!(Test-Path -Path "$ISOMedia\efi\Microsoft\boot\efisys_noprompt.bin"))) { Write-Log -Error "Missing the required efisys_noprompt.bin bootfile for ISO creation."; Start-Sleep 3 }
+        If ($ISO -eq 'Prompt' -and (!(Test-Path -Path "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys.bin"))) { Write-Log -Error "Missing the required efisys.bin bootfile for ISO creation."; Start-Sleep 3 }
+        ElseIf ($ISO -eq 'No-Prompt' -and (!(Test-Path -Path "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys_noprompt.bin"))) { Write-Log -Error "Missing the required efisys_noprompt.bin bootfile for ISO creation."; Start-Sleep 3 }
         Else
         {
-            $Host.UI.RawUI.WindowTitle = "Creating a $($ISO) Bootable Windows Installation Media ISO."
-            Write-Log -Info "Creating a $($ISO) Bootable Windows Installation Media ISO."
+            $Host.UI.RawUI.WindowTitle = "Creating a $ISO Bootable Windows Installation Media ISO."
+            Write-Log -Info "Creating a $ISO Bootable Windows Installation Media ISO."
             $NewISO = New-ISOMedia -BootType $ISO
-            If ($NewISO.Path) { $DynamicParams.Add('ISO', $true) }
-            Else { Write-Log -Error "ISO creation failed." -ErrorRecord $Error[0] }
         }
     }
 }
@@ -2069,12 +2065,12 @@ Try
 {
     $Host.UI.RawUI.WindowTitle = "Finalizing Optimizations."
     Write-Log -Info "Finalizing Optimizations."
-    $SaveDirectory | New-Container
-    If ($DynamicParams['ISO']) { Move-Item -Path $($NewISO.Path) -Destination $SaveDirectory }
+    $SaveDirectory = New-Container -Path "$PSScriptRoot\Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -PassThru
+    If ($NewISO.Path) { Move-Item -Path $NewISO.Path -Destination $SaveDirectory.FullName }
     Else
     {
-        If ($ISOMedia) { Move-Item -Path $ISOMedia -Destination $SaveDirectory }
-        Else { Get-ChildItem -Path $ImageDirectory -Include $ImageFiles -Recurse | Move-Item -Destination $SaveDirectory }
+        If ($ISOMedia) { Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName }
+        Else { Get-ChildItem -Path $ImageDirectory -Include $ImageFiles -Recurse | Move-Item -Destination $SaveDirectory.FullName }
     }
 }
 Finally
@@ -2093,7 +2089,7 @@ Finally
     }
     @("$DISMLog", "$Env:SystemRoot\Logs\DISM\dism.log") | Remove-Container
     $InstallWimInfo | Out-File -FilePath (Join-Path -Path $LogDirectory -ChildPath WimFileInfo.txt) -Encoding UTF8 -Force
-    [void](Get-ChildItem -Path $LogDirectory -Filter *.log | Compress-Archive -DestinationPath (Join-Path -Path $SaveDirectory -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest)
+    [void](Get-ChildItem -Path $LogDirectory -Filter *.log | Compress-Archive -DestinationPath (Join-Path -Path $SaveDirectory.FullName -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest)
     $TempDirectory | Remove-Container
     [void](Clear-WindowsCorruptMountPoint)
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }

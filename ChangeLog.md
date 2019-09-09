@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 3.2.7.1 (09-08-2019) ##
+
+- Windows Photo Viewer is now only restored if the Windows Photos App is removed.
+- When optimizing the file structure of the ISO media, the '\sources\sxs' folder is now only removed if the .NET Framework 3 (NetFx3) has been integrated into the image.
+- Updated multiple functions in the Functions module.
+- Made some minor but necessary adjustments to the primary script.
+
 ## Build 3.2.7.0 (09-03-2019) ##
 
 - Corrected an issue that affected users who only supplied a WIM file for optimizing. An error occurred when the variable assigned to the mount path of the boot image was being returned to the main script despite a boot image not even being present. This would have resulted in failed DaRT integration and image dismount.

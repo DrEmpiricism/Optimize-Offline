@@ -3,7 +3,7 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
 	 Created by:   	BenTheGreat
 	 Filename:     	Functions.psm1
-	 Last updated:	09/03/2019
+	 Last updated:	09/09/2019
 	===========================================================================
 #>
 
@@ -29,7 +29,6 @@ $ImageDirectory = Join-Path -Path $TempDirectory -ChildPath ImageOffline
 $InstallMount = Join-Path -Path $TempDirectory -ChildPath InstallMountOffline
 $BootMount = Join-Path -Path $TempDirectory -ChildPath BootMountOffline
 $RecoveryMount = Join-Path -Path $TempDirectory -ChildPath RecoveryMountOffline
-$SaveDirectory = Join-Path -Path $ScriptRootPath -ChildPath Optimize-Offline"_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))"
 $ScriptLog = Join-Path -Path $LogDirectory -ChildPath Optimize-Offline.log
 $PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageList.log
 $DISMLog = Join-Path -Path $LogDirectory -ChildPath DISM.log
@@ -42,12 +41,13 @@ Function Import-Config
     [OutputType([PSCustomObject])]
     Param ()
 
-    $ConfigObj = New-Object -TypeName PSObject -Property @{ }
-    Get-Content -Path $ConfigFilePath | ForEach-Object {
-        If ($_ -match '=')
+    $ConfigObj = [PSCustomObject]@{ }
+    Get-Content -Path $ConfigFilePath | ForEach-Object -Process {
+        If (!$_.StartsWith('#') -and $_ -match '=')
         {
             $Data = $_.Split('=').Trim()
-            If ($Data[1] -eq "True" -or $Data[1] -eq "False") { $Data[1] = [Convert]::ToBoolean($Data[1]) }
+            If ($Data[1].Equals('False')) { Remove-Variable Data; Return }
+            If ($Data[1].Equals('True')) { [Switch]$Data[1] = [Convert]::ToBoolean($Data[1]) }
             $ConfigObj | Add-Member -MemberType NoteProperty -Name $Data[0] -Value $Data[1]
         }
     }
@@ -168,8 +168,7 @@ Function Get-WimFileInfo
         InstallationType = $($WimImage.InstallationType)
         Language         = $($WimImage.Languages)
     }
-    If ($WimImage.Architecture -eq 0) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '0', 'x86') }
-    ElseIf ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
+    If ($WimImage.Architecture -eq 9) { $WimObject | Add-Member -MemberType NoteProperty -Name Architecture -Value $($WimImage.Architecture -replace '9', 'amd64') }
     $WimObject
 }
 
@@ -187,37 +186,20 @@ Function Start-Executable
 
     Begin
     {
-        $StandardOutFile = "$WorkDirectory\$($Executable.Name)-StandardOutput.txt"
-        $StandardErrFile = "$WorkDirectory\$($Executable.Name)-StandardError.txt"
-        $ExeParams = @{
-            FilePath               = $($Executable.FullName)
-            RedirectStandardError  = $StandardErrFile
-            RedirectStandardOutput = $StandardOutFile
-            Wait                   = $true
-            WindowStyle            = 'Hidden'
-            PassThru               = $true
-        }
-        If ($Arguments) { $ExeParams.Add('ArgumentList', $Arguments) }
+        $StartInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
+        $StartInfo.FileName = $Executable.FullName
+        If ($Arguments) { $StartInfo.Arguments = $Arguments }
+        $StartInfo.CreateNoWindow = $true
+        $StartInfo.WindowStyle = 'Hidden'
+        $StartInfo.UseShellExecute = $false
+        $Process = New-Object -TypeName System.Diagnostics.Process
+        $Process.StartInfo = $StartInfo
     }
     Process
     {
-        $RunExe = Start-Process @ExeParams
-        If ($PassThru.IsPresent)
-        {
-            $Result = New-Object -TypeName PSObject -Property @{ ExitCode = $RunExe.ExitCode }
-            $RunOutput = Get-Content -Path $StandardOutFile -Raw -ErrorAction Ignore
-            $RunError = Get-Content -Path $StandardErrFile -Raw -ErrorAction Ignore
-            If ($RunExe.ExitCode -ne 0)
-            {
-                If ($RunOutput) { $Result | Add-Member -MemberType NoteProperty StandardOutput -Value $RunOutput.Trim() }
-                If ($RunError) { $Result | Add-Member -MemberType NoteProperty StandardError -Value $RunError.Trim() }
-            }
-            $Result
-        }
-    }
-    End
-    {
-        $StandardOutFile, $StandardErrFile | Remove-Container
+        [void]$Process.Start()
+        $Process.WaitForExit()
+        If ($PassThru.IsPresent) { $Process.ExitCode }
     }
 }
 
@@ -239,10 +221,10 @@ Function Get-OfflineHives
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$($InstallMount)\Windows\System32\config\software"),
-                ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$($InstallMount)\Windows\System32\config\system"),
-                ('HKLM\WIM_HKCU "{0}"' -f "$($InstallMount)\Users\Default\NTUSER.DAT"),
-                ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$($InstallMount)\Windows\System32\config\default")) | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ("LOAD $($_)") }; Break
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$InstallMount\Windows\System32\config\software"),
+                ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$InstallMount\Windows\System32\config\system"),
+                ('HKLM\WIM_HKCU "{0}"' -f "$InstallMount\Users\Default\NTUSER.DAT"),
+                ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$InstallMount\Windows\System32\config\default")) | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ("LOAD $($_)") }; Break
         }
         'Unload'
         {
@@ -386,8 +368,8 @@ Function Import-RegistryTemplates
         ForEach ($Template In $Templates)
         {
             Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
-            $RegEdit = Start-Executable -Executable "$Env:SystemRoot\REGEDIT.EXE" -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
-            If ($RegEdit.ExitCode -ne 0) { Write-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
+            $RET = Start-Executable -Executable "$Env:SystemRoot\REGEDIT.EXE" -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
+            If ($RET -ne 0) { Write-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
             Remove-Container -Path $Template.FullName
         }
     }
@@ -445,8 +427,8 @@ public class ISOWriter
         }
         Switch ($BootType)
         {
-            'Prompt' { $BootFile = Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\efisys.bin" }
-            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$ISOMedia\efi\Microsoft\boot\efisys_noprompt.bin" }
+            'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys.bin" }
+            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys_noprompt.bin" }
         }
         $FileSystem = @{ UDF = 4 }
         $PlatformId = @{ EFI = 0xEF }
@@ -457,7 +439,7 @@ public class ISOWriter
     }
     Process
     {
-        ForEach ($Item In Get-ChildItem -Path $ISOMedia -Force)
+        ForEach ($Item In Get-ChildItem -Path $ISOMedia.FullName -Force)
         {
             If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force }
             If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
@@ -623,11 +605,11 @@ Function Grant-FolderOwnership
             {
                 If (Test-Path $Object.FullName -PathType Container)
                 {
-                    Grant-FolderOwnership -Path $($Object.FullName)
+                    Grant-FolderOwnership -Path $Object.FullName
                 }
                 Else
                 {
-                    Grant-FileOwnership -Path $($Object.FullName)
+                    Grant-FileOwnership -Path $Object.FullName
                 }
             }
         }
@@ -640,8 +622,7 @@ Function Dismount-Images
     Param ()
 
     If (Get-OfflineHives -Test) { Get-OfflineHives -Unload }
-    $QueryHives = Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline')
-    If ($QueryHives) { $QueryHives | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('UNLOAD {0}' -f $($_)) } }
+    Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') | ForEach-Object { Start-Executable -Executable "$Env:SystemRoot\System32\REG.EXE" -Arguments ('UNLOAD {0}' -f $($_)) }
     $MountPath = @()
     If ((Get-WindowsImage -Mounted).ImagePath -match "winre.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Recovery*" } }
     If ((Get-WindowsImage -Mounted).ImagePath -match "install.wim") { $MountPath += (Get-WindowsImage -Mounted).MountPath | Where-Object { $_ -like "*Install*" } }
@@ -696,7 +677,7 @@ Function Stop-Optimize
     Write-Log -Info "Dismounting and discarding the image."; Write-Log -Failed
     Dismount-Images
     @("$DISMLog", "$Env:SystemRoot\Logs\DISM\dism.log") | Remove-Container
-    $SaveDirectory | New-Container
+    $SaveDirectory = New-Container -Path "$ScriptRootPath\Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -PassThru
     If ($Error.Count -gt 0)
     {
         ($Error | ForEach-Object -Process {
@@ -704,10 +685,10 @@ Function Stop-Optimize
                     Line  = $_.InvocationInfo.ScriptLineNumber
                     Error = $_.Exception.Message
                 }
-            } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory -ChildPath ErrorRecord.log) -Force
+            } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory.FullName -ChildPath ErrorRecord.log) -Force
     }
-    Get-ChildItem -Path $LogDirectory -Filter *.log | Move-Item -Destination $SaveDirectory -Force
-    Remove-Container -Path $TempDirectory
+    Get-ChildItem -Path $LogDirectory -Filter *.log | Move-Item -Destination $SaveDirectory.FullName -Force
+    $TempDirectory | Remove-Container
     ((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $DefaultVariables).InputObject).ForEach{ Remove-Variable -Name $_ -ErrorAction SilentlyContinue }
     Return
 }
