@@ -86,8 +86,6 @@ All content that gets copied to the image are copied to the locations that are i
 
 Content can be in the form of files, folders or directories. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory while keeping its original file structure. Content is NOT copied haphazardly nor are original file structures ignored.
 
-**Optimize-Offline does NOT add any script to the registry to be automatically executed during new user log-in and all content is ONLY copied to the image. Only default setup scripts like SetupComplete.cmd, OOBE.cmd and ErrorHandler.cmd will run automatically as they're designed to do by default.**
-
 #### Registry Template Integration ####
 
 Any custom registry template (.reg) file to be imported into the offline image's registry hives can be placed in the '\Content\Additional\RegistryTemplates' folder. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate hives.
