@@ -2,7 +2,7 @@
 
 ## Build 3.2.7.2 (09-17-2019) ##
 
-- The functions module has been renamed and each imported function is in its own individual script.
+- The Offline Processing Module has been renamed and restructured.
 - Updated multiple functions.
 - Corrected an issue preventing the WIM metadata log from being saved.
 - Added a Refresh-Explorer.ps1, RebootToRecovery_MyPC.reg, SetupComplete.cmd and OOBE.cmd in the 'Additional\Setup' folder.
