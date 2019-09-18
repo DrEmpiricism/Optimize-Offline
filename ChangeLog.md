@@ -1,5 +1,14 @@
 # ChangeLog #
 
+## Build 3.2.7.2 (09-17-2019) ##
+
+- The functions module has been renamed and each imported function is in its own individual script.
+- Updated multiple functions.
+- Corrected an issue preventing the WIM metadata log from being saved.
+- Added a Refresh-Explorer.ps1, RebootToRecovery_MyPC.reg, SetupComplete.cmd and OOBE.cmd in the 'Additional\Setup' folder.
+- Updated the 'Additional Tweaks.reg' file in the 'Additional\RegistryTemplate' folder.
+- Made some minor updates and adjustments to the primary script.
+
 ## Build 3.2.7.1 (09-08-2019) ##
 
 - Windows Photo Viewer is now only restored if the Windows Photos App is removed.
@@ -25,19 +34,3 @@
 - Updated the C# code in the Functions module for access token privileges and ISO creation.
 - Updated the Windows Store bundle packages with their latest versions.
 - Additional script and module code enhancements and changes.
-
-## Build 3.2.6.8 (08-20-2019) ##
-
-- The -ISO switch has been changed to a parameter that will now accept two values: 'Prompt' and 'No-Prompt.' This allows for those who wish to create a final Windows Installation Media ISO to also set the binary bootcode the image will be created with. An ISO created with the No-Prompt bootcode will not require a keypress to begin Windows Setup allowing for a completely unattended Windows installation, while an ISO created with the Prompt bootcode will require a keypress before Windows Setup will start.
-- Registry optimizations have been updated to further accommodate the decoupling of the Search and Cortana features in builds 1903+. A few additional registry optimizations have been updated.
-- The Functions.psm1 module has been updated.
-- Additional primary script code modifications.
-
-## Build 3.2.6.7 (08-14-2019) ##
-
-- The Boot and Recovery images are now automatically mounted at the beginning of the script and remain mounted during the full runtime of the script. The Boot image will only be mounted if a Windows Installation Media ISO is used as the source image for optimization. If only an install.wim is provided, the Recovery image will only be mounted.
-- Drivers can now be added to the Boot and Recovery images.
-- In the 'Content\Additional\Drivers' directory are three new directories: Install, Boot and Recovery. Driver packages placed in the 'Install' directory will be added to the Install image, those placed in the 'Boot' directory will be added to the Boot image and those place in the 'Recovery' directory will be added to the Recovery image.
-- Updated the applied registry optimizations to accommodate the recent decoupling of the Windows Search and Cortana features which could have resulted in a non-functional search function.
-- Updated the functions module.
-- Optimized and updated additional script and module process code.
