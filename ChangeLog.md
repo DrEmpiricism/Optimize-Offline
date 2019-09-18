@@ -6,7 +6,7 @@
 - Updated multiple functions.
 - Corrected an issue preventing the WIM metadata log from being saved.
 - Added a Refresh-Explorer.ps1, RebootToRecovery_MyPC.reg, SetupComplete.cmd and OOBE.cmd in the 'Additional\Setup' folder.
-- Updated the 'Additional Tweaks.reg' file in the 'Additional\RegistryTemplate' folder.
+- Updated the 'Additional Tweaks.reg' file in the 'Additional\RegistryTemplates' folder.
 - Made some minor updates and adjustments to the primary script.
 
 ## Build 3.2.7.1 (09-08-2019) ##
