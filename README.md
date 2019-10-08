@@ -108,7 +108,7 @@ It is also in good practice to have a good idea what each Configuration Pass doe
 
 ### About Microsoft DaRT 10 ###
 
-Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debugging tools. Since these tools run in a Preinstallation Environment and are quite powerful, it's wise to be aware of what they do prior to using them.
+Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debugging tools. Since these tools run in a Preinstallation Environment and are quite powerful, it's wise to be aware of what they do prior to using them and to NOT integrate them into images that will be used by multiple people.
 
 > Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
@@ -159,14 +159,13 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 ## Optimize-Offline Best Practices ##
 
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
-- If maintaining fully updated OEM images, it's best to integrate offline updates into the image and then run Optimize-Offline.  It is not recommended to optimize an image and then integrate offline updates.
+- If maintaining fully updated OEM images, it's best to integrate offline updates into the image BEFORE running Optimize-Offline.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
-- Do not manually meddle in either the working directories nor the registry while it's optimizing an image.
 - Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
 
 ## Calling Optimize-Offline ##
 
-The easiest way to call Optimize-Offline is by using the provided [Start.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Start.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Start.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
+The easiest way to call Optimize-Offline is by using the provided [Optimize-Offline.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Optimize-Offline.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Optimize-Offline.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
