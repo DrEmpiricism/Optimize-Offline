@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 3.2.7.3 (10-08-2019) ##
+
+- Removed the disabling of the Clipboard feature with the -Registry switch.
+- Updated the Start Menu layout clean-up.
+- Updated the Windows Store bundle packages with their latest versions.
+- Removed a redundant line of code.
+
 ## Build 3.2.7.2 (09-17-2019) ##
 
 - The Offline Processing Module has been renamed and restructured.
