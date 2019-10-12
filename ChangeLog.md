@@ -1,6 +1,6 @@
 # ChangeLog #
 
-## Build 3.2.7.4 (10-122-2019) ##
+## Build 3.2.7.4 (10-12-2019) ##
 
 - Created a custom Win32Calc.wim that replaces the official cabinet files for builds 17663+ for the integration of the Win32 Calculator.
 - The custom Win32Calc.wim fixes an issue that is present in the OEM Win32Calc cabinet packages which cause the Win32 Calculator to crash when the conversion type is changed.
