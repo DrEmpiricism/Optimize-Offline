@@ -1,5 +1,13 @@
 # ChangeLog #
 
+## Build 3.2.7.4 (10-122-2019) ##
+
+- Created a custom Win32Calc.wim that replaces the official cabinet files for builds 17663+ for the integration of the Win32 Calculator.
+- The custom Win32Calc.wim fixes an issue that is present in the OEM Win32Calc cabinet packages which cause the Win32 Calculator to crash when the conversion type is changed.
+- Updated the registry optimizations applied when the -Registry switch is used.
+- A custom LockScreen can now be applied to the image using the -Additional switch and its associated Config.ini by adding the custom LockScreen image to the new 'Content\Additional\LockScreen' folder.
+- Updated multiple functions used with the OfflineProcessing module.
+
 ## Build 3.2.7.3 (10-08-2019) ##
 
 - Removed the disabling of the Clipboard feature with the -Registry switch.
@@ -29,15 +37,3 @@
 - Converted certain variables to dynamic parameters.
 - Improved string creation by incorporating the StringBuilder .NET class which significantly reduces script overhead and load.
 - Made some minor adjustments and optimizations to both the primary script and the functions module.
-
-## Build 3.2.6.9 (08-30-2019) ##
-
-- When supplying a WIM as the source image, it no longer has to be named as 'install.wim' as to accommodate users who catalog their individual WIM files by version, build, edition, etc.
-- The mounting and dismounting order of any images has been optimized.
-- All additional primary script variables have been moved to the Functions module.
-- If the CallingShellApp System Application or YourPhone Appx Package is removed, its associated Immersive Control Panel Settings link will also be removed.
-- Enabled .NET strong cryptography in the Registry Optimizations that ensures current SSL protocols are used for .NET application communication and not outdated and vulnerable SSL protocols.
-- Optimized how logs are generated and saved.
-- Updated the C# code in the Functions module for access token privileges and ISO creation.
-- Updated the Windows Store bundle packages with their latest versions.
-- Additional script and module code enhancements and changes.
