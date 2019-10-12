@@ -18,20 +18,20 @@ Function Import-RegistryTemplates
             $REGContent | Set-Content -Path "$($_.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
         }
         $Templates = Get-ChildItem -Path $RegistryTemplates -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
-        Get-OfflineHives -Load
+        RegHives -Load
     }
     Process
     {
         ForEach ($Template In $Templates)
         {
             Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
-            $RET = Start-Executable -Executable "$Env:SystemRoot\regedit.exe" -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
-            If ($RET -ne 0) { Write-Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
-            Remove-Container -Path $Template.FullName
+            $RET = RunExe -Executable $REGEDIT -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
+            If ($RET -ne 0) { Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
+            $Template.FullName | Purge
         }
     }
     End
     {
-        Get-OfflineHives -Unload
+        RegHives -Unload
     }
 }

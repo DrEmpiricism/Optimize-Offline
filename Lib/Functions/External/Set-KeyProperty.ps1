@@ -31,8 +31,14 @@ Function Set-KeyProperty
     {
         ForEach ($Item In $Path)
         {
-            If (Test-Path -LiteralPath $Item) { Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue }
-            Else { [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue | New-ItemProperty -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue) }
+            If (Test-Path -LiteralPath $Item)
+            {
+                Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue
+            }
+            Else
+            {
+                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue | New-ItemProperty -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
+            }
         }
     }
 }

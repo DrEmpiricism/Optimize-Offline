@@ -3,7 +3,7 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
 	 Created by:   	BenTheGreat
 	 Filename:     	OfflineProcessing.psm1
-	 Last updated:	09/17/2019
+	 Last updated:	10/12/2019
 	===========================================================================
 #>
 
@@ -29,6 +29,9 @@ $RecoveryMount = Join-Path -Path $TempDirectory -ChildPath RecoveryMountOffline
 $ScriptLog = Join-Path -Path $LogDirectory -ChildPath Optimize-Offline.log
 $PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageList.log
 $DISMLog = Join-Path -Path $LogDirectory -ChildPath DISM.log
+$DISM = Join-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe
+$REG = Join-Path -Path $Env:SystemRoot\System32 -ChildPath reg.exe
+$REGEDIT = Join-Path -Path $Env:SystemRoot -ChildPath regedit.exe
 $DynamicParams = @{ }
 #endregion Global Variables
 

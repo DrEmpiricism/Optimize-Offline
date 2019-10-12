@@ -15,13 +15,13 @@ Function Get-OfflineHives
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$InstallMount\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$InstallMount\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$InstallMount\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$InstallMount\Windows\System32\config\default")) | ForEach-Object -Process { Start-Executable -Executable "$Env:SystemRoot\System32\reg.exe" -Arguments ('LOAD {0}' -f $($_)) }
+            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$InstallMount\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$InstallMount\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$InstallMount\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$InstallMount\Windows\System32\config\default")) | ForEach-Object -Process { RunExe -Executable $REG -Arguments ('LOAD {0}' -f $($_)) }
             Break
         }
         'Unload'
         {
             [System.GC]::Collect()
-            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object -Process { Start-Executable -Executable "$Env:SystemRoot\System32\reg.exe" -Arguments ('UNLOAD {0}' -f $($_)) }
+            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object -Process { RunExe -Executable $REG -Arguments ('UNLOAD {0}' -f $($_)) }
             Break
         }
         'Test'
