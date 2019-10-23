@@ -1,5 +1,11 @@
 # ChangeLog #
 
+## Build 3.2.7.5 (10-23-2019) ##
+
+- Updated multiple OfflineProcessing module functions.
+- Added the ability to access protected offline registry keys.
+- Updated the offline registry key values set during the integration of the Win32Calc designating as a System Application.
+
 ## Build 3.2.7.4 (10-12-2019) ##
 
 - Created a custom Win32Calc.wim that replaces the official cabinet files for builds 17663+ for the integration of the Win32 Calculator.
@@ -30,10 +36,3 @@
 - When optimizing the file structure of the ISO media, the '\sources\sxs' folder is now only removed if the .NET Framework 3 (NetFx3) has been integrated into the image.
 - Updated multiple functions in the Functions module.
 - Made some minor but necessary adjustments to the primary script.
-
-## Build 3.2.7.0 (09-03-2019) ##
-
-- Corrected an issue that affected users who only supplied a WIM file for optimizing. An error occurred when the variable assigned to the mount path of the boot image was being returned to the main script despite a boot image not even being present. This would have resulted in failed DaRT integration and image dismount.
-- Converted certain variables to dynamic parameters.
-- Improved string creation by incorporating the StringBuilder .NET class which significantly reduces script overhead and load.
-- Made some minor adjustments and optimizations to both the primary script and the functions module.
