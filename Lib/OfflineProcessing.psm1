@@ -1,14 +1,18 @@
 ﻿<#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.167
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 	 Created by:   	BenTheGreat
 	 Filename:     	OfflineProcessing.psm1
-	 Last updated:	10/12/2019
+	 Version:       1.0.0.6
+	 Last updated:	10/23/2019
 	===========================================================================
 #>
 
 #region Global Variables
-$ScriptRootPath = Split-Path -Path $PSScriptRoot -Parent
+$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.5'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
+$ModuleInfo = [PSCustomObject]@{ Version = '1.0.0.6'; Name = 'OfflineProcessing'; Path = Join-Path -Path $PSScriptRoot -ChildPath OfflineProcessing.psm1 }
+$ScriptRootPath = Split-Path -Path $ScriptInfo.Path -Parent
+$ModuleRootPath = Split-Path -Path $ModuleInfo.Path -Parent
 $DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
 $EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
@@ -35,8 +39,8 @@ $REGEDIT = Join-Path -Path $Env:SystemRoot -ChildPath regedit.exe
 $DynamicParams = @{ }
 #endregion Global Variables
 
-$Internal = @(Get-ChildItem -Path "$PSScriptRoot\Functions\Internal" -Filter *.ps1)
-$External = @(Get-ChildItem -Path "$PSScriptRoot\Functions\External" -Filter *.ps1)
+$Internal = @(Get-ChildItem -Path (Join-Path -Path $ModuleRootPath -ChildPath 'Functions\Internal') -Filter *.ps1)
+$External = @(Get-ChildItem -Path (Join-Path -Path $ModuleRootPath -ChildPath 'Functions\External') -Filter *.ps1)
 ForEach ($Function In @($Internal + $External)) { . $Function.FullName }
 
 New-Alias -Name Create -Value New-Container
@@ -51,6 +55,7 @@ New-Alias -Name RegImport -Value Import-RegistryTemplates
 New-Alias -Name Stop -Value Stop-Optimize
 New-Alias -Name Config -Value Import-Config
 New-Alias -Name UnmountAll -Value Dismount-Images
+New-Alias -Name TestReq -Value Test-Requirements
 
 Export-ModuleMember -Function $External.Basename -Variable * -Alias *
 # SIG # Begin signature block
