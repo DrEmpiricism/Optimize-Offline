@@ -1,6 +1,6 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1903 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1909 64-bit architectures.
 
 ## About Optimize-Offline ##
 
@@ -80,7 +80,7 @@ A short list of some of the optimizations include:
 
 When the -Additional switch it used, any content specified in its configuration file (Config.ini) will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
 
-Within the '\Content\Additional' directory are six folders: 'Drivers', 'SystemLogo', 'RegistryTemplates', 'Setup', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be copied because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
+Within the '\Content\Additional' directory are seven folders: 'Drivers', 'LockScreen', 'RegistryTemplates', 'Setup', 'SystemLogo', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be copied because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
 
 All content that gets copied to the image are copied to the locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
 
@@ -162,6 +162,7 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 - If maintaining fully updated OEM images, it's best to integrate offline updates into the image BEFORE running Optimize-Offline.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
 - Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
+- Read the ReadMe files in the 'Content\Additional' directories for important information regarding user-specific content.
 
 ## Calling Optimize-Offline ##
 
