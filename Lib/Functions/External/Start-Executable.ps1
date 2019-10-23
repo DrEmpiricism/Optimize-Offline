@@ -5,8 +5,7 @@ Function Start-Executable
     (
         [Parameter(Mandatory = $true)]
         [IO.FileInfo]$Executable,
-        [string[]]$Arguments,
-        [switch]$PassThru
+        [String[]]$Arguments
     )
 
     Begin
@@ -22,8 +21,8 @@ Function Start-Executable
     }
     Process
     {
-        [void]$Process.Start()
+        [Void]$Process.Start()
         $Process.WaitForExit()
-        If ($PassThru.IsPresent) { $Process.ExitCode }
+        $Process.ExitCode
     }
 }

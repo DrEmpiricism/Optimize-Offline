@@ -10,7 +10,7 @@ Function Get-WimFileInfo
         [Int]$Index = 1
     )
 
-    $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index -ErrorAction SilentlyContinue)
+    $WimImage = (Get-WindowsImage -ImagePath $WimFile.FullName -Index $Index)
     $WimObject = [PSCustomObject]@{
         Name             = $($WimImage.ImageName)
         Description      = $($WimImage.ImageDescription)

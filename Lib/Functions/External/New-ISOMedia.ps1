@@ -5,7 +5,7 @@ Function New-ISOMedia
     (
         [Parameter(Mandatory = $true)]
         [ValidateSet('Prompt', 'No-Prompt')]
-        [string]$BootType
+        [String]$BootType
     )
 
     Begin
@@ -53,7 +53,7 @@ public class ISOWriter
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
         $BootStream.LoadFromFile($BootFile.FullName)
         ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
-        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name) }).ChooseImageDefaultsForMediaType(13)
+        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $($InstallWimInfo.Name); WorkingDirectory = $WorkDirectory }).ChooseImageDefaultsForMediaType(13)
     }
     Process
     {
@@ -69,7 +69,8 @@ public class ISOWriter
         $WriteISO = $FSImage.CreateResultImage()
         $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
         [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-        [PSCustomObject]@{ Path = $ISOFile.FullName }
+        If ([Math]::Round((Get-ChildItem -Path $ISOFile.FullName -File).Length / 1GB).ToString() -gt 0) { [PSCustomObject]@{ Path = $ISOFile.FullName } }
+        Else { [PSCustomObject]@{ Path = $null } }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }

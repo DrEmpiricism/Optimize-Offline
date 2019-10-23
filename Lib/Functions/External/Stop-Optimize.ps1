@@ -4,7 +4,7 @@ Function Stop-Optimize
     Param ()
 
     $Host.UI.RawUI.WindowTitle = "Dismounting and discarding the image."
-    Log -Info "Dismounting and discarding the image."; Log -Failed
+    Log -Info "Dismounting and discarding the image." -Failed
     UnmountAll
     @($DISMLog, "$Env:SystemRoot\Logs\DISM\dism.log") | Purge
     $SaveDirectory = Create -Path "$ScriptRootPath\Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -PassThru

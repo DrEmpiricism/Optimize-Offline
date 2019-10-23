@@ -6,8 +6,8 @@ Function Remove-Container
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string[]]$Path,
-        [switch]$Force
+        [String[]]$Path,
+        [Switch]$Force
     )
 
     Begin

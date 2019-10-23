@@ -6,25 +6,27 @@ Function Set-KeyProperty
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string[]]$Path,
+        [String[]]$Path,
         [Parameter(Mandatory = $true)]
-        [string]$Name,
+        [String]$Name,
         [Parameter(Mandatory = $false)]
         $Value,
         [Parameter(Mandatory = $true)]
-        [ValidateSet('DWord', 'String', 'ExpandString', 'QWord', 'Binary')]
-        [string]$Type
+        [ValidateSet('DWord', 'String', 'ExpandString', 'MultiString', 'QWord', 'Binary')]
+        [String]$Type,
+        [Switch]$Force
     )
 
     Begin
     {
         Switch ($Type)
         {
-            'DWord' { [int32]$Value = $Value; Break }
-            'String' { [string]$Value = $Value; Break }
-            'ExpandString' { [string]$Value = $Value; Break }
-            'QWord' { [int64]$Value = $Value; Break }
-            'Binary' { [byte[]]$Value = $Value; Break }
+            'DWord' { [Int32]$Value = $Value; Break }
+            'String' { [String]$Value = $Value; Break }
+            'ExpandString' { [String]$Value = $Value; Break }
+            'MultiString' { [Array[]]$Value = $Value; Break }
+            'QWord' { [Int64]$Value = $Value; Break }
+            'Binary' { [Byte[]]$Value = $Value; Break }
         }
     }
     Process
@@ -33,11 +35,13 @@ Function Set-KeyProperty
         {
             If (Test-Path -LiteralPath $Item)
             {
+                If ($Force.IsPresent) { Grant-KeyAccess -SubKey $Item.Split(':')[1].TrimStart('\') }
                 Set-ItemProperty -LiteralPath $Item -Name $Name -Value $Value -Type $Type -Force -ErrorAction SilentlyContinue
             }
             Else
             {
-                [void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue | New-ItemProperty -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
+                If (Test-Path -LiteralPath (Split-Path -Path $Item) -PathType Container) { Grant-KeyAccess -SubKey (Split-Path -Path $Item).Split(':')[1].TrimStart('\') }
+                [Void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue | New-ItemProperty -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
             }
         }
     }

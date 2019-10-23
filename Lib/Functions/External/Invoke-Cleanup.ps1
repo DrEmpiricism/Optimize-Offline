@@ -4,11 +4,11 @@ Function Invoke-Cleanup
     Param
     (
         [Parameter(ParameterSetName = 'Install')]
-        [switch]$Install,
+        [Switch]$Install,
         [Parameter(ParameterSetName = 'Boot')]
-        [switch]$Boot,
+        [Switch]$Boot,
         [Parameter(ParameterSetName = 'Recovery')]
-        [switch]$Recovery
+        [Switch]$Recovery
     )
 
     $MountPath = Switch ($PSBoundParameters.Keys)
@@ -18,6 +18,6 @@ Function Invoke-Cleanup
         'Recovery' { $RecoveryMount }
     }
 
-    @("$MountPath\Windows\WinSxS\Temp\PendingDeletes\*", "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*", "$MountPath\Windows\WinSxS\ManifestCache\*.bin") | Purge -Force
+    @("$MountPath\Windows\WinSxS\Backup\*.*", "$MountPath\Windows\WinSxS\Temp\PendingDeletes\*", "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*", "$MountPath\Windows\WinSxS\ManifestCache\*.bin") | Purge -Force
     @("$MountPath\Windows\INF\*.log", "$MountPath\Windows\CbsTemp\*", "$MountPath\PerfLogs", ("$MountPath\" + '$Recycle.Bin')) | Purge
 }

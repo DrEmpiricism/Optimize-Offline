@@ -76,7 +76,7 @@ public class AccessToken
     }
     Process
     {
-        $Privilege | ForEach-Object { [AccessToken]::AdjustPrivilege($CurrentProcess.Handle, $_, !$Disable) }
+        $Privilege | ForEach-Object -Process { [AccessToken]::AdjustPrivilege($CurrentProcess.Handle, $_, !$Disable) }
     }
     End
     {

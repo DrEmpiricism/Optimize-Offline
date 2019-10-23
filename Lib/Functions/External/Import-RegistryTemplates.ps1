@@ -25,7 +25,7 @@ Function Import-RegistryTemplates
         ForEach ($Template In $Templates)
         {
             Write-Output ('Importing Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) >> $RegLog
-            $RET = RunExe -Executable $REGEDIT -Arguments ('/S "{0}"' -f $Template.FullName) -PassThru
+            $RET = RunExe $REGEDIT -Arguments ('/S "{0}"' -f $Template.FullName)
             If ($RET -ne 0) { Log -Error ('Failed to Import Registry Template: "{0}"' -f $($Template.BaseName.Replace('_Offline', $null))) }
             $Template.FullName | Purge
         }

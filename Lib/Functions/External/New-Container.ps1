@@ -7,8 +7,8 @@ Function New-Container
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string[]]$Path,
-        [switch]$PassThru
+        [String[]]$Path,
+        [Switch]$PassThru
     )
 
     Process
