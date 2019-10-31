@@ -1,5 +1,18 @@
 # ChangeLog #
 
+## Build 3.2.7.6 (10-31-2019) ##
+
+- The removal of Windows Capabilities has been moved to the new -Capabilities switch.
+- The -Packages switch now allows for the removal of Feature, OnDemand and Language Packages.
+- The Developer Mode Feature Package can now be integrated by using the new -DeveloperMode switch. Before integrating Developer Mode, [read about it](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)!
+- Updated process logging and corrected an issue where an error would return when formatting an error record.
+- Updated the package summary log creation process.
+- Updated and improved the integration of a default LockScreen.
+- Optimized the clean-up of any active mount points that are detected prior to the script initializing.
+- When disabling Optional Features, their files are now also removed. This further reduces the size of the final optimized image.
+- Updated the Data Deduplication firewall rules.
+- Optimized and improved a lot of process code in the primary script and the module functions.
+
 ## Build 3.2.7.5 (10-23-2019) ##
 
 - Updated multiple OfflineProcessing module functions.
@@ -29,10 +42,3 @@
 - Added a Refresh-Explorer.ps1, RebootToRecovery_MyPC.reg, SetupComplete.cmd and OOBE.cmd in the 'Additional\Setup' folder.
 - Updated the 'Additional Tweaks.reg' file in the 'Additional\RegistryTemplates' folder.
 - Made some minor updates and adjustments to the primary script.
-
-## Build 3.2.7.1 (09-08-2019) ##
-
-- Windows Photo Viewer is now only restored if the Windows Photos App is removed.
-- When optimizing the file structure of the ISO media, the '\sources\sxs' folder is now only removed if the .NET Framework 3 (NetFx3) has been integrated into the image.
-- Updated multiple functions in the Functions module.
-- Made some minor but necessary adjustments to the primary script.
