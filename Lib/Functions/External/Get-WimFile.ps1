@@ -1,4 +1,4 @@
-Function Get-WimFileInfo
+Function Get-WimFile
 {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
