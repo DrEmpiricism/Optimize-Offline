@@ -57,7 +57,13 @@ The following System Applications are safe to remove:
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
-**Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its effect on a live system.**
+**Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its impact on a live system.**
+
+### About Windows Capabilities and Packages ###
+
+The -Capabilities switch allows for the removal of Features on Demand (FOD) installed in the image and the -Packages switch allows for the removal of Windows Cabinet File Packages.
+
+Like with all removals, care must be taken when using either of these switches, primary the -Packages switch. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It's recommended to read the  [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
 
 ### About Registry Optimizations ###
 
@@ -116,13 +122,19 @@ Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debu
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
-For Windows builds 17763, the OEM cabinet packages extracted from Windows 10 Enterprise LTSC 2019 are applied to the image. For higher Windows builds, a custom Win32Calc.wim that incorporates the latest Win32Calc components and strict security descriptors is expanded into the image. This allows for proper system management and user control. Optimize-Offline then adds the Win32Calc link to the appropriate .ini system file (this is a hidden system file located in every directory that has a list of all the linked programs within said directory).
-
 ### About Data Deduplication ###
 
 > Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
 
-With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from the [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
+With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
+
+### About Developer Mode ###
+
+Developer Mode is a Windows Setting that, when enabled, allows the end-user to test any unsigned UWP app, use the Ubuntu Bash shell environment and offers optimizations for Windows Explorer, Remote Desktop and PowerShell. It is also a requirement when writing certain code in Visual Studio.
+
+Enabling Developer Mode also installs Device Portal and Device Discovery, though they must be manually toggled on in the Settings in order for them to be enabled. Enabling Device Portal will reconfigure the default firewall rules to allow incoming connections, as Device Portal is a feature allowing for the system to act as a local web server for other devices on the local network. This is used for developing, deploying and debugging apps. Enabling Device Discovery allows devices to pair with Device Portal.
+
+Developer Mode should ONLY be enabled on systems that require settings it provides. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)
 
 ### Integrating Windows Store ###
 
@@ -170,5 +182,5 @@ The easiest way to call Optimize-Offline is by using the provided [Optimize-Offl
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO "No-Prompt"
-- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Packages -Features -WindowsStore -MicrosoftEdge -Additional
+- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO "No-Prompt"
+- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Capabilities -Packages -Features -DeveloperMode -WindowsStore -MicrosoftEdge -Additional
