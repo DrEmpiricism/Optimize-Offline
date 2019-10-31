@@ -3,25 +3,26 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 	 Created by:   	BenTheGreat
 	 Filename:     	OfflineProcessing.psm1
-	 Version:       1.0.0.6
-	 Last updated:	10/23/2019
+	 Version:       1.0.0.7
+	 Last updated:	10/31/2019
 	===========================================================================
 #>
 
-#region Global Variables
-$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.5'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
-$ModuleInfo = [PSCustomObject]@{ Version = '1.0.0.6'; Name = 'OfflineProcessing'; Path = Join-Path -Path $PSScriptRoot -ChildPath OfflineProcessing.psm1 }
+#region Variables
+$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.6'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
+$ModuleInfo = [PSCustomObject]@{ Version = '1.0.0.7'; Name = 'OfflineProcessing'; Path = Join-Path -Path $PSScriptRoot -ChildPath OfflineProcessing.psm1 }
 $ScriptRootPath = Split-Path -Path $ScriptInfo.Path -Parent
 $ModuleRootPath = Split-Path -Path $ModuleInfo.Path -Parent
 $DaRTPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DaRT'
 $DedupPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Deduplication'
+$DevModePath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\DeveloperMode'
 $EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEdge'
 $StoreAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\WindowsStore'
 $Win32CalcPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Win32Calc'
 $AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional'
 $AppxWhitelistPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.xml'
 $AppAssocPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\CustomAppAssociations.xml'
-$TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OptimizeOfflineTemp_$(Get-Random)"
+$TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OfflineTemp_$(Get-Random)"
 $ConfigFilePath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
 $LogDirectory = Join-Path -Path $TempDirectory -ChildPath LogOffline
 $WorkDirectory = Join-Path -Path $TempDirectory -ChildPath WorkOffline
@@ -31,13 +32,14 @@ $InstallMount = Join-Path -Path $TempDirectory -ChildPath InstallMountOffline
 $BootMount = Join-Path -Path $TempDirectory -ChildPath BootMountOffline
 $RecoveryMount = Join-Path -Path $TempDirectory -ChildPath RecoveryMountOffline
 $ScriptLog = Join-Path -Path $LogDirectory -ChildPath Optimize-Offline.log
-$PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageList.log
+$PackageLog = Join-Path -Path $LogDirectory -ChildPath PackageSummary.log
 $DISMLog = Join-Path -Path $LogDirectory -ChildPath DISM.log
 $DISM = Join-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe
 $REG = Join-Path -Path $Env:SystemRoot\System32 -ChildPath reg.exe
 $REGEDIT = Join-Path -Path $Env:SystemRoot -ChildPath regedit.exe
-$DynamicParams = @{ }
-#endregion Global Variables
+$EXPAND = Join-Path -Path $Env:SystemRoot\System32 -ChildPath expand.exe
+$DynamicParams = [Hashtable]@{ }
+#endregion Variables
 
 $Internal = @(Get-ChildItem -Path (Join-Path -Path $ModuleRootPath -ChildPath 'Functions\Internal') -Filter *.ps1)
 $External = @(Get-ChildItem -Path (Join-Path -Path $ModuleRootPath -ChildPath 'Functions\External') -Filter *.ps1)
@@ -49,13 +51,14 @@ New-Alias -Name RegKey -Value Set-KeyProperty
 New-Alias -Name Cleanup -Value Invoke-Cleanup
 New-Alias -Name RunExe -Value Start-Executable
 New-Alias -Name Log -Value Write-Log
-New-Alias -Name WimData -Value Get-WimFileInfo
+New-Alias -Name WimData -Value Get-WimFile
 New-Alias -Name RegHives -Value Get-OfflineHives
 New-Alias -Name RegImport -Value Import-RegistryTemplates
 New-Alias -Name Stop -Value Stop-Optimize
 New-Alias -Name Config -Value Import-Config
 New-Alias -Name UnmountAll -Value Dismount-Images
 New-Alias -Name TestReq -Value Test-Requirements
+New-Alias -Name SetLock -Value Set-LockScreen
 
 Export-ModuleMember -Function $External.Basename -Variable * -Alias *
 # SIG # Begin signature block
