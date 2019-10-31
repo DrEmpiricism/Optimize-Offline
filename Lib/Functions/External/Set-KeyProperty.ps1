@@ -19,6 +19,7 @@ Function Set-KeyProperty
 
     Begin
     {
+        Push-Location -Path "HKLM:"
         Switch ($Type)
         {
             'DWord' { [Int32]$Value = $Value; Break }
@@ -40,9 +41,13 @@ Function Set-KeyProperty
             }
             Else
             {
-                If (Test-Path -LiteralPath (Split-Path -Path $Item) -PathType Container) { Grant-KeyAccess -SubKey (Split-Path -Path $Item).Split(':')[1].TrimStart('\') }
+                If (Test-Path -LiteralPath (Split-Path -LiteralPath $Item) -PathType Container) { Grant-KeyAccess -SubKey (Split-Path -LiteralPath $Item).Split(':')[1].TrimStart('\') }
                 [Void](New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue | New-ItemProperty -Name $Name -Value $Value -PropertyType $Type -Force -ErrorAction SilentlyContinue)
             }
         }
+    }
+    End
+    {
+        Pop-Location
     }
 }

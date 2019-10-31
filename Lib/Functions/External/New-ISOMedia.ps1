@@ -67,10 +67,9 @@ public class ISOWriter
     {
         $FSImage.BootImageOptions = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
-        $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallWimInfo.Edition).Replace(' ', '') + "_$($InstallWimInfo.Build).iso") -ItemType File -Force
+        $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force
         [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-        If ([Math]::Round((Get-ChildItem -Path $ISOFile.FullName -File).Length / 1GB).ToString() -gt 0) { [PSCustomObject]@{ Path = $ISOFile.FullName } }
-        Else { [PSCustomObject]@{ Path = $null } }
+        If ([Math]::Round((Get-ChildItem -Path $ISOFile.FullName -File).Length / 1GB).ToString() -gt 0) { [PSCustomObject]@{ Path = $ISOFile.FullName } } Else { [PSCustomObject]@{ Path = $null } }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
         While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }

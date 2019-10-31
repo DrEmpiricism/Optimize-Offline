@@ -5,9 +5,8 @@ Function Import-RegistryTemplates
 
     Begin
     {
-        $RegistryTemplates = Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates
-        $RegLog = Join-Path -Path $LogDirectory -ChildPath Registry-Optimizations.log
-        Get-ChildItem -Path $RegistryTemplates -Filter *.reg -Recurse | ForEach-Object -Process {
+        If (Test-Path -Path "$AdditionalPath\RegistryTemplates\*_Offline.reg") { Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *_Offline.reg -Recurse | Purge }
+        Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *.reg -Recurse | ForEach-Object -Process {
             $REGContent = Get-Content -Path $($_.FullName)
             $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
             $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM\ControlSet001'
@@ -17,7 +16,8 @@ Function Import-RegistryTemplates
             $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
             $REGContent | Set-Content -Path "$($_.FullName.Replace('.reg', '_Offline.reg'))" -Encoding Unicode -Force
         }
-        $Templates = Get-ChildItem -Path $RegistryTemplates -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        $Templates = Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *_Offline.reg -Recurse | Select-Object -Property Name, BaseName, Extension, Directory, FullName
+        $RegLog = Join-Path -Path $LogDirectory -ChildPath Registry-Optimizations.log
         RegHives -Load
     }
     Process

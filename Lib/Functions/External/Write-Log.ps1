@@ -6,12 +6,10 @@ Function Write-Log
 		[Parameter(ParameterSetName = 'Info')]
 		[String]$Info,
 		[Parameter(ParameterSetName = 'Error')]
-		[Parameter(ParameterSetName = 'Failed')]
 		[String]$Error,
 		[Parameter(ParameterSetName = 'Error',
-				   ValueFromPipeline = $true,
-				   ValueFromPipelineByPropertyName = $true)]
-		[Parameter(ParameterSetName = 'Failed')]
+			ValueFromPipeline = $true,
+			ValueFromPipelineByPropertyName = $true)]
 		[Management.Automation.ErrorRecord]$ErrorRecord,
 		[Parameter(ParameterSetName = 'Info')]
 		[Parameter(ParameterSetName = 'Finalized')]
@@ -24,35 +22,38 @@ Function Write-Log
 
 	Begin
 	{
+		[IO.FileInfo]$ScriptLog = $ScriptLog
 		$Timestamp = (Get-Date -Format 's')
-		$LogMutex = New-Object System.Threading.Mutex($false, "SyncLogMutex")
-		[Void]$LogMutex.WaitOne()
+		$LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
 	}
 	Process
 	{
-		If (!(Test-Path -Path $ScriptLog))
+		If (!$ScriptLog.Exists)
 		{
+			$ScriptLog = New-Item -Path $ScriptLog -ItemType File -Force
 			@"
 ***************************************************************************************************
-
-$($ScriptInfo.Name) v$($ScriptInfo.Version) starting on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
-
+Running Script : $($ScriptInfo.Name) $($ScriptInfo.Version)
+Optimize Start : $(Get-Date -UFormat "%m/%d/%Y %r")
+Identity Name : $([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+Computer Name : $Env:COMPUTERNAME
 ***************************************************************************************************
-Optimizing image: $($InstallWimInfo.Name)
-***************************************************************************************************
 
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8
+"@ | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Force
 		}
 		Switch ($PSBoundParameters.Keys)
 		{
 			'Info'
 			{
-				"$Timestamp [INFO]: $Info" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+				[Void]$LogMutex.WaitOne()
+				"$Timestamp [INFO]: $Info" | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Append
 				Write-Host $Info -ForegroundColor Cyan
+				[Void]$LogMutex.ReleaseMutex()
 			}
 			'Error'
 			{
-				"$Timestamp [ERROR]: $Error" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+				[Void]$LogMutex.WaitOne()
+				"$Timestamp [ERROR]: $Error" | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Append
 				Write-Host $Error -ForegroundColor Red
 				If ($PSBoundParameters.ContainsKey('ErrorRecord'))
 				{
@@ -61,32 +62,29 @@ Optimizing image: $($InstallWimInfo.Name)
 					$ErrorRecord.InvocationInfo.ScriptName,
 					$ErrorRecord.InvocationInfo.ScriptLineNumber,
 					$ErrorRecord.InvocationInfo.OffsetInLine
-					"$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+					"$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Append
 					Write-Host $ExceptionMessage -ForegroundColor Red
 				}
+				[Void]$LogMutex.ReleaseMutex()
 			}
 			'Finalized'
 			{
 				@"
 
 ***************************************************************************************************
-Optimizations finalized on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+Optimizations finalized : $(Get-Date -UFormat "%m/%d/%Y %r")
 ***************************************************************************************************
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+"@ | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Append
 			}
 			'Failed'
 			{
 				@"
 
 ***************************************************************************************************
-Optimizations failed on [$(Get-Date -UFormat "%m/%d/%Y at %r")]
+Optimizations failed : $(Get-Date -UFormat "%m/%d/%Y %r")
 ***************************************************************************************************
-"@ | Out-File -FilePath $ScriptLog -Encoding UTF8 -Append
+"@ | Out-File -FilePath $ScriptLog.FullName -Encoding UTF8 -Append
 			}
 		}
-	}
-	End
-	{
-		[Void]$LogMutex.ReleaseMutex()
 	}
 }
