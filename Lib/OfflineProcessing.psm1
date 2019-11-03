@@ -8,7 +8,7 @@
 #>
 
 #region Variables
-$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.7'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
+$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.6'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
 $ModuleInfo = [PSCustomObject]@{ Name = 'OfflineProcessing'; Path = Join-Path -Path $PSScriptRoot -ChildPath OfflineProcessing.psm1 }
 $ScriptRootPath = Split-Path -Path $ScriptInfo.Path -Parent
 $ModuleRootPath = Split-Path -Path $ModuleInfo.Path -Parent
