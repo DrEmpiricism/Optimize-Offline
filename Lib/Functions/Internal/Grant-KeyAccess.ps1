@@ -27,11 +27,13 @@ Function Grant-KeyAccess
         $ACL.SetAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule($Admin, $Rights, $Inheritance, $Propagation, $Type)))
         $Key.SetAccessControl($ACL)
         $Key.Close()
+        $Key.Dispose()
+        [GC]::Collect()
         $Key = $SubKey.Insert(0, 'HKLM:\')
-        $ACL = Get-Acl -Path $Key
+        $ACL = Get-Acl -LiteralPath $Key
         $TrustedInstaller = [System.Security.Principal.NTAccount]'NT SERVICE\TrustedInstaller'
         $ACL.SetOwner($TrustedInstaller)
-        $ACL | Set-Acl -Path $Key
+        $ACL | Set-Acl -LiteralPath $Key
     }
     End
     {

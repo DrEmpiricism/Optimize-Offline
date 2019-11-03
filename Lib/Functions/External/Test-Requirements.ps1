@@ -13,11 +13,6 @@ Function Test-Requirements
         Write-Warning "$($ScriptInfo.Name) requires a Windows 10 or Windows Server 2016 environment."; Break
     }
 
-    If ((Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty OSArchitecture) -ne '64-bit')
-    {
-        Write-Warning "$($ScriptInfo.Name) requires a 64-bit environment."; Break
-    }
-
     If (Test-Path -Path HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT)
     {
         Write-Warning "$($ScriptInfo.Name) cannot be run in a Preinstallation environment."; Break
