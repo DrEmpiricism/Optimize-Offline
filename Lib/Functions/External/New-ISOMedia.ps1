@@ -17,7 +17,7 @@ Function New-ISOMedia
         }
         If (!('ISOWriter' -as [Type]))
         {
-            Add-Type -CompilerParameters $CompilerParams -TypeDefinition @'
+            Add-Type @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
@@ -42,7 +42,7 @@ public class ISOWriter
         }
     }
 }
-'@
+'@ -CompilerParameters $CompilerParams
         }
         Switch ($BootType)
         {
@@ -70,11 +70,11 @@ public class ISOWriter
         $ISOFile = New-Item -Path $WorkDirectory -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force
         [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
         If ([Math]::Round((Get-ChildItem -Path $ISOFile.FullName -File).Length / 1GB).ToString() -gt 0) { [PSCustomObject]@{ Path = $ISOFile.FullName } } Else { [PSCustomObject]@{ Path = $null } }
-        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
-        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
-        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }
-        While ([System.Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }
-        [System.GC]::Collect()
-        [System.GC]::WaitForPendingFinalizers()
+        While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }
+        While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
+        While ([Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }
+        While ([Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
 }

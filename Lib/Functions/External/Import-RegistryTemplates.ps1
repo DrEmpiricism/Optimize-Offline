@@ -5,7 +5,7 @@ Function Import-RegistryTemplates
 
     Begin
     {
-        If (Test-Path -Path "$AdditionalPath\RegistryTemplates\*_Offline.reg") { Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *_Offline.reg -Recurse | Purge }
+        Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *_Offline.reg -Recurse | Purge
         Get-ChildItem -Path (Join-Path -Path $AdditionalPath -ChildPath RegistryTemplates) -Filter *.reg -Recurse | ForEach-Object -Process {
             $REGContent = Get-Content -Path $($_.FullName)
             $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'

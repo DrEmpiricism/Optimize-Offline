@@ -3,12 +3,12 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 	 Created by:   	BenTheGreat
 	 Filename:     	OfflineProcessing.psm1
-	 Last updated:	11/03/2019
+	 Last updated:	11/10/2019
 	===========================================================================
 #>
 
 #region Variables
-$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.6'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
+$ScriptInfo = [PSCustomObject]@{ Version = '3.2.7.7'; Name = 'Optimize-Offline'; Path = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath Optimize-Offline.ps1 }
 $ModuleInfo = [PSCustomObject]@{ Name = 'OfflineProcessing'; Path = Join-Path -Path $PSScriptRoot -ChildPath OfflineProcessing.psm1 }
 $ScriptRootPath = Split-Path -Path $ScriptInfo.Path -Parent
 $ModuleRootPath = Split-Path -Path $ModuleInfo.Path -Parent

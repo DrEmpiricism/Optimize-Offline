@@ -21,7 +21,7 @@ Function Set-LockScreen
     }
     Finally
     {
-        If ($FileStream) { $FileStream.Close() }
+        If ($FileStream) { $FileStream.Close(); $FileStream.Dispose() }
         If ($Bitmap) { $Bitmap.Dispose() }
     }
     If ((Test-Path -Path "$InstallMount\Windows\Web\Screen\img100.jpg") -and (Test-Path -Path "$InstallMount\Windows\Web\Screen\img103.png"))
