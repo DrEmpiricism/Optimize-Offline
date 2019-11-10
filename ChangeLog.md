@@ -2,7 +2,7 @@
 
 ## Build 3.2.7.7 (11-10-2019) ##
 
-- Due to the vulnerabililties found in PowerShell 2.0, and the fact it has been depreciated for quite some time, the 'MicrosoftWindowsPowerShellV2Root' Optional Feature is now automatically disabled during the optimization process.
+- Due to the vulnerabilities found in PowerShell 2.0, and the fact it has been depreciated for quite some time, the 'MicrosoftWindowsPowerShellV2Root' Optional Feature is now automatically disabled during the optimization process.
 - The primary script and module functions have been updated to use class-defined lists for string and array collections.
 - Updated registry values set in the offline registry hives.
 - The -DaRT switch has been changed into a parameter and will accept the values 'Setup' and 'Recovery'. This allows the end-user to control the environments Microsoft DaRT is integrated into. It should be noted that integrating Microsoft DaRT into the Windows Recovery environment is not recommended as it will allow anyone with access to the system to reboot into the Recovery Environment and access the Microsoft DaRT toolset.
