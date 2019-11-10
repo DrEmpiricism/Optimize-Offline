@@ -15,8 +15,8 @@
 		Removes Appx Provisioned Packages and accepts one of the three values that determines the method in which they are removed:
 
 		Select = Populates and outputs a Gridview list of all Appx Provisioned Packages for selective removal.
-		All = Automatically removes all Appx Provisioned Packages found in the image.
 		Whitelist = Automatically removes all Appx Provisioned Packages NOT found in the AppxWhiteList.xml file.
+		All = Automatically removes all Appx Provisioned Packages found in the image.
 
 	.PARAMETER SystemApps
 		Populates and outputs a Gridview list of System Applications for selective removal.
@@ -55,7 +55,7 @@
 		Integrates the Windows Server Data Deduplication Feature into the image.
 
 	.PARAMETER DaRT
-		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.
+		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and/or Windows Recovery.
 
 	.PARAMETER Registry
 		Integrates optimized registry values into the image.
@@ -72,13 +72,13 @@
 		No-Prompt = The efisys_noprompt.bin binary bootcode is written to the ISO which does not require a key press when booted and will begin Windows Setup automatically.
 
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT -Registry -ISO "No-Prompt"
+		.\Optimize-Offline.ps1 -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
 
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -SourcePath "D:\Windows 10 ISOs\Win10ProForWorkstations_17663.iso" -WindowsApps "All" -SystemApps -Packages -Features -Additional -ISO "Prompt"
+		.\Optimize-Offline.ps1 -SourcePath "D:\Windows 10 ISOs\Win10ProForWorkstations_17663.iso" -WindowsApps "All" -SystemApps -Packages -Features -DaRT "Setup", "Recovery" -Additional -ISO "Prompt"
 
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -Additional
+		.\Optimize-Offline.ps1 -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional
 
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win10 LTSC 2019\install.wim" -WindowsStore -MicrosoftEdge
@@ -88,8 +88,8 @@
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 		Created by:     BenTheGreat
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.7.6
-		Last updated:	11/03/2019
+		Version:        3.2.7.7
+		Last updated:	11/10/2019
 		===========================================================================
 
 	.INPUTS
@@ -111,7 +111,7 @@ Param
 	[IO.FileInfo]$SourcePath,
 	[Parameter(Mandatory = $false,
 		HelpMessage = 'Allows for either the selective or automated removal of Appx Provisioned Packages.')]
-	[ValidateSet('Select', 'All', 'Whitelist')]
+	[ValidateSet('Select', 'Whitelist', 'All')]
 	[String]$WindowsApps,
 	[Parameter(HelpMessage = 'Populates and outputs a Gridview list of System Applications for selective removal.')]
 	[Switch]$SystemApps,
@@ -131,8 +131,10 @@ Param
 	[Switch]$Win32Calc,
 	[Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication Feature into the image.')]
 	[Switch]$Dedup,
-	[Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.')]
-	[Switch]$DaRT,
+	[Parameter(Mandatory = $false,
+		HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and/or Windows Recovery.')]
+	[ValidateSet('Setup', 'Recovery')]
+	[String[]]$DaRT,
 	[Parameter(HelpMessage = 'Integrates optimized registry values into the image.')]
 	[Switch]$Registry,
 	[Parameter(HelpMessage = 'Integrates user specific content in the "Content/Additional" directory based on the parameters set in the Config.ini.')]
@@ -210,6 +212,7 @@ If ($SourcePath.Extension -eq '.ISO')
 			$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
 			Copy-Item -Path $Item.FullName -Destination $ISOExport
 		}
+		$DynamicParams.Add('ISOMedia', $true)
 		Get-ChildItem -Path "$($ISOMedia.FullName)\sources" -Include install.wim, boot.wim -Recurse | Move-Item -Destination $ImageDirectory -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
 		$InstallWim = Get-ChildItem -Path $ImageDirectory -Filter install.wim | Select-Object -ExpandProperty FullName
 		$BootWim = Get-ChildItem -Path $ImageDirectory -Filter boot.wim | Select-Object -ExpandProperty FullName
@@ -276,7 +279,7 @@ If ($InstallInfo.Build -ge '17134' -and $InstallInfo.Build -le '18362')
 	If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
 	If ($InstallInfo.Language -ne 'en-US' -and $Win32Calc.IsPresent) { $Win32Calc = $false }
 	If ($InstallInfo.Build -gt '17134' -and $InstallInfo.Language -ne 'en-US' -and $Dedup.IsPresent) { $Dedup = $false }
-	If ($InstallInfo.Language -ne 'en-US' -and $DaRT.IsPresent) { $DaRT = $false }
+	If ($InstallInfo.Language -ne 'en-US' -and $DaRT) { Remove-Variable DaRT }
 	If ($InstallInfo.Name -like "*LTSC*")
 	{
 		$DynamicParams.Add('LTSC', $true)
@@ -388,7 +391,7 @@ Else
 If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt 0)
 {
 	$Host.UI.RawUI.WindowTitle = "Removing Appx Provisioned Packages."
-	$RemovedAppxPackages = [Collections.ArrayList]@()
+	$RemovedAppxPackages = [Collections.Generic.List[Object]]::New()
 	Switch ($PSBoundParameters.WindowsApps)
 	{
 		'Select'
@@ -408,7 +411,38 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 						}
 						Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
 						[Void](Remove-AppxProvisionedPackage @AppxParams)
-						[Void]$RemovedAppxPackages.Add($_.DisplayName)
+						$RemovedAppxPackages.Add($_.DisplayName)
+					}
+					$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
+				}
+				Catch
+				{
+					Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
+					Stop; Break
+				}
+			}
+		}
+		'Whitelist'
+		{
+			If (Test-Path -Path $AppxWhitelistPath)
+			{
+				Try
+				{
+					[XML]$Whitelist = Get-Content -Path $AppxWhitelistPath
+					Get-AppxProvisionedPackage -Path $InstallMount | ForEach-Object -Process {
+						If ($_.DisplayName -notin $Whitelist.Appx.DisplayName)
+						{
+							$AppxParams = @{
+								Path             = $InstallMount
+								PackageName      = $($_.PackageName)
+								ScratchDirectory = $ScratchDirectory
+								LogPath          = $DISMLog
+								ErrorAction      = 'Stop'
+							}
+							Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
+							[Void](Remove-AppxProvisionedPackage @AppxParams)
+							$RemovedAppxPackages.Add($_.DisplayName)
+						}
 					}
 					$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
 				}
@@ -433,7 +467,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 					}
 					Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
 					[Void](Remove-AppxProvisionedPackage @AppxParams)
-					[Void]$RemovedAppxPackages.Add($_.DisplayName)
+					$RemovedAppxPackages.Add($_.DisplayName)
 				}
 				$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
 			}
@@ -441,37 +475,6 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 			{
 				Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
 				Stop; Break
-			}
-		}
-		'Whitelist'
-		{
-			If (Test-Path -Path $AppxWhitelistPath)
-			{
-				Try
-				{
-					[XML]$Whitelist = Get-Content -Path $AppxWhitelistPath
-					Get-AppxProvisionedPackage -Path $InstallMount | ForEach-Object -Process {
-						If ($_.DisplayName -notin $Whitelist.Appx.DisplayName)
-						{
-							$AppxParams = @{
-								Path             = $InstallMount
-								PackageName      = $($_.PackageName)
-								ScratchDirectory = $ScratchDirectory
-								LogPath          = $DISMLog
-								ErrorAction      = 'Stop'
-							}
-							Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
-							[Void](Remove-AppxProvisionedPackage @AppxParams)
-							[Void]$RemovedAppxPackages.Add($_.DisplayName)
-						}
-					}
-					$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
-				}
-				Catch
-				{
-					Log -Error "Failed to Remove Appx Provisioned Packages." -ErrorRecord $Error[0]
-					Stop; Break
-				}
 			}
 		}
 	}
@@ -504,27 +507,30 @@ If ($SystemApps.IsPresent)
 	$InboxAppsPackages = Get-ChildItem -Path $InboxAppsKey -Name | Select-Object -Property @{ Label = 'DisplayName'; Expression = { ($_.Split('_')[0]) } }, @{ Label = 'PackageName'; Expression = { ($_) } } | Sort-Object -Property DisplayName | Out-GridView -Title "Remove System Applications." -PassThru
 	If ($InboxAppsPackages)
 	{
-		$RemovedSystemApps = [Collections.ArrayList]@()
+		$RemovedSystemApps = [Collections.Generic.List[Object]]::New()
 		Clear-Host
 		Try
 		{
 			$InboxAppsPackages | ForEach-Object -Process {
 				Log -Info "Removing System Application: $($_.DisplayName)"
 				$PackageKey = (Join-Path -Path $InboxAppsKey -ChildPath $($_.PackageName)) -replace 'HKLM:', 'HKLM'
-				$RET = RunExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey)
+				$RET = RunExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
 				If ($RET -eq 1) { Log -Error "Failed to Remove System Application: $($_.DisplayName)"; Return }
-				[Void]$RemovedSystemApps.Add($_.DisplayName)
+				$RemovedSystemApps.Add($_.DisplayName)
 				Start-Sleep 2
 			}
-			$DynamicParams.Add('SystemApps', $true)
+			$DynamicParams.Add('SystemApps', $true); Clear-Host
 		}
 		Catch
 		{
 			Log -Error "Failed to Remove System Applications." -ErrorRecord $Error[0]
 			Stop; Break
 		}
+		Finally
+		{
+			RegHives -Unload
+		}
 	}
-	RegHives -Unload; Clear-Host
 }
 
 If ($Capabilities.IsPresent)
@@ -576,7 +582,7 @@ If ($Packages.IsPresent)
 					ErrorAction      = 'Stop'
 				}
 				Log -Info ('Removing Windows Package: {0}' -f $($_.PackageName.Replace('Package', $null).Split('~')[0]).TrimEnd('-'))
-				[void](Remove-WindowsPackage @ParamsPackage)
+				[Void](Remove-WindowsPackage @ParamsPackage)
 			}
 			$DynamicParams.Add('Packages', $true); Clear-Host
 		}
@@ -597,7 +603,7 @@ If ($RemovedAppxPackages -or $RemovedSystemApps)
 
 If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
 {
-	$Host.UI.RawUI.WindowTitle = "Removing Windows Defender Remnants."
+	$Host.UI.RawUI.WindowTitle = "Disabling Windows Defender Services, Drivers and SmartScreen Integration."
 	Log -Info "Disabling Windows Defender Services, Drivers and SmartScreen Integration."
 	RegHives -Load
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
@@ -636,25 +642,18 @@ If ($RemovedSystemApps -contains 'Microsoft.Windows.SecHealthUI')
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControl" -Value "Anywhere" -Type String
 	}
 	RegHives -Unload
-	[Void]$SB.Append('windowsdefender;')
 	If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions | Where-Object -Property State -EQ Enabled)
 	{
-		Try
-		{
-			Log -Info "Disabling Optional Feature: Windows-Defender-Default-Definitions"
-			[Void](Disable-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions -Remove -NoRestart -ScratchDirectory $ScratchDirectory -LogPath $DISMLog -ErrorAction Stop)
-		}
-		Catch
-		{
-			Log -Error "Failed to Disable Windows Feature: Windows-Defender-Default-Definitions" -ErrorRecord $Error[0]
-			Stop; Break
-		}
+		$Host.UI.RawUI.WindowTitle = "Disabling Optional Feature: Windows-Defender-Default-Definitions"
+		Log -Info "Disabling Optional Feature: Windows-Defender-Default-Definitions"
+		[Void](Disable-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions -Remove -NoRestart -ScratchDirectory $ScratchDirectory -LogPath $DISMLog -ErrorAction SilentlyContinue)
 	}
+	[Void]$SB.Append('windowsdefender;')
 }
 
 If ($RemovedAppxPackages -like "*Xbox*" -or $RemovedSystemApps -contains 'Microsoft.XboxGameCallableUI')
 {
-	$Host.UI.RawUI.WindowTitle = "Removing Xbox Remnants."
+	$Host.UI.RawUI.WindowTitle = "Disabling Xbox Services and Drivers."
 	Log -Info "Disabling Xbox Services and Drivers."
 	RegHives -Load
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
@@ -682,18 +681,13 @@ If ($SB.Length -gt 5)
 	RegHives -Unload
 }
 
-If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName SMB1* | Where-Object -Property State -EQ Enabled)
+ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 {
-	Try
+	If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature | Where-Object -Property State -EQ Enabled)
 	{
-		$Host.UI.RawUI.WindowTitle = "Disabling Optional Feature: SMBv1 Protocol"
-		Log -Info "Disabling Optional Feature: SMBv1 Protocol"
-		[Void](Get-WindowsOptionalFeature -Path $InstallMount | Where-Object FeatureName -Like SMB1* | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchDirectory -LogPath $DISMLog -ErrorAction Stop)
-	}
-	Catch
-	{
-		Log -Error "Failed to Disable the SMBv1 Protocol Windows Features." -ErrorRecord $Error[0]
-		Stop; Break
+		$Host.UI.RawUI.WindowTitle = ('Disabling Optional Feature: {0}' -f $Feature)
+		Log -Info ('Disabling Optional Feature: {0}' -f $Feature)
+		[Void](Disable-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -Remove -NoRestart -ScratchDirectory $ScratchDirectory -LogPath $DISMLog -ErrorAction SilentlyContinue)
 	}
 }
 
@@ -729,7 +723,7 @@ If ($Features.IsPresent)
 	}
 	Clear-Host
 	$Host.UI.RawUI.WindowTitle = "Enabling Optional Features."
-	$EnableFeatures = Get-WindowsOptionalFeature -Path $InstallMount | Where-Object { $_.FeatureName -notlike "*SMB1*" -and $_.FeatureName -ne "Windows-Defender-Default-Definitions" -and $_.State -eq "Disabled" } | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Out-GridView -Title "Enable Optional Features." -PassThru
+	$EnableFeatures = Get-WindowsOptionalFeature -Path $InstallMount | Where-Object { $_.FeatureName -notlike "*SMB1*" -and $_.FeatureName -ne "Windows-Defender-Default-Definitions" -and $_.FeatureName -ne "MicrosoftWindowsPowerShellV2Root" -and $_.State -eq "Disabled" } | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Out-GridView -Title "Enable Optional Features." -PassThru
 	If ($EnableFeatures)
 	{
 		Try
@@ -1082,16 +1076,16 @@ If ($Dedup.IsPresent -and (Test-Path -Path $DedupPath -Filter Microsoft-Windows-
 	}
 }
 
-If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
+If ($DaRT -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 {
-	$Host.UI.RawUI.WindowTitle = "Integrating Microsoft DaRT 10."
 	If ($InstallInfo.Build -eq '17134') { $CodeName = 'RS4' }
 	ElseIf ($InstallInfo.Build -eq '17763') { $CodeName = 'RS5' }
 	ElseIf ($InstallInfo.Build -eq '18362') { $CodeName = 'RS6' }
-	If ($DynamicParams.Boot)
+	If ($PSBoundParameters.DaRT -eq 'Setup' -and $DynamicParams.Boot)
 	{
 		Try
 		{
+			$Host.UI.RawUI.WindowTitle = "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($BootInfo.Name)"
 			Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($BootInfo.Name)"
 			$MSDaRT10Boot = @{
 				ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
@@ -1111,18 +1105,21 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\setup.exe
 '@ | Out-File -FilePath "$BootMount\Windows\System32\winpeshl.ini" -Force
-			Start-Sleep 3
 		}
 		Catch
 		{
 			Log -Error "Failed to integrate Microsoft DaRT 10 into $($BootInfo.Name)" -ErrorRecord $Error[0]
+		}
+		Finally
+		{
 			Start-Sleep 3
 		}
 	}
-	If ($DynamicParams.Recovery)
+	If ($PSBoundParameters.DaRT -eq 'Recovery' -and $DynamicParams.Recovery)
 	{
 		Try
 		{
+			$Host.UI.RawUI.WindowTitle = "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($RecoveryInfo.Name)"
 			Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($RecoveryInfo.Name)"
 			$MSDaRT10Recovery = @{
 				ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
@@ -1142,11 +1139,13 @@ If ($DaRT.IsPresent -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 %WINDIR%\System32\netstart.exe
 %SYSTEMDRIVE%\sources\recovery\recenv.exe
 '@ | Out-File -FilePath "$RecoveryMount\Windows\System32\winpeshl.ini" -Force
-			Start-Sleep 3
 		}
 		Catch
 		{
 			Log -Error "Failed to integrate Microsoft DaRT 10 into $($RecoveryInfo.Name)" -ErrorRecord $Error[0]
+		}
+		Finally
+		{
 			Start-Sleep 3
 		}
 	}
@@ -1234,13 +1233,12 @@ If ($Registry.IsPresent)
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisableInventory" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisablePCA" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\AppCompat" -Name "DisableUAR" -Value 1 -Type DWord
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Messaging" -Name "AllowMessageSync" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Messenger\Client" -Name "CEIP" -Value 2 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Messenger\Client" -Name "CEIP" -Value 2 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\AppV\CEIP" -Name "CEIPEnable" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient\Windows" -Name "CEIPEnable" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\SQMClient" -Name "CorporateSQMURL" -Value "127.0.0.1" -Type String
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Internet Explorer\SQM" -Name "DisableCustomerImprovementProgram" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Application-Experience/Steps-Recorder" -Name "Enabled" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\TabletPC" -Name "PreventHandwritingDataSharing" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform" -Name "NoGenTicket" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\TextInput" -Name "AllowLinguisticDataCollection" -Value 0 -Type DWord
@@ -1253,13 +1251,7 @@ If ($Registry.IsPresent)
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Input\TIPC" -Name "Enabled" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "EnableFeaturedSoftware" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Name "Disabled" -Value 1 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\AutoLogger-Diagtrack-Listener" -Name "Start" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\SQMLogger" -Name "Start" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe" -Name "Debugger" -Value "%SystemRoot%\System32\taskkill.exe" -Type ExpandString
 	#****************************************************************#
 	Write-Output "Disabling Windows Tracking." >> $RegLog
 	#****************************************************************#
@@ -1276,8 +1268,7 @@ If ($Registry.IsPresent)
 	#****************************************************************#
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocation" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableLocationScripting" -Value 1 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Permissions\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0 -Type DWord
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableSensors" -Value 1 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny" -Type String
 	If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc" -Name "Start" -Value 4 -Type DWord }
 	If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0 -Type DWord }
@@ -1325,7 +1316,7 @@ If ($Registry.IsPresent)
 		Write-Output "Disabling Biometric and Microsoft Hello Services." >> $RegLog
 		#****************************************************************#
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\Credential Provider" -Name "Domain Accounts" -Value 0 -Type DWord
+		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 		If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
 	}
 	If ($RemovedSystemApps -contains 'Microsoft.Windows.SecureAssessmentBrowser')
@@ -1342,11 +1333,12 @@ If ($Registry.IsPresent)
 		#****************************************************************#
 		Write-Output "Disabling Subscribed Content Delivery and Live Tiles." >> $RegLog
 		#****************************************************************#
-		@("SubscribedContent-202914Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-310091Enabled",
-			"SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled",
-			"SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled", "SubscribedContent-338393Enabled", "SubscribedContent-353698Enabled", "ContentDeliveryAllowed",
-			"FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RemediationRequired", "RotatingLockScreenEnabled", "RotatingLockScreenOverlayEnabled",
-			"SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $($_) -Value 0 -Type DWord }
+		@("SubscribedContent-202914Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280813Enabled", "SubscribedContent-280815Enabled",
+			"SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-314381Enabled", "SubscribedContent-314559Enabled",
+			"SubscribedContent-314563Enabled", "SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338389Enabled",
+			"SubscribedContent-338393Enabled", "SubscribedContent-353694Enabled", "SubscribedContent-353696Enabled", "SubscribedContent-353698Enabled", "SubscribedContent-8800010Enabled",
+			"ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RemediationRequired",
+			"RotatingLockScreenEnabled", "RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $($_) -Value 0 -Type DWord }
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 	}
@@ -1376,13 +1368,7 @@ If ($Registry.IsPresent)
 		#****************************************************************#
 		Write-Output "Disabling Reserved Storage." >> $RegLog
 		#****************************************************************#
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "BaseHardReserveSize" -Value 0 -Type QWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "BaseSoftReserveSize" -Value 0 -Type QWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "HardReserveAdjustment" -Value 0 -Type QWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "MinDiskSize" -Value 0 -Type QWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "PassedPolicy" -Value 0 -Type QWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "ShippedWithReserves" -Value 0 -Type DWord
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name "TiAttemptedInitialization" -Value 0 -Type DWord
+		@("BaseHardReserveSize", "BaseSoftReserveSize", "HardReserveAdjustment", "MinDiskSize", "PassedPolicy", "ShippedWithReserves", "TiAttemptedInitialization") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" -Name $($_) -Value 0 -Type QWord }
 	}
 	#****************************************************************#
 	Write-Output "Disabling the Automatic Clean-up of Downloads by Storage Sense." >> $RegLog
@@ -1510,11 +1496,11 @@ If ($Registry.IsPresent)
 		#****************************************************************#
 		Write-Output "Restoring Windows Photo Viewer." >> $RegLog
 		#****************************************************************#
-		@(".bmp", ".cr2", ".dib", ".gif", ".ico", ".jfif", ".jpe", ".jpeg", ".jpg", ".jxr", ".png", ".tif", ".tiff", ".wdp") | ForEach-Object -Process {
+		@('.bmp', '.cr2', '.dib', '.gif', '.ico', '.jfif', '.jpe', '.jpeg', '.jpg', '.jxr', '.png', '.tif', '.tiff', '.wdp') | ForEach-Object -Process {
 			RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Classes\$($_)" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
 			RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($_)\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value 0 -Type Binary
 		}
-		@("Paint.Picture", "giffile", "jpegfile", "pngfile") | ForEach-Object -Process {
+		@('Paint.Picture', 'giffile', 'jpegfile', 'pngfile') | ForEach-Object -Process {
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043" -Type ExpandString
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($_)\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1" -Type ExpandString
 		}
@@ -1736,7 +1722,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 			}
 		}
 	}
-	If ($Config.NetFx3.IsPresent -and $ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$($ISOMedia.FullName)\sources\sxs" -Filter *netfx3*.cab -Recurse))
+	If ($Config.NetFx3.IsPresent -and $DynamicParams.ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$($ISOMedia.FullName)\sources\sxs" -Filter *netfx3*.cab -Recurse))
 	{
 		Try
 		{
@@ -1781,9 +1767,9 @@ Try
                     <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
                     <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
                     <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
-                    <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
-                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk" />
-                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />
+					<start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
+                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk" />
+                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk" />
                 </start:Group>
             </defaultlayout:StartLayout>
         </StartLayoutCollection>
@@ -1792,14 +1778,12 @@ Try
 "@
 	If ($RemovedSystemApps -contains 'c5e2524a-ea46-4f67-841f-6a9465d9d515')
 	{
-		$UWPFileExplorer = '<start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk" />'
-		$FileExplorer = '<start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\File Explorer.lnk" />'
-		$LayoutModTemplate = $LayoutModTemplate.Replace($UWPFileExplorer, $FileExplorer)
+		$LayoutModTemplate = $LayoutModTemplate -replace 'UWP File Explorer.lnk', 'File Explorer.lnk'
 	}
 	Else
 	{
 		$UWPShell = New-Object -ComObject WScript.Shell
-		$UWPShortcut = $UWPShell.CreateShortcut("$InstallMount\ProgramData\Microsoft\Windows\Start Menu\Programs\UWP File Explorer.lnk")
+		$UWPShortcut = $UWPShell.CreateShortcut("$InstallMount\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk")
 		$UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
 		$UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
 		$UWPShortcut.WorkingDirectory = "%SystemRoot%"
@@ -1808,10 +1792,6 @@ Try
 		[Void][Runtime.InteropServices.Marshal]::ReleaseComObject($UWPShell)
 	}
 	$LayoutModTemplate | Out-File -FilePath "$InstallMount\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Encoding UTF8 -Force
-}
-Catch
-{
-	Log -Error "Failed to Clean-up the Start Menu Layout." -ErrorRecord $Error[0]
 }
 Finally
 {
@@ -1825,9 +1805,9 @@ If ($DynamicParams.Count -gt 0)
 	$PackageLog = New-Item -Path $PackageLog -ItemType File
 	If ($DynamicParams.WindowsStore) { "`tIntegrated Appx Provisioned Packages", (Get-AppxProvisionedPackage -Path $InstallMount | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
 	If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount | Where-Object { $_.PackageName -like "*DeveloperMode*" -or $_.PackageName -like "*Internet-Browser*" -or $_.PackageName -like "*Windows-FileServer-ServerCore*" -or $_.PackageName -like "*Windows-Dedup*" -or $_.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
-	If ($DynamicParams.InstallDrivers) { "`tIntegrated Install Drivers", (Get-WindowsDriver -Path $InstallMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
-	If ($DynamicParams.BootDrivers) { "`tIntegrated Boot Drivers", (Get-WindowsDriver -Path $BootMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
-	If ($DynamicParams.RecoveryDrivers) { "`tIntegrated Recovery Drivers", (Get-WindowsDriver -Path $RecoveryMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
+	If ($DynamicParams.InstallDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
+	If ($DynamicParams.BootDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
+	If ($DynamicParams.RecoveryDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount | Select-Object -Property ProviderName, ClassName, BootCritical, Date, Version | Sort-Object -Property ProviderName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 }
 }
 
 If ((Repair-WindowsImage -Path $InstallMount -CheckHealth).ImageHealthState -eq 'Healthy')
@@ -2005,7 +1985,7 @@ Catch
 	Stop; Break
 }
 
-If ($ISOMedia)
+If ($DynamicParams.ISOMedia)
 {
 	$Host.UI.RawUI.WindowTitle = "Optimizing the Windows Media File Structure."
 	Log -Info "Optimizing the Windows Media File Structure."
@@ -2039,7 +2019,7 @@ Try
 	If ($null -ne $NewISO.Path) { Move-Item -Path $NewISO.Path -Destination $SaveDirectory.FullName }
 	Else
 	{
-		If ($ISOMedia) { Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName }
+		If ($DynamicParams.ISOMedia) { Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName }
 		Else { Get-ChildItem -Path $ImageDirectory -Include $ImageFiles -Recurse | Move-Item -Destination $SaveDirectory.FullName }
 	}
 }
