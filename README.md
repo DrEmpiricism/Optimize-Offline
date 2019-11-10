@@ -21,9 +21,18 @@ Optimize-Offline is a Windows Image (WIM) optimization script designed for Windo
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
 - Not all integrations are available for languages outside of en-US.
-- Properties, features, packages, etc. can and often do change between builds.  This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before.
+- Properties, features, packages, etc. can and often do change between builds. This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before.
 - Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause errors during Windows 10 setup.
 - Support will not be given to users who attempt to optimize unsupported builds or previously modified images.
+
+## Optimize-Offline Best Practices ##
+
+- Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
+- If maintaining fully updated OEM images, it's best to integrate offline updates into the image BEFORE running Optimize-Offline.
+- To ensure package removals and integrations are retained, it's best to update an offline image with the latest Servicing Stack Update(s) and Monthly Cumulative Update before optimizing it.
+- Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
+- Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
+- Read the ReadMe files in the 'Content\Additional' directories for important information regarding user-specific content.
 
 ## Switches and Parameters ##
 
@@ -81,6 +90,13 @@ A short list of some of the optimizations include:
 - Disables the automatic creation of tabs and icons for Microsoft Edge.
 - Disables intrusive Microsoft feedback and notification queries.
 - Cleans-up the default Context Menu.
+
+### About the SMB1 File Sharing Protocol and Windows PowerShell 2.0 Optional Features ###
+
+When optimizing an image with Optimize-Offline, curiosity may arise as to why the SMB1 Protocol and Windows PowerShell 2.0 Optional Features are automatically disabled. In short, Microsoft has labled both of them a security risk.
+
+- The SMB1 Protocol is vulnerable to [Ransomware propagation](https://techcommunity.microsoft.com/t5/Storage-at-Microsoft/Stop-using-SMB1/ba-p/425858).
+- Windows PowerShell 2.0 can be used to run melicous scripts and has been [depreciated since Windows 10 version 1709](https://devblogs.microsoft.com/powershell/windows-powershell-2-0-deprecation/).
 
 ### About Additional Content ###
 
@@ -168,19 +184,12 @@ Conversely, failing to remove the defaultuser0 account immediately after Windows
 
 In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
 
-## Optimize-Offline Best Practices ##
-
-- Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
-- If maintaining fully updated OEM images, it's best to integrate offline updates into the image BEFORE running Optimize-Offline.
-- Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
-- Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
-- Read the ReadMe files in the 'Content\Additional' directories for important information regarding user-specific content.
-
 ## Calling Optimize-Offline ##
 
 The easiest way to call Optimize-Offline is by using the provided [Optimize-Offline.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Optimize-Offline.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Optimize-Offline.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT -Additional -ISO "No-Prompt"
-- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Capabilities -Packages -Features -DeveloperMode -WindowsStore -MicrosoftEdge -Additional
+- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT "Setup" -Additional -ISO "No-Prompt"
+- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\WIN_10_PFW.iso" -WindowsApps "All" -SystemApps -Capabilities -Features -Registry -Win32Calc -Dedup -DaRT "Setup", "Recovery" -ISO "Prompt"
+- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Capabilities -Packages -Features -DeveloperMode -WindowsStore -MicrosoftEdge -DaRT "Recovery" -Additional
