@@ -9,7 +9,7 @@ Function Stop-Optimize
 	$SaveDirectory = Create -Path "$ScriptRootPath\Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -PassThru
 	If ($Error.Count -gt 0)
 	{
-		($Error | ForEach-Object -Process { [PSCustomObject] @{ Line = $_.InvocationInfo.ScriptLineNumber; Error = $_.Exception.Message } } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory.FullName -ChildPath ErrorRecord.log) -Force
+		($Error | ForEach-Object -Process { [PSCustomObject] @{ Line = $_.InvocationInfo.ScriptLineNumber; Error = $_.Exception.Message } } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $SaveDirectory.FullName -ChildPath ErrorRecord.log) -Encoding UTF8 -Force
 	}
 	@($DISMLog, "$Env:SystemRoot\Logs\DISM\dism.log") | Purge
 	Get-ChildItem -Path $LogDirectory -Filter *.log | Move-Item -Destination $SaveDirectory.FullName -Force

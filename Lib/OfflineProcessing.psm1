@@ -3,7 +3,7 @@
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 	 Created by:   	BenTheGreat
 	 Filename:     	OfflineProcessing.psm1
-	 Last updated:	11/10/2019
+	 Last updated:	11/15/2019
 	===========================================================================
 #>
 
@@ -19,10 +19,10 @@ $EdgeAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\MicrosoftEd
 $StoreAppPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\WindowsStore'
 $Win32CalcPath = Join-Path -Path $ScriptRootPath -ChildPath 'Resources\Win32Calc'
 $AdditionalPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\Additional'
-$AppxWhitelistPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.xml'
 $AppAssocPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\CustomAppAssociations.xml'
+$WhitelistJsonPath = Join-Path -Path $ScriptRootPath -ChildPath 'Content\AppxWhiteList.json'
+$AdditionalJsonPath = Join-Path -Path $AdditionalPath -ChildPath Additional.json
 $TempDirectory = Join-Path -Path $ScriptRootPath -ChildPath "OfflineTemp_$(Get-Random)"
-$ConfigFilePath = Join-Path -Path $AdditionalPath -ChildPath Config.ini
 $LogDirectory = Join-Path -Path $TempDirectory -ChildPath LogOffline
 $WorkDirectory = Join-Path -Path $TempDirectory -ChildPath WorkOffline
 $ScratchDirectory = Join-Path -Path $TempDirectory -ChildPath ScratchOffline
@@ -37,7 +37,7 @@ $DISM = Join-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe
 $REG = Join-Path -Path $Env:SystemRoot\System32 -ChildPath reg.exe
 $REGEDIT = Join-Path -Path $Env:SystemRoot -ChildPath regedit.exe
 $EXPAND = Join-Path -Path $Env:SystemRoot\System32 -ChildPath expand.exe
-$DynamicParams = [Hashtable]@{ }
+$DynamicParams = @{ }
 #endregion Variables
 
 $Internal = @(Get-ChildItem -Path (Join-Path -Path $ModuleRootPath -ChildPath 'Functions\Internal') -Filter *.ps1)
@@ -54,7 +54,6 @@ New-Alias -Name WimData -Value Get-WimFile
 New-Alias -Name RegHives -Value Get-OfflineHives
 New-Alias -Name RegImport -Value Import-RegistryTemplates
 New-Alias -Name Stop -Value Stop-Optimize
-New-Alias -Name Config -Value Import-Config
 New-Alias -Name UnmountAll -Value Dismount-Images
 New-Alias -Name TestReq -Value Test-Requirements
 New-Alias -Name SetLock -Value Set-LockScreen
