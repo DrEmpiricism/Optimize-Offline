@@ -13,11 +13,12 @@ A clear and concise description of what the bug is.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
+**Please complete the following information:**
 
 - Image Name: [e.g. Windows 10 Pro]
 - Image Build: [e.g. 17763]
 - Host Environment: [e.g. Windows 10 Pro]
+- Parameters Passed: [e.g -WindowsApps "All" -SystemApps -Capabilities -Packages -Features]
 
 **Additional content or data**
 Add any other pertinent content or data.
