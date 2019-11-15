@@ -1,5 +1,14 @@
 # ChangeLog #
 
+## Build 3.2.7.8 (11-15-20119) ##
+
+- Corrected an issue where trying to pass both the 'Setup' and 'Recovery' values in the Optimize-Offline.cmd calling script would return an error.
+- Changed the validation set for the -DaRT parameter. It now accepts one of three values: 'Setup,' 'Recovery' and 'All.' Passing the value -DaRT "All" will integrate Dart 10 into both Windows Setup and Windows Recovery, while passing -DaRT "Setup" or -DaRT "Recovery" will integrate DaRT 10 into that environment only.
+- The AppxWhitelist and Additional config file now use the JSON format instead of Ini and XML.
+- A PassedParameters.log file is now generated after the optimized image has been finalized. This log file displays all parameters and values passed to the script that were used in the optimization processes.
+- A few function modules have been updated with very small code modifications.
+- Updated the CustomAppAssociations.xml file.
+
 ## Build 3.2.7.7 (11-10-2019) ##
 
 - Due to the vulnerabilities found in PowerShell 2.0, and the fact it has been depreciated for quite some time, the 'MicrosoftWindowsPowerShellV2Root' Optional Feature is now automatically disabled during the optimization process.
@@ -37,9 +46,3 @@
 - A custom LockScreen can now be applied to the image using the -Additional switch and its associated Config.ini by adding the custom LockScreen image to the new 'Content\Additional\LockScreen' folder.
 - Updated multiple functions used with the OfflineProcessing module.
 
-## Build 3.2.7.3 (10-08-2019) ##
-
-- Removed the disabling of the Clipboard feature with the -Registry switch.
-- Updated the Start Menu layout clean-up.
-- Updated the Windows Store bundle packages with their latest versions.
-- Removed a redundant line of code.

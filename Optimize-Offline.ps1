@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 #Requires -Version 5
 #Requires -Module Dism
 <#
@@ -15,7 +15,7 @@
 		Removes Appx Provisioned Packages and accepts one of the three values that determines the method in which they are removed:
 
 		Select = Populates and outputs a Gridview list of all Appx Provisioned Packages for selective removal.
-		Whitelist = Automatically removes all Appx Provisioned Packages NOT found in the AppxWhiteList.xml file.
+		Whitelist = Automatically removes all Appx Provisioned Packages NOT found in the AppxWhiteList.json file.
 		All = Automatically removes all Appx Provisioned Packages found in the image.
 
 	.PARAMETER SystemApps
@@ -56,12 +56,17 @@
 
 	.PARAMETER DaRT
 		Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and/or Windows Recovery.
+		Accepts one of three values that determines how DaRT 10 is integrated:
+
+		Setup = Integrates DaRT 10 into Windows Setup.
+		Recovery = Integrates DaRT 10 into Windows Recovery.
+		All = Integrates DaRT 10 into both Windows Setup and Windows Recovery.
 
 	.PARAMETER Registry
 		Integrates optimized registry values into the image.
 
 	.PARAMETER Additional
-		Integrates user specific content in the "Content/Additional" directory based on the parameters set in the Config.ini.
+		Integrates user specific content in the "Content/Additional" directory based on the values set in the Additional.json file.
 
 	.PARAMETER ISO
 		Creates a new bootable Windows Installation Media ISO.
@@ -75,7 +80,7 @@
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
 
 	.EXAMPLE
-		.\Optimize-Offline.ps1 -SourcePath "D:\Windows 10 ISOs\Win10ProForWorkstations_17663.iso" -WindowsApps "All" -SystemApps -Packages -Features -DaRT "Setup", "Recovery" -Additional -ISO "Prompt"
+		.\Optimize-Offline.ps1 -SourcePath "D:\Windows 10 ISOs\Win10ProForWorkstations_17663.iso" -WindowsApps "All" -SystemApps -Packages -Features -DaRT "All" -Additional -ISO "Prompt"
 
 	.EXAMPLE
 		.\Optimize-Offline.ps1 -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional
@@ -88,8 +93,8 @@
 		Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.168
 		Created by:     BenTheGreat
 		Filename:     	Optimize-Offline.ps1
-		Version:        3.2.7.7
-		Last updated:	11/10/2019
+		Version:        3.2.7.8
+		Last updated:	11/15/2019
 		===========================================================================
 
 	.INPUTS
@@ -133,8 +138,8 @@ Param
 	[Switch]$Dedup,
 	[Parameter(Mandatory = $false,
 		HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and/or Windows Recovery.')]
-	[ValidateSet('Setup', 'Recovery')]
-	[String[]]$DaRT,
+	[ValidateSet('Setup', 'Recovery', 'All')]
+	[String]$DaRT,
 	[Parameter(HelpMessage = 'Integrates optimized registry values into the image.')]
 	[Switch]$Registry,
 	[Parameter(HelpMessage = 'Integrates user specific content in the "Content/Additional" directory based on the parameters set in the Config.ini.')]
@@ -305,7 +310,7 @@ Try
 	Log -Info "Supported Image Build: [$($InstallInfo.Build)]"
 	Start-Sleep 3; $Timer.Start(); $Error.Clear()
 	Log -Info "Mounting $($InstallInfo.Name)"
-	$MountWindowsImage = @{
+	$MountInstallParams = @{
 		ImagePath        = $InstallWim
 		Index            = $ImageIndex
 		Path             = $InstallMount
@@ -313,7 +318,7 @@ Try
 		LogPath          = $DISMLog
 		ErrorAction      = 'Stop'
 	}
-	[Void](Mount-WindowsImage @MountWindowsImage)
+	[Void](Mount-WindowsImage @MountInstallParams)
 }
 Catch
 {
@@ -335,7 +340,7 @@ If ($DynamicParams.Boot)
 	Try
 	{
 		$BootMount | Create
-		$MountBootImage = @{
+		$MountBootParams = @{
 			Path             = $BootMount
 			ImagePath        = $BootWim
 			Index            = 2
@@ -344,7 +349,7 @@ If ($DynamicParams.Boot)
 			ErrorAction      = 'Stop'
 		}
 		Log -Info "Mounting $($BootInfo.Name)"
-		[Void](Mount-WindowsImage @MountBootImage)
+		[Void](Mount-WindowsImage @MountBootParams)
 	}
 	Catch
 	{
@@ -359,7 +364,7 @@ If ($DynamicParams.Recovery)
 	Try
 	{
 		$RecoveryMount | Create
-		$MountRecoveryImage = @{
+		$MountRecoveryParams = @{
 			Path             = $RecoveryMount
 			ImagePath        = $RecoveryWim
 			Index            = 1
@@ -368,7 +373,7 @@ If ($DynamicParams.Recovery)
 			ErrorAction      = 'Stop'
 		}
 		Log -Info "Mounting $($RecoveryInfo.Name)"
-		[Void](Mount-WindowsImage @MountRecoveryImage)
+		[Void](Mount-WindowsImage @MountRecoveryParams)
 	}
 	Catch
 	{
@@ -402,7 +407,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 				Try
 				{
 					$AppxPackages | ForEach-Object -Process {
-						$AppxParams = @{
+						$RemoveAppxParams = @{
 							Path             = $InstallMount
 							PackageName      = $($_.PackageName)
 							ScratchDirectory = $ScratchDirectory
@@ -410,7 +415,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 							ErrorAction      = 'Stop'
 						}
 						Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
-						[Void](Remove-AppxProvisionedPackage @AppxParams)
+						[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 						$RemovedAppxPackages.Add($_.DisplayName)
 					}
 					$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
@@ -424,15 +429,15 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 		}
 		'Whitelist'
 		{
-			If (Test-Path -Path $AppxWhitelistPath)
+			If (Test-Path -Path $WhitelistJsonPath)
 			{
 				Try
 				{
-					[XML]$Whitelist = Get-Content -Path $AppxWhitelistPath
+					$WhitelistJson = Get-Content -Path $WhitelistJsonPath -Raw | ConvertFrom-Json
 					Get-AppxProvisionedPackage -Path $InstallMount | ForEach-Object -Process {
-						If ($_.DisplayName -notin $Whitelist.Appx.DisplayName)
+						If ($_.DisplayName -notin $WhitelistJson.DisplayName)
 						{
-							$AppxParams = @{
+							$RemoveAppxParams = @{
 								Path             = $InstallMount
 								PackageName      = $($_.PackageName)
 								ScratchDirectory = $ScratchDirectory
@@ -440,7 +445,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 								ErrorAction      = 'Stop'
 							}
 							Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
-							[Void](Remove-AppxProvisionedPackage @AppxParams)
+							[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 							$RemovedAppxPackages.Add($_.DisplayName)
 						}
 					}
@@ -458,7 +463,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 			Try
 			{
 				Get-AppxProvisionedPackage -Path $InstallMount | ForEach-Object -Process {
-					$AppxParams = @{
+					$RemoveAppxParams = @{
 						Path             = $InstallMount
 						PackageName      = $($_.PackageName)
 						ScratchDirectory = $ScratchDirectory
@@ -466,7 +471,7 @@ If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount).Count -gt
 						ErrorAction      = 'Stop'
 					}
 					Log -Info ('Removing Appx Provisioned Package: {0}' -f $($_.DisplayName))
-					[Void](Remove-AppxProvisionedPackage @AppxParams)
+					[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 					$RemovedAppxPackages.Add($_.DisplayName)
 				}
 				$DynamicParams.Add('WindowsApps', $WindowsApps); Clear-Host
@@ -543,7 +548,7 @@ If ($Capabilities.IsPresent)
 		Try
 		{
 			$WindowsCapabilities | ForEach-Object -Process {
-				$ParamsCapability = @{
+				$RemoveCapabilityParams = @{
 					Path             = $InstallMount
 					Name             = $($_.Name)
 					ScratchDirectory = $ScratchDirectory
@@ -551,7 +556,7 @@ If ($Capabilities.IsPresent)
 					ErrorAction      = 'Stop'
 				}
 				Log -Info ('Removing Windows Capability: {0}' -f $($_.Name.Split('~')[0]))
-				[Void](Remove-WindowsCapability @ParamsCapability)
+				[Void](Remove-WindowsCapability @RemoveCapabilityParams)
 			}
 			$DynamicParams.Add('Capabilities', $true); Clear-Host
 		}
@@ -573,7 +578,7 @@ If ($Packages.IsPresent)
 		Try
 		{
 			$WindowsPackages | ForEach-Object -Process {
-				$ParamsPackage = @{
+				$RemovePackageParams = @{
 					Path             = $InstallMount
 					PackageName      = $($_.PackageName)
 					NoRestart        = $true
@@ -582,7 +587,7 @@ If ($Packages.IsPresent)
 					ErrorAction      = 'Stop'
 				}
 				Log -Info ('Removing Windows Package: {0}' -f $($_.PackageName.Replace('Package', $null).Split('~')[0]).TrimEnd('-'))
-				[Void](Remove-WindowsPackage @ParamsPackage)
+				[Void](Remove-WindowsPackage @RemovePackageParams)
 			}
 			$DynamicParams.Add('Packages', $true); Clear-Host
 		}
@@ -701,7 +706,7 @@ If ($Features.IsPresent)
 		Try
 		{
 			$DisableFeatures | ForEach-Object -Process {
-				$ParamsFeature = @{
+				$DisableFeatureParams = @{
 					Path             = $InstallMount
 					FeatureName      = $($_.FeatureName)
 					Remove           = $true
@@ -711,7 +716,7 @@ If ($Features.IsPresent)
 					ErrorAction      = 'Stop'
 				}
 				Log -Info "Disabling Optional Feature: $($_.FeatureName)"
-				[Void](Disable-WindowsOptionalFeature @ParamsFeature)
+				[Void](Disable-WindowsOptionalFeature @DisableFeatureParams)
 			}
 			$DynamicParams.Add('DisabledOptionalFeatures', $true); Clear-Host
 		}
@@ -729,7 +734,7 @@ If ($Features.IsPresent)
 		Try
 		{
 			$EnableFeatures | ForEach-Object -Process {
-				$EnableFeature = @{
+				$EnableFeatureParams = @{
 					Path             = $InstallMount
 					FeatureName      = $($_.FeatureName)
 					All              = $true
@@ -740,7 +745,7 @@ If ($Features.IsPresent)
 					ErrorAction      = 'Stop'
 				}
 				Log -Info "Enabling Optional Feature: $($_.FeatureName)"
-				[Void](Enable-WindowsOptionalFeature @EnableFeature)
+				[Void](Enable-WindowsOptionalFeature @EnableFeatureParams)
 			}
 			$DynamicParams.Add('EnabledOptionalFeatures', $true); Clear-Host
 		}
@@ -904,7 +909,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
 {
 	Try
 	{
-		$CalcPackage = @{
+		$ExpandCalcParams = @{
 			ImagePath        = "$Win32CalcPath\Win32Calc.wim"
 			Index            = 1
 			ApplyPath        = $InstallMount
@@ -916,7 +921,7 @@ If ($Win32Calc.IsPresent -and $null -eq (Get-WindowsPackage -Path $InstallMount 
 		}
 		$Host.UI.RawUI.WindowTitle = "Integrating the Win32 Calculator."
 		Log -Info "Integrating the Win32 Calculator."
-		[Void](Expand-WindowsImage @CalcPackage)
+		[Void](Expand-WindowsImage @ExpandCalcParams)
 		Add-Content -Path "$InstallMount\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\desktop.ini" -Value 'Calculator.lnk=@%SystemRoot%\System32\shell32.dll,-22019' -Encoding Unicode -Force
 		RegHives -Load
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\RegisteredApplications" -Name "Windows Calculator" -Value "SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Calculator\Capabilities" -Type String
@@ -1081,13 +1086,13 @@ If ($DaRT -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 	If ($InstallInfo.Build -eq '17134') { $CodeName = 'RS4' }
 	ElseIf ($InstallInfo.Build -eq '17763') { $CodeName = 'RS5' }
 	ElseIf ($InstallInfo.Build -eq '18362') { $CodeName = 'RS6' }
-	If ($PSBoundParameters.DaRT -eq 'Setup' -and $DynamicParams.Boot)
+	If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.Boot)
 	{
 		Try
 		{
 			$Host.UI.RawUI.WindowTitle = "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($BootInfo.Name)"
 			Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($BootInfo.Name)"
-			$MSDaRT10Boot = @{
+			$ExpandDaRTBootParams = @{
 				ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
 				Index            = 1
 				ApplyPath        = $BootMount
@@ -1097,7 +1102,7 @@ If ($DaRT -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			[Void](Expand-WindowsImage @MSDaRT10Boot)
+			[Void](Expand-WindowsImage @ExpandDaRTBootParams)
 			If (!(Test-Path -Path "$BootMount\Windows\System32\fmapi.dll")) { Copy-Item -Path "$InstallMount\Windows\System32\fmapi.dll" -Destination "$BootMount\Windows\System32" -Force }
 			@'
 [LaunchApps]
@@ -1115,13 +1120,13 @@ If ($DaRT -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 			Start-Sleep 3
 		}
 	}
-	If ($PSBoundParameters.DaRT -eq 'Recovery' -and $DynamicParams.Recovery)
+	If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.Recovery)
 	{
 		Try
 		{
 			$Host.UI.RawUI.WindowTitle = "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($RecoveryInfo.Name)"
 			Log -Info "Integrating Microsoft DaRT 10 and Windows $($CodeName) Debugging Tools into $($RecoveryInfo.Name)"
-			$MSDaRT10Recovery = @{
+			$ExpandDaRTRecoveryParams = @{
 				ImagePath        = "$DaRTPath\MSDaRT10_$($CodeName).wim"
 				Index            = 1
 				ApplyPath        = $RecoveryMount
@@ -1131,7 +1136,7 @@ If ($DaRT -and (Test-Path -Path $DaRTPath -Filter MSDaRT10_*.wim))
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			[Void](Expand-WindowsImage @MSDaRT10Recovery)
+			[Void](Expand-WindowsImage @ExpandDaRTRecoveryParams)
 			If (!(Test-Path -Path "$RecoveryMount\Windows\System32\fmapi.dll")) { Copy-Item -Path "$InstallMount\Windows\System32\fmapi.dll" -Destination "$RecoveryMount\Windows\System32" -Force }
 			@'
 [LaunchApps]
@@ -1480,11 +1485,6 @@ If ($Registry.IsPresent)
 	#****************************************************************#
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
-	#****************************************************************
-	Write-Output "Adding 'Reboot to Recovery' to This PC." >> $RegLog
-	#****************************************************************
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery" -Name "Icon" -Value "%SystemRoot%\System32\imageres.dll,-110" -Type ExpandString -Force
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command" -Name "(default)" -Value "shutdown.exe /r /o /f /t 00" -Type String -Force
 	#****************************************************************#
 	Write-Output "Removing 'Edit with Paint 3D and 3D Print' from the Context Menu." >> $RegLog
 	#****************************************************************#
@@ -1582,11 +1582,11 @@ If ($Registry.IsPresent)
 }
 #endregion Registry Optimizations
 
-If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
+If ($Additional.IsPresent -and (Test-Path -Path $AdditionalJsonPath))
 {
 	Clear-Host
-	$Config = Config
-	If ($Config.Setup.IsPresent -and (Test-Path -Path "$AdditionalPath\Setup\*"))
+	$ContentJson = Get-Content -Path $AdditionalJsonPath -Raw | ConvertFrom-Json
+	If ($ContentJson.Integrate.Setup -and (Test-Path -Path "$AdditionalPath\Setup\*"))
 	{
 		$Host.UI.RawUI.WindowTitle = "Applying Setup Content."
 		Log -Info "Applying Setup Content."
@@ -1594,7 +1594,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 		Get-ChildItem -Path "$AdditionalPath\Setup" -Exclude RebootRecovery.png, RefreshExplorer.png, README.md | Copy-Item -Destination "$InstallMount\Windows\Setup\Scripts" -Recurse
 		Start-Sleep 3
 	}
-	If ($Config.Wallpaper.IsPresent -and (Test-Path -Path "$AdditionalPath\Wallpaper\*"))
+	If ($ContentJson.Integrate.Wallpaper -and (Test-Path -Path "$AdditionalPath\Wallpaper\*"))
 	{
 		$Host.UI.RawUI.WindowTitle = "Applying Wallpaper."
 		Log -Info "Applying Wallpaper."
@@ -1602,7 +1602,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 		Get-ChildItem -Path "$AdditionalPath\Wallpaper\*" -Include *.jpg, *.png, *.bmp, *.gif -File | Copy-Item -Destination "$InstallMount\Windows\Web\Wallpaper"
 		Start-Sleep 3
 	}
-	If ($Config.SystemLogo.IsPresent -and (Test-Path -Path "$AdditionalPath\SystemLogo\*.bmp"))
+	If ($ContentJson.Integrate.SystemLogo -and (Test-Path -Path "$AdditionalPath\SystemLogo\*.bmp"))
 	{
 		$Host.UI.RawUI.WindowTitle = "Applying System Logo."
 		Log -Info "Applying System Logo."
@@ -1610,32 +1610,32 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 		Copy-Item -Path "$AdditionalPath\SystemLogo\*.bmp" -Destination "$InstallMount\Windows\System32\oobe\info\logo" -Recurse
 		Start-Sleep 3
 	}
-	If ($Config.LockScreen.IsPresent -and (Test-Path -Path "$AdditionalPath\LockScreen\*.jpg"))
+	If ($ContentJson.Integrate.LockScreen -and (Test-Path -Path "$AdditionalPath\LockScreen\*.jpg"))
 	{
 		$Host.UI.RawUI.WindowTitle = "Applying LockScreen."
 		Log -Info "Applying LockScreen."
 		SetLock
 	}
-	If ($Config.RegistryTemplates.IsPresent -and (Test-Path -Path "$AdditionalPath\RegistryTemplates\*.reg"))
+	If ($ContentJson.Integrate.RegistryTemplates -and (Test-Path -Path "$AdditionalPath\RegistryTemplates\*.reg"))
 	{
 		$Host.UI.RawUI.WindowTitle = "Importing Registry Templates."
 		Log -Info "Importing Registry Templates."
 		RegImport
 	}
-	If ($Config.Unattend.IsPresent -and (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml"))
+	If ($ContentJson.Integrate.Unattend -and (Test-Path -Path "$AdditionalPath\Unattend\unattend.xml"))
 	{
 		Try
 		{
 			$Host.UI.RawUI.WindowTitle = "Applying Answer File."
 			Log -Info "Applying Answer File."
-			$UnattendParams = @{
+			$ApplyUnattendParams = @{
 				UnattendPath     = "$AdditionalPath\Unattend\unattend.xml"
 				Path             = $InstallMount
 				ScratchDirectory = $ScratchDirectory
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			[Void](Use-WindowsUnattend @UnattendParams)
+			[Void](Use-WindowsUnattend @ApplyUnattendParams)
 			"$InstallMount\Windows\Panther" | Create
 			Copy-Item -Path "$AdditionalPath\Unattend\unattend.xml" -Destination "$InstallMount\Windows\Panther" -Force
 			Start-Sleep 3
@@ -1647,7 +1647,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 			Start-Sleep 3
 		}
 	}
-	If ($Config.Drivers.IsPresent)
+	If ($ContentJson.Integrate.Drivers)
 	{
 		If (Get-ChildItem -Path "$AdditionalPath\Drivers\Install" -Filter *.inf -Recurse)
 		{
@@ -1722,13 +1722,13 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 			}
 		}
 	}
-	If ($Config.NetFx3.IsPresent -and $DynamicParams.ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$($ISOMedia.FullName)\sources\sxs" -Filter *netfx3*.cab -Recurse))
+	If ($ContentJson.Integrate.NetFx3 -and $DynamicParams.ISOMedia -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 | Where-Object -Property State -EQ DisabledWithPayloadRemoved) -and (Get-ChildItem -Path "$($ISOMedia.FullName)\sources\sxs" -Filter *netfx3*.cab -Recurse))
 	{
 		Try
 		{
 			$Host.UI.RawUI.WindowTitle = "Enabling Windows Feature: NetFx3"
 			Log -Info "Enabling Windows Feature: NetFx3"
-			$NetFx3Params = @{
+			$EnableNetFx3Params = @{
 				Path             = $InstallMount
 				FeatureName      = 'NetFx3'
 				Source           = "$($ISOMedia.FullName)\sources\sxs"
@@ -1739,7 +1739,7 @@ If ($Additional.IsPresent -and (Test-Path -Path $ConfigFilePath))
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			[Void](Enable-WindowsOptionalFeature @NetFx3Params)
+			[Void](Enable-WindowsOptionalFeature @EnableNetFx3Params)
 			$DynamicParams.Add('NetFx3', $true)
 		}
 		Catch
@@ -1832,14 +1832,14 @@ If ($DynamicParams.Boot)
 		Cleanup -Boot
 		$Host.UI.RawUI.WindowTitle = "Saving and Dismounting $($BootInfo.Name)"
 		Log -Info "Saving and Dismounting $($BootInfo.Name)"
-		$DismountBootImage = @{
+		$DismountBootParams = @{
 			Path             = $BootMount
 			Save             = $true
 			ScratchDirectory = $ScratchDirectory
 			LogPath          = $DISMLog
 			ErrorAction      = 'Stop'
 		}
-		[Void](Dismount-WindowsImage @DismountBootImage)
+		[Void](Dismount-WindowsImage @DismountBootParams)
 	}
 	Catch
 	{
@@ -1855,14 +1855,14 @@ If ($DynamicParams.Recovery)
 		Cleanup -Recovery
 		$Host.UI.RawUI.WindowTitle = "Saving and Dismounting $($RecoveryInfo.Name)"
 		Log -Info "Saving and Dismounting $($RecoveryInfo.Name)"
-		$DismountRecoveryImage = @{
+		$DismountRecoveryParams = @{
 			Path             = $RecoveryMount
 			Save             = $true
 			ScratchDirectory = $ScratchDirectory
 			LogPath          = $DISMLog
 			ErrorAction      = 'Stop'
 		}
-		[Void](Dismount-WindowsImage @DismountRecoveryImage)
+		[Void](Dismount-WindowsImage @DismountRecoveryParams)
 	}
 	Catch
 	{
@@ -1904,7 +1904,7 @@ If ($DynamicParams.Recovery)
 	{
 		$Host.UI.RawUI.WindowTitle = "Rebuilding and Exporting $($RecoveryInfo.Name)"
 		Log -Info "Rebuilding and Exporting $($RecoveryInfo.Name)"
-		$ExportRecovery = @{
+		$ExportRecoveryParams = @{
 			SourceImagePath      = $RecoveryWim
 			SourceIndex          = 1
 			DestinationImagePath = "$WorkDirectory\winre.wim"
@@ -1912,7 +1912,7 @@ If ($DynamicParams.Recovery)
 			LogPath              = $DISMLog
 			ErrorAction          = 'Stop'
 		}
-		[Void](Export-WindowsImage @ExportRecovery)
+		[Void](Export-WindowsImage @ExportRecoveryParams)
 		$WinREPath | Purge
 		Move-Item -Path "$WorkDirectory\winre.wim" -Destination $WinREPath -Force
 	}
@@ -1928,14 +1928,14 @@ Try
 	Cleanup -Install
 	$Host.UI.RawUI.WindowTitle = "Saving and Dismounting $($InstallInfo.Name)"
 	Log -Info "Saving and Dismounting $($InstallInfo.Name)"
-	$DismountWindowsImage = @{
+	$DismountInstallParams = @{
 		Path             = $InstallMount
 		Save             = $true
 		ScratchDirectory = $ScratchDirectory
 		LogPath          = $DISMLog
 		ErrorAction      = 'Stop'
 	}
-	[Void](Dismount-WindowsImage @DismountWindowsImage)
+	[Void](Dismount-WindowsImage @DismountInstallParams)
 }
 Catch
 {
@@ -1964,7 +1964,7 @@ Try
 	}
 	Else
 	{
-		$ExportInstall = @{
+		$ExportInstallParams = @{
 			SourceImagePath      = $InstallWim
 			SourceIndex          = $ImageIndex
 			DestinationImagePath = "$WorkDirectory\install.wim"
@@ -1973,7 +1973,7 @@ Try
 			LogPath              = $DISMLog
 			ErrorAction          = 'Stop'
 		}
-		[Void](Export-WindowsImage @ExportInstall)
+		[Void](Export-WindowsImage @ExportInstallParams)
 		$InstallWim | Purge
 		Move-Item -Path "$WorkDirectory\install.wim" -Destination $InstallWim -Force
 		$ImageFiles = @('install.wim', 'boot.wim')
@@ -2027,13 +2027,21 @@ Finally
 {
 	$Timer.Stop()
 	Start-Sleep 5
+	$PassedParams = [Ordered]@{ }
+	ForEach ($Key In $PSBoundParameters.Keys)
+	{
+		If ($PSBoundParameters.$Key -is [Array]) { $Value = $PSBoundParameters.$Key -join ',' }
+		Else { $Value = $PSBoundParameters.$Key }
+		$PassedParams.Add($Key, $Value)
+	}
 	If ($Error.Count -gt 0)
 	{
-		($Error | ForEach-Object -Process { [PSCustomObject] @{ Line = $_.InvocationInfo.ScriptLineNumber; Error = $_.Exception.Message } } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $LogDirectory -ChildPath ErrorRecord.log) -Force
+		($Error | ForEach-Object -Process { [PSCustomObject] @{ Line = $_.InvocationInfo.ScriptLineNumber; Error = $_.Exception.Message } } | Format-Table -AutoSize -Wrap | Out-String).Trim() | Out-File -FilePath (Join-Path -Path $LogDirectory -ChildPath ErrorRecord.log) -Encoding UTF8 -Force
 	}
 	Log -Info "$($ScriptInfo.Name) completed in [$($Timer.Elapsed.Minutes.ToString())] minutes with [$($Error.Count)] errors." -Finalized
-	@($DISMLog, "$Env:SystemRoot\Logs\DISM\dism.log") | Purge
 	$InstallInfo | Out-File -FilePath (Join-Path -Path $LogDirectory -ChildPath WimFileInfo.log) -Encoding UTF8 -Force
+	$PassedParams | Out-File -FilePath (Join-Path -Path $LogDirectory -ChildPath PassedParameters.log) -Encoding UTF8 -Force
+	@($DISMLog, "$Env:SystemRoot\Logs\DISM\dism.log") | Purge
 	[Void](Get-ChildItem -Path $LogDirectory -Filter *.log | Compress-Archive -DestinationPath (Join-Path -Path $SaveDirectory.FullName -ChildPath OptimizeLogs.zip) -CompressionLevel Fastest)
 	$TempDirectory | Purge
 	[Void](Clear-WindowsCorruptMountPoint)
