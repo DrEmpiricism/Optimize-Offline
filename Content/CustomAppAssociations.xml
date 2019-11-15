@@ -30,6 +30,7 @@
   <Association Identifier=".mpeg" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
   <Association Identifier=".mpg" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
   <Association Identifier=".mts" ProgId="WMP11.AssocFile.M2TS" ApplicationName="Windows Media Player" />
+  <Association Identifier=".nfo" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
   <Association Identifier=".oxps" ProgId="Windows.XPSReachViewer" ApplicationName="XPS Viewer" />
   <Association Identifier=".png" ProgId="PhotoViewer.FileAssoc.Png" ApplicationName="Windows Photo Viewer" />
   <Association Identifier=".txt" ProgId="txtfile" ApplicationName="Notepad" />
