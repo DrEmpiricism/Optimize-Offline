@@ -190,6 +190,6 @@ The easiest way to call Optimize-Offline is by using the provided [Optimize-Offl
 
 The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
 
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT "Setup" -Additional -ISO "No-Prompt"
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\WIN_10_PFW.iso" -WindowsApps "All" -SystemApps -Capabilities -Features -Registry -Win32Calc -Dedup -DaRT "Setup", "Recovery" -ISO "Prompt"
+- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Whitelist" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT "Setup" -Additional -ISO "No-Prompt"
+- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\WIN_10_PFW.iso" -WindowsApps "All" -SystemApps -Capabilities -Features -Registry -Win32Calc -Dedup -DaRT "All" -ISO "Prompt"
 - .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Capabilities -Packages -Features -DeveloperMode -WindowsStore -MicrosoftEdge -DaRT "Recovery" -Additional
