@@ -93,10 +93,10 @@ A short list of some of the optimizations include:
 
 ### About the SMB1 File Sharing Protocol and Windows PowerShell 2.0 Optional Features ###
 
-When optimizing an image with Optimize-Offline, curiosity may arise as to why the SMB1 Protocol and Windows PowerShell 2.0 Optional Features are automatically disabled. In short, Microsoft has labled both of them a security risk.
+When optimizing an image with Optimize-Offline, curiosity may arise as to why the SMB1 Protocol and Windows PowerShell 2.0 Optional Features are automatically disabled. In short, Microsoft has labeled both of them a security risk.
 
 - The SMB1 Protocol is vulnerable to [Ransomware propagation](https://techcommunity.microsoft.com/t5/Storage-at-Microsoft/Stop-using-SMB1/ba-p/425858).
-- Windows PowerShell 2.0 can be used to run melicous scripts and has been [depreciated since Windows 10 version 1709](https://devblogs.microsoft.com/powershell/windows-powershell-2-0-deprecation/).
+- Windows PowerShell 2.0 can be used to run malicious scripts and has been [depreciated since Windows 10 version 1709](https://devblogs.microsoft.com/powershell/windows-powershell-2-0-deprecation/).
 
 ### About Additional Content ###
 
