@@ -176,5 +176,6 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
-Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type: `.\Start-Optimize.ps1`
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type: 
+`.\Start-Optimize.ps1`
 This will import the content of the Configuration.json into the Optimize-Offline module and image optimization will begin.
