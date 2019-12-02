@@ -1,6 +1,6 @@
 # ChangeLog #
 
-## Build 4.0.0.0 (12-01-2019) ##
+## Build 4.0.0.0 (12-02-2019) ##
 
 - Optimize-Offline project has been restructured and converted to an advanced PowerShell cmdlet.
 - Function and variable control are now done with a nested resources module.
