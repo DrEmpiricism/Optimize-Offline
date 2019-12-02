@@ -1,12 +1,10 @@
 {
-  "Integrate": {
-    "Setup": true,
-    "Wallpaper": true,
-    "SystemLogo": true,
-    "LockScreen": true,
-    "RegistryTemplates": true,
-    "Unattend": false,
-    "Drivers": false,
-    "NetFx3": false
-  }
+  "Setup": true,
+  "Wallpaper": true,
+  "SystemLogo": true,
+  "LockScreen": true,
+  "RegistryTemplates": true,
+  "Unattend": false,
+  "Drivers": false,
+  "NetFx3": false
 }

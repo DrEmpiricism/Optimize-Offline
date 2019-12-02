@@ -1,1 +1,1 @@
-Any registration templates (reg files) added herein will be integrated into the image registry when the -Additional switch is used and its value set to True in the Config.ini
+If adding additional user content, place any registration templates (reg files) to be added to the image here.

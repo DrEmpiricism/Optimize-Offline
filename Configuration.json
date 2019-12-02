@@ -1,0 +1,22 @@
+﻿{
+  "_Info": [
+    "This is a JSON based Configuration file for Optimize-Offline.",
+    "Ensure proper formatting is used when editing the JSON parameter values.",
+    "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
+  ],
+  "SourcePath": "Path:\\To\\Source\\Image",
+  "WindowsApps": "All",
+  "SystemApps": true,
+  "Capabilities": true,
+  "Packages": true,
+  "Features": true,
+  "DeveloperMode": false,
+  "WindowsStore": false,
+  "MicrosoftEdge": false,
+  "Win32Calc": true,
+  "Dedup": true,
+  "DaRT": "Setup",
+  "Registry": true,
+  "Additional": true,
+  "ISO": "No-Prompt"
+}

@@ -1,6 +1,24 @@
 # ChangeLog #
 
-## Build 3.2.7.8 (11-15-20119) ##
+## Build 4.0.0.0 (12-01-2019) ##
+
+- Optimize-Offline project has been restructured and converted to an advanced PowerShell cmdlet.
+- Function and variable control are now done with a nested resources module.
+- Data is now imported into the cmdlet using localized data files.
+- Optimize-Offline now requires a system culture of en-US.
+- The Optimize-Offline.cmd call script has been replaced with the Start-Optimize.ps1 call script.
+- Start-Optimize.ps1 allows for Optimize-Offline to be called from the PowerShell console with more control over how parameters are passed to the modules by automatically importing the configuration file (Configuration.json) into the Optimize-Offline cmdlet.
+- Once the Configuration.json file has been edited, Start-Optimize.ps1 will execute Optimize-Offline with its content values.
+- After an image has been successfully optimized, Optimize-Offline will generate a configuration JSON file (Configuration.json) based on the parameters and values passed for that specific optimization. Users will be able to use this configuration JSON file to replicate future image optimizations, or as a template.
+- The System Application removal process has been updated. The four System Applications that use a GUID namespace as their application names are now displayed using their resolved application names.
+- There is now a removed package clean-up process that runs after Provisioned and System Apps have been removed instead of being separated within other processes.
+- The applying of optimized registry settings has been updated to its own advanced function. Moreover, multiple registry settings have been updated.
+- Processing speed has been increased while overhead and load have been decreased.
+- Updated and optimized multiple Resource functions and variables.
+- Improved and updated run requirements utilizing a custom module manifest data file.
+- All bundle and dependency packages for the integration of the Windows Store have been updated.
+
+## Build 3.2.7.8 (11-15-2019) ##
 
 - Corrected an issue where trying to pass both the 'Setup' and 'Recovery' values in the Optimize-Offline.cmd calling script would return an error.
 - Changed the validation set for the -DaRT parameter. It now accepts one of three values: 'Setup,' 'Recovery' and 'All.' Passing the value -DaRT "All" will integrate Dart 10 into both Windows Setup and Windows Recovery, while passing -DaRT "Setup" or -DaRT "Recovery" will integrate DaRT 10 into that environment only.
@@ -37,12 +55,3 @@
 - Updated multiple OfflineProcessing module functions.
 - Added the ability to access protected offline registry keys.
 - Updated the offline registry key values set during the integration of the Win32Calc designating as a System Application.
-
-## Build 3.2.7.4 (10-12-2019) ##
-
-- Created a custom Win32Calc.wim that replaces the official cabinet files for builds 17663+ for the integration of the Win32 Calculator.
-- The custom Win32Calc.wim fixes an issue that is present in the OEM Win32Calc cabinet packages which cause the Win32 Calculator to crash when the conversion type is changed.
-- Updated the registry optimizations applied when the -Registry switch is used.
-- A custom LockScreen can now be applied to the image using the -Additional switch and its associated Config.ini by adding the custom LockScreen image to the new 'Content\Additional\LockScreen' folder.
-- Updated multiple functions used with the OfflineProcessing module.
-

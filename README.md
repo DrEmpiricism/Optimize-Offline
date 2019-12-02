@@ -1,53 +1,43 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization script designed for Windows 10 versions 1803-to-1909 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
 
 ## About Optimize-Offline ##
 
-- Primary focus' are the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
-- Accepts either a full Windows 10 installation ISO, or a Windows 10 install.wim file.
-- Does not perform any changes to an installed or live system nor can it optimize a live system.
-- Makes multiple changes to both the offline system and registry hives to enhance security, usability and privacy while also improving performance.
-- Checks the health of the image both before and after the script runs to ensure the image retains a healthy status.
-- Detects what System Applications were removed, and further removes any associated drivers or services associated with them.
-- Allows offline removal of Provisioned Application Packages, System Applications and Windows OnDemand Packages.
-- Allows offline disabling and offline enabling of Windows Features.
-- Allows for the offline integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Setup content, Data Deduplication and more.
-- All optimization processes are done silently and properly with proper error-handling.
+- Primary objective is the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
+- Accepts either a full Windows 10 installation ISO or a Windows 10 install.wim file.
+- Does not perform any changes to an installed or live system.
+- Checks the health of the image both before and after the module runs to ensure the image retains a healthy status.
+- Detects what Provisioned and System Applications were removed and further removes any associated drivers, services and integrated content associated with them.
+- Allows for the removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files and Optional Features.
+- Allows for the integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Developer Mode, Setup content, Data Deduplication and more.
+- All optimization processes are done silently with internal error-handling.
 
-## Script Disclaimer ##
+## Module Disclaimer ##
 
 - Latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases)
 - It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Not all integrations are available for languages outside of en-US.
-- Properties, features, packages, etc. can and often do change between builds. This means that when optimizing an image, the script could warn of an error during the optimization process that did not occur before.
-- Just because something can be removed does not mean it should be removed. Haphazard removal of System Applications can cause errors during Windows 10 setup.
+- Optimize-Offline is designed for the en-US system language culture.
+- Just because something can be removed does not mean it should be removed. Haphazard removal of features and/or packages can cause Windows 10 setup or runtime errors.
 - Support will not be given to users who attempt to optimize unsupported builds or previously modified images.
 
 ## Optimize-Offline Best Practices ##
 
+- Keep the default project file stucture in its default state.
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
-- If maintaining fully updated OEM images, it's best to integrate offline updates into the image BEFORE running Optimize-Offline.
-- To ensure package removals and integrations are retained, it's best to update an offline image with the latest Servicing Stack Update(s) and Monthly Cumulative Update before optimizing it.
-- Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the script or the registry while the script is optimizing.
-- Optimize-Offline requires PowerShell version 5.0 and a 64-bit environment.
+- If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
+- To ensure package removals and integrations are retained, it is best to update an offline image with the latest Servicing Stack Update(s) and Monthly Cumulative Update before optimizing it.
+- Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the module or the registry while optimizations are processing.
 - Read the ReadMe files in the 'Content\Additional' directories for important information regarding user-specific content.
 
-## Switches and Parameters ##
+## Parameters ##
 
 ### About System Applications ###
 
 System Applications are a lot like Provisioned Application Packages (Windows Apps) in respect that they are provisioned and installed during the setup of Windows. During the Windows Setup component pass, setup looks for these System Applications in the default registry and provisions them for installation only if their entries are present. By removing these entries, Windows Setup does not provision them for installation.
 
 This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevent both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
-
-Four System Applications use a GUID namespace instead of an identifiable package name:
-
-- 1527c705-839a-4832-9118-54d4Bd6a0c89 = Microsoft.Windows.FilePicker
-- c5e2524a-ea46-4f67-841f-6a9465d9d515 = Microsoft.Windows.FileExplorer
-- E2A4F912-2574-4A75-9BB0-0D023378592B = Microsoft.Windows.AppResolverUX
-- F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE = Microsoft.Windows.AddSuggestedFoldersToLibraryDialog
 
 #### System Applications universally safe to remove ####
 
@@ -70,14 +60,14 @@ Cortana can also be removed, though doing so will render the default search feat
 
 ### About Windows Capabilities and Packages ###
 
-The -Capabilities switch allows for the removal of Features on Demand (FOD) installed in the image and the -Packages switch allows for the removal of Windows Cabinet File Packages.
+The Capabilities parameter allows for the removal of Features on Demand (FOD) installed in the image and the Packages parameter allows for the removal of Windows Cabinet File Packages.
 
-Like with all removals, care must be taken when using either of these switches, primary the -Packages switch. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It's recommended to read the  [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
+Like with all removals, care must be taken when using either of these removal parameters, particularly the Packages parameter. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It is recommended to read the  [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
 
 ### About Registry Optimizations ###
 
 The -Registry switch applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
-The script only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Conversely, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
+The module only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Conversely, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
 
 A short list of some of the optimizations include:
 
@@ -100,13 +90,11 @@ When optimizing an image with Optimize-Offline, curiosity may arise as to why th
 
 ### About Additional Content ###
 
-When the -Additional switch it used, any content specified in its configuration file (Config.ini) will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
+When the Additional parameter it used, any content specified in its configuration JSON file (Additional.json) will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
 
-Within the '\Content\Additional' directory are seven folders: 'Drivers', 'LockScreen', 'RegistryTemplates', 'Setup', 'SystemLogo', 'Unattend' and 'Wallpaper', and one configuration file: Config.ini. The script automatically checks each folder to ensure the file-types are valid for the type of content being added to the image. Aside from the 'Drivers' and 'RegistryTemplates' folders, content validation is based on Microsoft's deployment guidelines. Any content located in the 'Setup' folder will be copied because what a user implements during the setup of their device can be an array of different container types - files, directories, executables, etc.
+Content validation is based on Microsoft's deployment guidelines. All content that gets transfered to the image are copied to locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
 
-All content that gets copied to the image are copied to the locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
-
-Content can be in the form of files, folders or directories. If, for example, you want a wallpaper directory called 'Custom', Optimize-Offline will copy the added 'Custom' directory - and all contents therein - to the '\Windows\Web\Wallpaper' directory while keeping its original file structure. Content is NOT copied haphazardly nor are original file structures ignored.
+Content can be in the form of files, folders or directories, unless a specific filetype is required. Content is NOT copied haphazardly nor are original file structures ignored.
 
 #### Registry Template Integration ####
 
@@ -130,7 +118,7 @@ It is also in good practice to have a good idea what each Configuration Pass doe
 
 ### About Microsoft DaRT 10 ###
 
-Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debugging tools. Since these tools run in a Preinstallation Environment and are quite powerful, it's wise to be aware of what they do prior to using them and to NOT integrate them into images that will be used by multiple people.
+Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debugging tools. Since these tools run in a Preinstallation Environment and are quite powerful, it is wise to be aware of what they do prior to using them and to NOT integrate them into images that will be used by multiple people.
 
 > Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
@@ -184,12 +172,9 @@ Conversely, failing to remove the defaultuser0 account immediately after Windows
 
 In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
 
-## Calling Optimize-Offline ##
+## Using Optimize-Offline ##
 
-The easiest way to call Optimize-Offline is by using the provided [Optimize-Offline.cmd script](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/Optimize-Offline.cmd). Right-click the script and 'Open with Notepad,' then edit any variables to accommodate your optimization requirements. Once finished, save any changes and right click the Optimize-Offline.cmd script and select 'Run as Administrator' and it will call Optimize-Offline and pass all the variables, parameters and switches to the PowerShell script. This allows the end-user to quickly call Optimize-Offline without having to manually input the paths, parameters and switches each time an image is to be optimized.
+Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
-The second way is to open an elevated PowerShell console shell and navigate to the root directory of the Optimize-Offline script and then dot source the script, followed by the paths, parameters and switches required for optimization:
-
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\Win10Pro_Full.iso" -WindowsApps "Whitelist" -SystemApps -Capabilities -Packages -Features -Registry -Win32Calc -Dedup -DaRT "Setup" -Additional -ISO "No-Prompt"
-- .\Optimize-Offline.ps1 -SourcePath "D:\ISO Files\WIN_10_PFW.iso" -WindowsApps "All" -SystemApps -Capabilities -Features -Registry -Win32Calc -Dedup -DaRT "All" -ISO "Prompt"
-- .\Optimize-Offline.ps1 -SourcePath "D:\WIM Files\LTSC 2019\install.wim" -SystemApps -Capabilities -Packages -Features -DeveloperMode -WindowsStore -MicrosoftEdge -DaRT "Recovery" -Additional
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type: `.\Start-Optimize.ps1`
+This will import the content of the Configuration.json into the Optimize-Offline module and image optimization will begin.
