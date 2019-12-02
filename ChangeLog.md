@@ -17,6 +17,7 @@
 - Updated and optimized multiple Resource functions and variables.
 - Improved and updated run requirements utilizing a custom module manifest data file.
 - All bundle and dependency packages for the integration of the Windows Store have been updated.
+- Additionally, many other smaller code changes have been committed.
 
 ## Build 3.2.7.8 (11-15-2019) ##
 
