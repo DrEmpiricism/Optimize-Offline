@@ -3,9 +3,8 @@ Function Set-LockScreen
     [CmdletBinding()]
     Param ()
 
-    $JPGImage = Get-ChildItem -Path $AdditionalPath.LockScreen -Filter *.jpg | Select-Object -First 1 | Copy-Item -Destination (Join-Path -Path $WorkFolder -ChildPath img100.jpg) -PassThru -Force
-    $PNGImage = Join-Path -Path $WorkFolder -ChildPath ([IO.Path]::ChangeExtension($JPGImage.BaseName.Replace('100', '103'), '.png'))
-    $PNGImage = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($PNGImage)
+    $JPGImage = Get-ChildItem -Path $OptimizeOffline.LockScreen -Filter *.jpg | Select-Object -First 1 | Copy-Item -Destination (Get-Path -Path $WorkFolder -ChildPath img100.jpg) -PassThru -Force
+    $PNGImage = Get-Path -Path $WorkFolder -ChildPath ([IO.Path]::ChangeExtension($JPGImage.BaseName.Replace('100', '103'), '.png'))
     Try
     {
         Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction Stop
@@ -26,9 +25,9 @@ Function Set-LockScreen
     }
     If ((Test-Path -Path "$InstallMount\Windows\Web\Screen\img100.jpg") -and (Test-Path -Path "$InstallMount\Windows\Web\Screen\img103.png"))
     {
-        If ((Test-Path -Path (Join-Path -Path $WorkFolder -ChildPath img100.jpg)) -and (Test-Path -Path (Join-Path -Path $WorkFolder -ChildPath img103.png)))
+        If ((Test-Path -Path (Get-Path -Path $WorkFolder -ChildPath img100.jpg)) -and (Test-Path -Path (Get-Path -Path $WorkFolder -ChildPath img103.png)))
         {
-            $BKPImage = Get-ChildItem -Path "$InstallMount\Windows\Web\Screen" -Include img100.jpg, img103.png -Recurse -Force | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Join-Path -Path $WorkFolder -ChildPath $PSItem.Name.Insert($PSItem.Name.Length, '.bkp')) -PassThru -Force }
+            $BKPImage = Get-ChildItem -Path "$InstallMount\Windows\Web\Screen" -Include img100.jpg, img103.png -Recurse -Force | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path $WorkFolder -ChildPath $PSItem.Name.Insert($PSItem.Name.Length, '.bkp')) -PassThru -Force }
             $ACL = Get-Acl -Path "$InstallMount\Windows\Web\Screen\img100.jpg"
             Try
             {
@@ -38,7 +37,7 @@ Function Set-LockScreen
             Catch
             {
                 Log -Error ('Failed to Apply Lock Screen: {0}' -f $(FormatError))
-                $BKPImage | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Join-Path -Path "$InstallMount\Windows\Web\Screen" -ChildPath $PSItem.Name.Replace('.bkp', $null)) -Force }
+                $BKPImage | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path "$InstallMount\Windows\Web\Screen" -ChildPath $PSItem.Name.Replace('.bkp', $null)) -Force }
                 Return
             }
             Finally

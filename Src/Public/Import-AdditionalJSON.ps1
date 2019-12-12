@@ -3,7 +3,7 @@ Function Import-AdditionalJSON
     [CmdletBinding()]
     Param ()
 
-    $AdditionalJSON = Get-Content -Path $AdditionalPath.AdditionalJson -Raw | ConvertFrom-Json
+    $AdditionalJSON = Get-Content -Path $OptimizeOffline.AdditionalJSON -Raw | ConvertFrom-Json
     $AdditionalParams = @{ }
     ForEach ($Member In (Get-Member -InputObject $AdditionalJSON -MemberType NoteProperty))
     {

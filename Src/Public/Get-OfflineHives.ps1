@@ -1,6 +1,6 @@
 Function Get-OfflineHives
 {
-    [CmdletBinding(DefaultParameterSetName = 'None')]
+    [CmdletBinding(DefaultParameterSetName = 'Load')]
     Param
     (
         [Parameter(ParameterSetName = 'Load')]
@@ -11,22 +11,48 @@ Function Get-OfflineHives
         [Switch]$Test
     )
 
-    Switch ($PSBoundParameters.Keys)
+    $Hive = [Ordered]@{
+        SOFTWARE = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\SOFTWARE')
+        SYSTEM   = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\SYSTEM')
+        DEFAULT  = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\DEFAULT')
+        NTUSER   = (Get-Path -Path $InstallMount -ChildPath 'Users\Default\NTUSER.DAT')
+    }
+
+    $HiveMountPoint = [Ordered]@{
+        SOFTWARE = 'WIM_HKLM_SOFTWARE'
+        SYSTEM   = 'WIM_HKLM_SYSTEM'
+        DEFAULT  = 'WIM_HKU_DEFAULT'
+        NTUSER   = 'WIM_HKCU'
+    }
+
+    $HKLM = 0x80000002
+
+    Switch ($PSCmdlet.ParameterSetName)
     {
         'Load'
         {
-            @(('HKLM\WIM_HKLM_SOFTWARE "{0}"' -f "$InstallMount\Windows\System32\config\software"), ('HKLM\WIM_HKLM_SYSTEM "{0}"' -f "$InstallMount\Windows\System32\config\system"), ('HKLM\WIM_HKCU "{0}"' -f "$InstallMount\Users\Default\NTUSER.DAT"), ('HKLM\WIM_HKU_DEFAULT "{0}"' -f "$InstallMount\Windows\System32\config\default")) | ForEach-Object -Process { [Void](StartExe $REG -Arguments ('LOAD {0}' -f $PSItem)) }
+            $RegLoad = Import-Win32API -Load
+            'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege
+            [Void]$RegLoad::RegLoadKey($HKLM, $HiveMountPoint.SOFTWARE, $Hive.SOFTWARE)
+            [Void]$RegLoad::RegLoadKey($HKLM, $HiveMountPoint.SYSTEM, $Hive.SYSTEM)
+            [Void]$RegLoad::RegLoadKey($HKLM, $HiveMountPoint.DEFAULT, $Hive.DEFAULT)
+            [Void]$RegLoad::RegLoadKey($HKLM, $HiveMountPoint.NTUSER, $Hive.NTUSER)
+            'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege -Disable
             Break
         }
         'Unload'
         {
+            $RegUnload = Import-Win32API -Unload
+            'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege
             [GC]::Collect()
-            @('HKLM\WIM_HKLM_SOFTWARE', 'HKLM\WIM_HKLM_SYSTEM', 'HKLM\WIM_HKCU', 'HKLM\WIM_HKU_DEFAULT') | ForEach-Object -Process { [Void](StartExe $REG -Arguments ('UNLOAD {0}' -f $PSItem)) }
+            [GC]::WaitForPendingFinalizers()
+            $HiveMountPoint.Values.ForEach{ [Void]$RegUnload::RegUnLoadKey($HKLM, $PSItem) }
+            'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege -Disable
             Break
         }
         'Test'
         {
-            @('HKLM:\WIM_HKLM_SOFTWARE', 'HKLM:\WIM_HKLM_SYSTEM', 'HKLM:\WIM_HKCU', 'HKLM:\WIM_HKU_DEFAULT') | ForEach-Object -Process { If (Test-Path -LiteralPath $PSItem) { $true } }
+            $HiveMountPoint.Values.ForEach{ If (Test-Path -Path $PSItem.Insert(0, 'HKLM:\')) { $true } }
             Break
         }
     }

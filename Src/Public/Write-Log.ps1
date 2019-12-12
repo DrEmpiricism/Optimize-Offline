@@ -21,6 +21,21 @@ Function Write-Log
 		[IO.FileInfo]$ModuleLog = $ModuleLog
 		$Timestamp = (Get-Date -Format 's')
 		$LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
+		$Header = @"
+***************************************************************************************************
+Running Module : $($ManifestData.ModuleName) $($ManifestData.ModuleVersion)
+Optimize Start : {0}
+Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+Computer Name  : $Env:COMPUTERNAME
+***************************************************************************************************
+
+"@
+		$Footer = @"
+
+***************************************************************************************************
+Optimizations Finalized : {0}
+***************************************************************************************************
+"@
 		[Void]$LogMutex.WaitOne()
 	}
 	Process
@@ -28,15 +43,7 @@ Function Write-Log
 		If (!$ModuleLog.Exists)
 		{
 			$ModuleLog = New-Item -Path $ModuleLog -ItemType File -Force
-			@"
-***************************************************************************************************
-Running Module : $($ManifestData.ModuleName) $($ManifestData.ModuleVersion)
-Optimize Start : $(Get-Date -UFormat "%m/%d/%Y %r")
-Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name)
-Computer Name  : $Env:COMPUTERNAME
-***************************************************************************************************
-
-"@ | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Force
+			$Header -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Force
 		}
 		Switch ($PSBoundParameters.Keys)
 		{
@@ -54,22 +61,12 @@ Computer Name  : $Env:COMPUTERNAME
 			}
 			'Finalized'
 			{
-				@"
-
-***************************************************************************************************
-Optimizations Finalized : $(Get-Date -UFormat "%m/%d/%Y %r")
-***************************************************************************************************
-"@ | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
+				$Footer -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
 				$Host.UI.RawUI.WindowTitle = "Optimizations Completed."
 			}
 			'Failed'
 			{
-				@"
-
-***************************************************************************************************
-Optimizations Failed : $(Get-Date -UFormat "%m/%d/%Y %r")
-***************************************************************************************************
-"@ | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
+				$Footer.Replace('Optimizations Finalized : {0}', 'Optimizations Failed : {0}') -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
 				$Host.UI.RawUI.WindowTitle = "Optimizations Failed."
 			}
 		}

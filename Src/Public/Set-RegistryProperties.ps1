@@ -1,45 +1,3 @@
-$RegistryData = ConvertFrom-StringData -StringData @'
-DisableCortana                      = Disabling Cortana and Search Bar Web Connectivity.
-DisableTelemetry                    = Disabling System Telemetry, Logging, Data Collecting and Advertisements.
-DisableTracking                     = Disabling Windows Tracking.
-DisableLocation                     = Disabling System Location Sensors.
-DisablePassReveal                   = Disabling the Password Reveal Button.
-DisableSharedExperiences            = Disabling Cross-Device Sharing and Shared Experiences.
-DisableWiFiSense                    = Disabling WiFi Sense.
-DisableNotifications                = Disabling Microsoft Toast and Lockscreen Notifications.
-DisableAutoplayAutorun              = Disabling Connected Drive Autoplay and Autorun.
-DisableFileBlocking                 = Disabling Automatic Download File Blocking.
-DisableModernUISwapFile             = Disabling the Modern UI Swap File.
-DisableReservedStorage              = Disabling Reserved Storage.
-DisableAutoCleanup                  = Disabling the Automatic Clean-up of Downloads by Storage Sense.
-DisableLogonAnimation               = Disabling the First Log-on Animation.
-DisableStartupSound                 = Disabling the Windows Start-up Sound.
-EnableOLEDTaskbar                   = Optimizing Taskbar Icons and Transparency.
-EnableLaunchToThisPC                = Enabling File Explorer Launch to This PC.
-DisableJPEGQualityReduction         = Disabling Wallpaper .JPEG Quality Reduction.
-DisableAcrylicBlur                  = Disabling the Sign-in Screen Acrylic Blur.
-DisableShortcutText                 = Disabling the Trailing Text for Shortcuts.
-DisableEdgeShortcutPrelaunch        = Disabling Microsoft Edge Desktop Shortcut Creation and Pre-Launching.
-DisablePinnedIcons                  = Disabling Pinned Windows Store, Windows Mail and People Icons.
-ReduceStartMenuDelay                = Reducing Start Menu Delay.
-EnableCombineSmallIcons             = Enabling TaskBar Icon Combining with Small Icons.
-DisableOpenFilePrompt               = Disabling the Open File Prompt.
-EnableClassicPersonalizationPanel   = Enabling the Classic Personalization Panel.
-EnableFloatingImmersiveControlPanel = Enabling the Floating Immersive Control Panel.
-EnableThisPCDesktop                 = Enabling This PC Desktop Icon.
-RemoveEditPaintPrintContextMenu     = Removing Edit with Paint 3D and 3D Print from the Context Menu.
-RestoreWindowsPhotoViewer           = Restoring Windows Photo Viewer.
-RemoveUserFoldersExplorer           = Removing User Folders from Explorer.
-IncreaseIconCache                   = Increasing the Icon Cache Size.
-DisableStickyKeysPrompt             = Disabling the Sticky Keys Prompt.
-DisableEnhancedPointerPrecision     = Disabling Enhanced Pointer Precision.
-RemoveAccessShareCastContextMenu    = Removing Give Access To, Share and Cast To Device from the Context Menu.
-RemoveRestorePreviousVersions       = Removing Restore Previous Versions from the Context Menu.
-EnableLongFilePaths                 = Enabling Long File Paths.
-EnableStrongCrypto                  = Enabling Strong Cryptography for .NET Applications.
-EnableRebootRecoveryMyPC            = Adding Reboot to Recovery to This PC.
-'@
-
 Function Set-RegistryProperties
 {
     [CmdletBinding()]
@@ -47,11 +5,14 @@ Function Set-RegistryProperties
 
     Begin
     {
-        $InstallInfo = Import-Clixml -Path (Join-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
+        $InstallInfo = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
         RegHives -Load
     }
     Process
     {
+        Try { Import-LocalizedData -BindingVariable RegistryData -FileName Set-RegistryProperties.strings.psd1 -ErrorAction Stop }
+        Catch { Log -Error ('Failed to import the registry localized data file: "{0}"' -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf)); Start-Sleep 3; Return }
+
         $RegistryData.DisableCortana | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         If ($InstallInfo.Build -ge '18362') { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowCortanaButton" -Value 0 -Type DWord }
         ElseIf ($InstallInfo.Build -le '17763') { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0 -Type DWord }

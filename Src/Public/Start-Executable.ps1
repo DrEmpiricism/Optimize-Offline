@@ -12,7 +12,7 @@ Function Start-Executable
     {
         $StartInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
         $StartInfo.FileName = $Executable.FullName
-        $StartInfo.Arguments = $Arguments
+        If (![String]::IsNullOrEmpty($Arguments)) { $StartInfo.Arguments = $Arguments }
         $StartInfo.CreateNoWindow = $true
         $StartInfo.WindowStyle = 'Hidden'
         $StartInfo.UseShellExecute = $false
@@ -24,5 +24,9 @@ Function Start-Executable
         [Void]$Process.Start()
         $Process.WaitForExit()
         $Process.ExitCode
+    }
+    End
+    {
+        If ($null -ne $Process) { $Process.Dispose() }
     }
 }

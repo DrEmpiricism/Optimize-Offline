@@ -45,8 +45,8 @@ public class ISOWriter
 }
 '@ -CompilerParameters $CompilerParams
         }
-        $ISOMedia = Import-Clixml -Path (Join-Path -Path $WorkFolder -ChildPath ISOMedia.xml)
-        $InstallInfo = Import-Clixml -Path (Join-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
+        $ISOMedia = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath ISOMedia.xml)
+        $InstallInfo = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
         Switch ($BootType)
         {
             'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys.bin" }

@@ -17,7 +17,7 @@ Function New-Container
         {
             If (!(Test-Path -LiteralPath $Item))
             {
-                $RET = New-Item -Path $Item -ItemType Directory -Force -ErrorAction SilentlyContinue
+                $RET = New-Item -Path $Item -ItemType Directory -Force -ErrorAction:$ErrorActionPreference
                 If ($PassThru.IsPresent) { $RET }
             }
         }

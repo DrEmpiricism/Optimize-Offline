@@ -1,5 +1,16 @@
 # ChangeLog #
 
+## Build 4.0.0.1 (12-11-2019) ##
+
+- Cmdlet help topics have been re-written into an XML-based external MAML file. Moreover, this XML MAML help document will be able to be updated any time Optimize-Offline is imported into a session.
+- A few additional Resource functions have been created to aid in various framework tasks.
+- Multiple Resource functions have been updated.
+- The imported localized data has been updated.
+- The loading and unloading of registry hives is now done natively using the Advapi32.dll Win32 API.
+- A custom System.IO.Optimized.Wim object type is now created when Optimize-Offline finalizes and added to the final save folder in the form of an XML document that will contain both default and optimized-specific image metadata.
+- The Windows Store bundle packages have been updated.
+- This update list is not exhaustive of all changes and updates, but outlines the major ones.
+
 ## Build 4.0.0.0 (12-02-2019) ##
 
 - Optimize-Offline project has been restructured and converted to an advanced PowerShell cmdlet.
@@ -50,9 +61,3 @@
 - When disabling Optional Features, their files are now also removed. This further reduces the size of the final optimized image.
 - Updated the Data Deduplication firewall rules.
 - Optimized and improved a lot of process code in the primary script and the module functions.
-
-## Build 3.2.7.5 (10-23-2019) ##
-
-- Updated multiple OfflineProcessing module functions.
-- Added the ability to access protected offline registry keys.
-- Updated the offline registry key values set during the integration of the Win32Calc designating as a System Application.
