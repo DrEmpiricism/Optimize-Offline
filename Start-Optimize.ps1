@@ -1,18 +1,17 @@
 ﻿Using module .\Optimize-Offline.psm1
+#Requires -RunAsAdministrator
 <#
 	.SYNOPSIS
 		Configuration call script for the Optimize-Offline cmdlet.
 
 	.DESCRIPTION
-		Start-Optimize automatically imports the configuration JSON file (Configuration.json) into the Optimize-Offline cmdlet.
+		Start-Optimize automatically imports the cnfiguration JSON file (Configuration.json) into the Optimize-Offline cmdlet.
 
 	.EXAMPLE
 		.\Start-Optimize.ps1
 
 	.NOTES
-		This call script requires that the configuration JSON file (Configuration.json) is located in the Optimize-Offline module root directory.
 		Ensure all content within the configuration JSON file (Configuration.json) are valid and formatted properly.
-		This configuration call script requires elevated permission to execute.
 #>
 [CmdletBinding()]
 Param ()
@@ -20,12 +19,27 @@ Param ()
 # Ensure we are running with administrative permissions first.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
-	Write-Warning "Elevation is required to process optimizations. Please relaunch Start-Optimize.ps1 as an administrator."
+	Write-Warning "Elevation is required to process optimizations. Please relaunch Start-Optimize as an administrator."
 	Start-Sleep 3
 	Exit
 }
 
-# If the ordered collection list variable still exists from a previous optimization, remove it.
+# Ensure the configuration JSON file is present.
+If (!(Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json)))
+{
+	Write-Warning "Missing the required configuration JSON file."
+	Start-Sleep 3
+	Exit
+}
+
+# Import the Dism module.
+Try { Get-Module -Name Dism -ListAvailable | Import-Module -MinimumVersion 3.0 -ErrorAction Stop }
+Catch { Write-Warning "Failed to import the required Dism module."; Break }
+
+# Clear the global error variable.
+$Error.Clear()
+
+# If the ordered collection list variable still exists from a previous session, remove it.
 If (Test-Path -Path Variable:\ConfigParams) { Remove-Variable -Name ConfigParams }
 
 # Use a Try/Catch block in case the configuration JSON file URL formatting is invalid so we can catch it, correct its formatting and continue.
@@ -38,6 +52,7 @@ Catch [ArgumentException]
 {
 	$ContentJSON = (Get-Content -Path $ConfigJSON.FullName -Raw).Replace('\', '\\') | Set-Content -Path $ConfigJSON.FullName -Encoding UTF8 -Force -PassThru
 	$ContentJSON = $ContentJSON | ConvertFrom-Json
+	$Error.Remove($Error[-1])
 }
 
 If ($ContentJSON -is [PSObject])

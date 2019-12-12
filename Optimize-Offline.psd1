@@ -15,19 +15,21 @@
 	GUID                   = "86c4db30-1a45-43c7-a96b-46d2a1d84671"
 	RootModule             = "Optimize-Offline.psm1"
 	ModuleName             = "Optimize-Offline"
-	ModuleVersion          = "4.0.0.0"
+	ModuleVersion          = "4.0.0.1"
 	Author                 = "Ben White"
 	Copyright              = "(c) 2019. All rights reserved."
 	Description            = "The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM) files for optimal runtime environments."
+	HelpInfoUri            = "https://github.com/DrEmpiricism/Optimize-Offline/blob/master/en-US/Optimize-Offline-help.xml"
 	Culture                = "en-US"
 	PowerShellVersion      = "5.0"
 	DotNetFrameworkVersion = "4.0"
-	CLRVersion             = "2.0.50727"
+	CLRVersion             = "4.0"
 	ProcessorArchitecture  = "AMD64"
 	HostEnvironment        = @("Microsoft Windows 10", "Microsoft Windows Server 2016", "Microsoft Windows Server 2019")
-	RequiredModules        = @("Dism", ".\Src\OfflineResources.psm1")
-	NestedModules          = @(".\Src\OfflineResources.psm1")
-	ModuleList             = @(".\Optimize-Offline.psm1", ".\Src\OfflineResources.psm1")
+	RequiredModules        = @("Dism", ".\Src\Offline-Resources.psm1")
+	NestedModules          = @(".\Src\Offline-Resources.psm1")
+	ScriptsToProcess       = @(".\Start-Optimize.ps1")
+	ModuleList             = @(".\Optimize-Offline.psm1", ".\Src\Offline-Resources.psm1")
 	FunctionsToExport      = "Optimize-Offline"
 	CmdletsToExport        = @()
 	PrivateData            = @{
@@ -35,7 +37,7 @@
 			Tags         = @("Image optimization", "Offline Windows image", "WIM image", "Offline servicing", "Windows 10", "LTSC", "Deployment", "Debloat", "PSModule")
 			LicenseUri   = "https://github.com/DrEmpiricism/Optimize-Offline/blob/master/LICENSE"
 			ProjectUri   = "https://github.com/DrEmpiricism/Optimize-Offline"
-			ReleaseNotes = "FullRelease"
+			ReleaseNotes = "https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md"
 		}
 	}
 }
