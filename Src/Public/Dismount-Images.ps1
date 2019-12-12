@@ -17,7 +17,7 @@ Function Dismount-Images
         If (Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline'))
         {
             [GC]::Collect()
-            Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') | ForEach-Object -Process { [Void](RunExe $REG -Arguments ('UNLOAD {0}' -f $PSItem)) }
+            Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') | ForEach-Object -Process { [Void](StartExe $REG -Arguments ('UNLOAD {0}' -f $PSItem)) }
         }
         $MountPath.ForEach{ [Void](Dismount-WindowsImage -Path $PSItem -Discard) }
     }
