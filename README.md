@@ -1,3 +1,5 @@
+> [Module Help Topics and Optimization Details](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md)
+
 # Optimize-Offline #
 
 Optimize-Offline is a Windows Image (WIM) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
