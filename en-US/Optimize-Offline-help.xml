@@ -10,7 +10,7 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM) files for optimal runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimizing is easily controlled and executed using the Optimize-Offline configuration JSON file. Optimize-Offline independently optimizes an image by utilizing its array of custom cmdlets, functions and wrappers.</maml:para>
+      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -30,7 +30,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
           <maml:name>WindowsApps</maml:name>
           <maml:Description>
-            <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically based on the following values:</maml:para>
+            <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically. The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
             <maml:para>Select: Populates and outputs a Gridview list of all Provisioned App Packages for selective removal. Whitelist: Automatically removes all Provisioned App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned App Packages found in the image.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -43,7 +43,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>DaRT</maml:name>
           <maml:Description>
-            <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery based on the following values:</maml:para>
+            <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. The acceptable values for this parameter are: Setup, Recovery and All.</maml:para>
             <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. All: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -56,7 +56,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
           <maml:name>ISO</maml:name>
           <maml:Description>
-            <maml:para>Creates a new bootable Windows Installation Media ISO based on the following boot-type values:</maml:para>
+            <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
             <maml:para>Prompt: The efisys.bin binary bootcode is written to the ISO which requires a key press when booted to begin Windows Setup. No-Prompt: The efisys_noprompt.bin binary bootcode is written to the ISO which does not require a key press when booted and will begin Windows Setup automatically.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -205,7 +205,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>WindowsApps</maml:name>
         <maml:Description>
-          <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically based on the following values:</maml:para>
+          <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically. The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
           <maml:para>Select: Populates and outputs a Gridview list of all Provisioned App Packages for selective removal. Whitelist: Automatically removes all Provisioned App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned App Packages found in the image.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -326,7 +326,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
         <maml:name>DaRT</maml:name>
         <maml:Description>
-          <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery based on the following values:</maml:para>
+          <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. The acceptable values for this parameter are: Setup, Recovery and All.</maml:para>
           <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. All: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -363,7 +363,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>ISO</maml:name>
         <maml:Description>
-          <maml:para>Creates a new bootable Windows Installation Media ISO based on the following boot-type values:</maml:para>
+          <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
           <maml:para>Prompt: The efisys.bin binary bootcode is written to the ISO which requires a key press when booted to begin Windows Setup. No-Prompt: The efisys_noprompt.bin binary bootcode is written to the ISO which does not require a key press when booted and will begin Windows Setup automatically.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
@@ -410,35 +410,27 @@
     <command:examples>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
-        <dev:code>.\Start-Optimize.ps1</dev:code>
+        <dev:code>.\Start-Optimize.ps1
+
+An image will be optimized using the settings within the Configuration.json file.</dev:code>
         <dev:remarks>
           <maml:para></maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
+
+A Windows Installation Media (ISO) file will be optimized using manually passed parameters.</dev:code>
         <dev:remarks>
           <maml:para></maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Windows 10 ISOs\Win10ProForWorkstations_17663.iso" -WindowsApps "All" -SystemApps -Packages -Features -DaRT "All" -Additional -ISO "Prompt"</dev:code>
-        <dev:remarks>
-          <maml:para></maml:para>
-        </dev:remarks>
-      </command:example>
-      <command:example>
-        <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional</dev:code>
-        <dev:remarks>
-          <maml:para></maml:para>
-        </dev:remarks>
-      </command:example>
-      <command:example>
-        <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win10 LTSC 2019\install.wim" -WindowsStore -MicrosoftEdge</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional
+
+A Windows Image (WIM) file will be optimized using manually passed parameters.</dev:code>
         <dev:remarks>
           <maml:para></maml:para>
         </dev:remarks>
