@@ -1,28 +1,27 @@
-﻿<#
+﻿#Requires -RunAsAdministrator
+#Requires -Version 5
+<#
 	===========================================================================
 	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.170
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	12/11/2019
+	Last updated:	12/20/2019
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================
 #>
 
-#region Import Required Module and Functions
-Try { Get-Module -Name Dism -ListAvailable | Import-Module -Scope Global -ErrorAction Stop }
-Catch { Write-Warning "Failed to import the required Dism module."; Break }
-
-$PublicFunctions = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath Public) -Filter *.ps1)
-$PrivateFunctions = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath Private) -Filter *.ps1)
+#region Import Resource Functions
+$PublicFunctions = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath Public) -Filter *.ps1 -ErrorAction SilentlyContinue)
+$PrivateFunctions = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath Private) -Filter *.ps1 -ErrorAction SilentlyContinue)
 
 ForEach ($Function In @($PublicFunctions + $PrivateFunctions))
 {
 	Try { . $Function.FullName }
 	Catch { Write-Warning ('Failed to import the required function "{0}", {1}' -f $Function.FullName, $PSItem); Break }
 }
-#endregion Import Required Module and Functions
+#endregion Import Resource Functions
 
 #region Module Declarations
 $OfflineResources = [PSCustomObject]::New()
@@ -73,6 +72,7 @@ Catch { Write-Warning ('Failed to import the manifest data file: "{0}"' -f (Get-
 #region Variable Declarations
 $ConfigParams = [Collections.Specialized.OrderedDictionary]::New()
 $DynamicParams = [Collections.Hashtable]::New()
+$DefaultErrorActionPreference = $ErrorActionPreference
 $TempDirectory = (Get-Path -Path $OptimizeOffline.Directory -ChildPath OfflineTemp_$(Get-Random))
 $LogFolder = (Get-Path -Path $TempDirectory -ChildPath LogOffline)
 $WorkFolder = (Get-Path -Path $TempDirectory -ChildPath WorkOffline)
@@ -85,7 +85,8 @@ $ModuleLog = (Get-Path -Path $LogFolder -ChildPath Optimize-Offline.log)
 $RegistryLog = (Get-Path -Path $LogFolder -ChildPath RegistrySettings.log)
 $DISMLog = (Get-Path -Path $LogFolder -ChildPath DISM.log)
 $PackageLog = (Get-Path -Path $LogFolder -ChildPath PackageSummary.log)
-$DISM = (Get-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe)
+If (Test-Path -LiteralPath (Get-Path -Path (Get-DISMPath) -ChildPath dism.exe)) { $DISM = Get-Path -Path (Get-DISMPath) -ChildPath dism.exe }
+Else { $DISM = Get-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe }
 $REG = (Get-Path -Path $Env:SystemRoot\System32 -ChildPath reg.exe)
 $REGEDIT = (Get-Path -Path $Env:SystemRoot -ChildPath regedit.exe)
 $EXPAND = (Get-Path -Path $Env:SystemRoot\System32 -ChildPath expand.exe)
@@ -103,7 +104,7 @@ New-Alias -Name Stop -Value Stop-Optimize
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'ConfigParams', 'DynamicParams', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'ConfigParams', 'DynamicParams', 'DefaultErrorActionPreference', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams

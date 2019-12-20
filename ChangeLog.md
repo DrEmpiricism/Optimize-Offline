@@ -1,5 +1,13 @@
 # ChangeLog #
 
+## Build 4.0.0.2 (12-20-2019) ##
+
+- The error handling for multiple functions and processes has been updated or integrated.
+- Optimize-Offline now first checks for a Windows 10 ADK path for the Dism executable it uses. If the Windows 10 ADK is not found, it will use the system Dism executable instead.
+- Final image compression now will output a Windows Form Listbox for the compression type selection. If the Windows Form Listbox is unable to be displayed, it will revert back to its selectable Gridview list.
+- Additional module processes have been converted to advanced functions.
+- The imported localized data has been updated.
+
 ## Build 4.0.0.1 (12-11-2019) ##
 
 - Cmdlet help topics have been re-written into an XML-based external MAML file. Moreover, this XML MAML help document will be able to be updated any time Optimize-Offline is imported into a session.
@@ -48,16 +56,3 @@
 - The 'Additional Tweaks.reg' template located in the 'Content\Additional\RegistryTemplates' folder has been updated.
 - The Win32 Calculator image file has been updated with the latest Win32 Calculator files from Windows Server 2019.
 - The Microsoft DaRT image files have been updated.
-
-## Build 3.2.7.6 (10-31-2019) ##
-
-- The removal of Windows Capabilities has been moved to the new -Capabilities switch.
-- The -Packages switch now allows for the removal of Feature, OnDemand and Language Packages.
-- The Developer Mode Feature Package can now be integrated by using the new -DeveloperMode switch. Before integrating Developer Mode, [read about it](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)!
-- Updated process logging and corrected an issue where an error would return when formatting an error record.
-- Updated the package summary log creation process.
-- Updated and improved the integration of a default LockScreen.
-- Optimized the clean-up of any active mount points that are detected prior to the script initializing.
-- When disabling Optional Features, their files are now also removed. This further reduces the size of the final optimized image.
-- Updated the Data Deduplication firewall rules.
-- Optimized and improved a lot of process code in the primary script and the module functions.

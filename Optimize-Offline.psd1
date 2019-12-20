@@ -15,7 +15,7 @@
 	GUID                   = "86c4db30-1a45-43c7-a96b-46d2a1d84671"
 	RootModule             = "Optimize-Offline.psm1"
 	ModuleName             = "Optimize-Offline"
-	ModuleVersion          = "4.0.0.1"
+	ModuleVersion          = "4.0.0.2"
 	Author                 = "Ben White"
 	Copyright              = "(c) 2019. All rights reserved."
 	Description            = "The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM) files for optimal runtime environments."

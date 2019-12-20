@@ -8,8 +8,8 @@
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.0.1
-	 Last updated:	12/11/2019
+	 Version:       4.0.0.2
+	 Last updated:	12/20/2019
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -120,7 +120,7 @@ Function Optimize-Offline
 			$Host.UI.RawUI.WindowTitle = ($OptimizedData.ExportingMedia -f $SourcePath.Name)
 			Write-Host ($OptimizedData.ExportingMedia -f $SourcePath.Name) -ForegroundColor Cyan
 			$ISOMedia = Create -Path (Get-Path -Path $TempDirectory -ChildPath $SourcePath.BaseName) -PassThru
-			$ISOMedia | Export-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath ISOMedia.xml)
+			$ISOMedia | Export-DataFile -File ISOMedia
 			ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
 			{
 				$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
@@ -236,7 +236,7 @@ Function Optimize-Offline
 		Log -Info ($OptimizedData.MountingImage -f $InstallInfo.Name)
 		[Void](Mount-WindowsImage @MountInstallParams)
 		RegHives -Load
-		Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue | Export-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath CurrentVersion.xml) -ErrorAction SilentlyContinue
+		Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue | Export-DataFile -File CurrentVersion -ErrorAction SilentlyContinue
 		RegHives -Unload
 	}
 	Catch
@@ -622,9 +622,17 @@ Function Optimize-Offline
 	#region Import Custom App Associations
 	If (Test-Path -Path $OptimizeOffline.CustomAppAssociations)
 	{
-		Log -Info $OptimizedData.ImportingCustomAppAssociations
-		$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, $OptimizeOffline.CustomAppAssociations, $ScratchFolder, $DISMLog)
-		If ($RET -ne 0) { Log -Error $OptimizedData.FailedImportingCustomAppAssociations; Start-Sleep 3 }
+		Try
+		{
+			Log -Info $OptimizedData.ImportingCustomAppAssociations
+			$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, $OptimizeOffline.CustomAppAssociations, $ScratchFolder, $DISMLog) -ErrorAction Stop
+			If ($RET -ne 0) { Throw }
+		}
+		Catch
+		{
+			Log -Error $OptimizedData.FailedImportingCustomAppAssociations
+			Start-Sleep 3
+		}
 	}
 	#endregion Import Custom App Associations
 
@@ -773,17 +781,25 @@ Function Optimize-Offline
 		[Void](StartExe $EXPAND -Arguments ('"{0}" F:* "{1}"' -f $DevModePackage, $DevModeExpand.FullName))
 		If (Test-Path -Path "$($DevModeExpand.FullName)\update.mum")
 		{
-			Log -Info $OptimizedData.IntegratingDeveloperMode
-			$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Add-Package /PackagePath:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, "$($DevModeExpand.FullName)\update.mum", $ScratchFolder, $DISMLog)
-			If ($RET -eq 0)
+			Try
 			{
-				RegHives -Load
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -Value 1 -Type DWord
-				RegHives -Unload
-				$DynamicParams.DeveloperMode = $true
+				Log -Info $OptimizedData.IntegratingDeveloperMode
+				$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Add-Package /PackagePath:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, "$($DevModeExpand.FullName)\update.mum", $ScratchFolder, $DISMLog) -ErrorAction Stop
+				If ($RET -eq 0) { $DynamicParams.DeveloperMode = $true }
+				Else { Throw }
 			}
-			Else { Log -Error $OptimizedData.FailedIntegratingDeveloperMode; Start-Sleep 3 }
+			Catch
+			{
+				Log -Error $OptimizedData.FailedIntegratingDeveloperMode
+				Start-Sleep 3
+			}
+		}
+		If ($DynamicParams.DeveloperMode)
+		{
+			RegHives -Load
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowAllTrustedApps" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -Value 1 -Type DWord
+			RegHives -Unload
 		}
 	}
 	#endregion DeveloperMode Integration
@@ -1086,8 +1102,16 @@ Function Optimize-Offline
 	{
 		If (Test-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1'))
 		{
-			Log -Info "Applying Optimized Registry Settings."
-			Set-RegistryProperties
+			Try
+			{
+				Log -Info "Applying Optimized Registry Settings."
+				Set-RegistryProperties -ErrorAction Stop
+			}
+			Catch
+			{
+				Log -Error $OptimizedData.FailedApplyingRegistrySettings
+				Start-Sleep 3
+			}
 		}
 		Else
 		{
@@ -1100,7 +1124,19 @@ Function Optimize-Offline
 	#region Additional Content Integration
 	If ($Additional.IsPresent -and (Test-Path -Path $OptimizeOffline.AdditionalJSON))
 	{
-		$AdditionalParams = Import-AdditionalJSON
+		Try
+		{
+			$AdditionalParams = Import-AdditionalJSON -ErrorAction Stop
+		}
+		Catch
+		{
+			Log -Error ($OptimizedData.FailedImportingAdditionalJSON -f (Get-Path -Path $OptimizeOffline.AdditionalJSON -Split Leaf))
+			Start-Sleep 3
+		}
+	}
+
+	If ($AdditionalParams)
+	{
 		If ($AdditionalParams.Setup -and (Test-Path -Path "$($OptimizeOffline.Setup)\*"))
 		{
 			Log -Info $OptimizedData.ApplyingSetupContent
@@ -1443,12 +1479,19 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Stop
 	}
 
-	Do
+	Try
 	{
-		$CompressionList = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($PSItem) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single
-		$CompressionType = $CompressionList | Select-Object -ExpandProperty Compression
+		$CompressionType = Get-CompressionType -ErrorAction Stop
 	}
-	While ($CompressionList.Length -eq 0)
+	Catch
+	{
+		Do
+		{
+			$CompressionList = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($PSItem) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single
+			$CompressionType = $CompressionList | Select-Object -ExpandProperty Compression
+		}
+		While ($CompressionList.Length -eq 0)
+	}
 
 	If ($CompressionType -eq 'Solid') { Write-Warning $OptimizedData.SolidCompressionWarning; Start-Sleep 5; Clear-Host }
 
@@ -1457,9 +1500,9 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Log -Info ($OptimizedData.RebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
 		If ($CompressionType -eq 'Solid')
 		{
-			$RET = StartExe $DISM -Arguments @('/Export-Image /SourceImageFile:"{0}" /SourceIndex:{1} /DestinationImageFile:"{2}" /Compress:Recovery /ScratchDir:"{3}" /LogPath:"{4}"' -f $InstallWim, $ImageIndex, "$ImageFolder\install.esd", $ScratchFolder, $DISMLog)
+			$RET = Export-WimToEsd -ErrorAction Stop
 			If ($RET -eq 0) { Purge -Path $InstallWim; $ImageFiles = @('install.esd', 'boot.wim') }
-			Else { Log -Error ($OptimizedData.FailedRebuildingExportingSolid -f $InstallInfo.Name, $CompressionType); $ImageFiles = @('install.wim', 'boot.wim') }
+			Else { $ImageFiles = @('install.wim', 'boot.wim'); Throw }
 		}
 		Else
 		{
@@ -1481,7 +1524,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 	Catch
 	{
 		Log -Error ($OptimizedData.FailedRebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
-		Stop
+		Start-Sleep 3
 	}
 	Finally
 	{
@@ -1500,18 +1543,16 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			Start-Sleep 3
 		}
 	}
+	Else
+	{
+		Log -Error ($OptimizedData.MissingRequiredDataFiles -f (Get-Path -Path $InstallWim -Split Leaf))
+		Start-Sleep 3
+	}
 
 	If ($ISOMedia)
 	{
 		Log -Info $OptimizedData.OptimizingInstallMedia
-		Get-ChildItem -Path $ISOMedia.FullName -Filter *.dll | Purge
-		@("$($ISOMedia.FullName)\autorun.inf", "$($ISOMedia.FullName)\setup.exe", "$($ISOMedia.FullName)\ca", "$($ISOMedia.FullName)\NanoServer", "$($ISOMedia.FullName)\support", "$($ISOMedia.FullName)\upgrade",
-			"$($ISOMedia.FullName)\sources\dlmanifests", "$($ISOMedia.FullName)\sources\etwproviders", "$($ISOMedia.FullName)\sources\inf", "$($ISOMedia.FullName)\sources\hwcompat", "$($ISOMedia.FullName)\sources\migration",
-			"$($ISOMedia.FullName)\sources\replacementmanifests", "$($ISOMedia.FullName)\sources\servicing", "$($ISOMedia.FullName)\sources\servicingstackmisc", "$($ISOMedia.FullName)\sources\uup", "$($ISOMedia.FullName)\sources\vista",
-			"$($ISOMedia.FullName)\sources\xp") | Purge
-		@('.adml', '.mui', '.rtf', '.txt') | ForEach-Object -Process { Get-ChildItem -Path "$($ISOMedia.FullName)\sources\$($InstallInfo.Language)" -Filter *$($PSItem) -Exclude 'setup.exe.mui' -Recurse | Purge }
-		@('.dll', '.gif', '.xsl', '.bmp', '.mof', '.ini', '.cer', '.exe', '.sdb', '.txt', '.nls', '.xml', '.cat', '.inf', '.sys', '.bin', '.ait', '.admx', '.dat', '.ttf', '.cfg', '.xsd', '.rtf', '.xrm-ms') | ForEach-Object -Process { Get-ChildItem -Path "$($ISOMedia.FullName)\sources" -Filter *$($PSItem) -Exclude @('EI.cfg', 'gatherosstate.exe', 'setup.exe', 'lang.ini', 'pid.txt', '*.clg') -Recurse | Purge }
-		If ($DynamicParams.NetFx3) { "$($ISOMedia.FullName)\sources\sxs" | Purge }
+		Optimize-InstallMedia
 		Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination "$($ISOMedia.FullName)\sources" -Force
 		If ($ISO)
 		{
@@ -1519,8 +1560,16 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			ElseIf ($ISO -eq 'No-Prompt' -and (!(Test-Path -Path "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys_noprompt.bin"))) { Log -Error "Missing the required efisys_noprompt.bin bootfile for ISO creation." }
 			Else
 			{
-				Log -Info ($OptimizedData.CreatingISO -f $ISO)
-				$NewISO = New-ISOMedia -BootType $ISO
+				Try
+				{
+					Log -Info ($OptimizedData.CreatingISO -f $ISO)
+					$NewISO = New-ISOMedia -BootType $ISO -ErrorAction Stop
+				}
+				Catch
+				{
+					Log -Error ($OptimizedData.FailedCreatingISO -f $ISO)
+					Start-Sleep 3
+				}
 			}
 		}
 	}
@@ -1529,7 +1578,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 	{
 		Log -Info $OptimizedData.FinalizingOptimizations
 		$SaveDirectory = Create -Path "$($OptimizeOffline.Directory)\Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))" -PassThru
-		If ($null -ne $NewISO.Path) { Move-Item -Path $NewISO.Path -Destination $SaveDirectory.FullName }
+		If ($NewISO.Exists) { Move-Item -Path $NewISO.FullName -Destination $SaveDirectory.FullName }
 		Else
 		{
 			If ($ISOMedia) { Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName }
@@ -1541,7 +1590,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		$Timer.Stop()
 		Start-Sleep 5
 		Log -Info ($OptimizedData.OptimizationsCompleted -f $ManifestData.ModuleName, $Timer.Elapsed.Minutes.ToString(), $Error.Count) -Finalized
-		If ($Error.Count -gt 0) { Get-ErrorRecord | Out-File -FilePath (Get-Path -Path $LogFolder -ChildPath ErrorRecord.log) -Force }
+		If ($Error.Count -gt 0) { (Get-ErrorRecord | Format-List | Out-String).Trim() | Out-File -FilePath (Get-Path -Path $LogFolder -ChildPath ErrorRecord.log) -Force }
 		@($DISMLog, "$Env:SystemRoot\Logs\DISM\dism.log") | Purge
 		ForEach ($Key In $PSBoundParameters.Keys) { $ConfigParams.$Key = $PSBoundParameters.$Key }
 		Export-ConfigJSON | Out-File -FilePath (Get-Path -Path $LogFolder -ChildPath Configuration.json) -Encoding UTF8 -Force
