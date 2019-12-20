@@ -2,16 +2,18 @@
 #Requires -RunAsAdministrator
 <#
 	.SYNOPSIS
-		Configuration call script for the Optimize-Offline cmdlet.
+		Start-Optimize is a configuration call script for the Optimize-Offline module.
 
 	.DESCRIPTION
-		Start-Optimize automatically imports the cnfiguration JSON file (Configuration.json) into the Optimize-Offline cmdlet.
+		Start-Optimize automatically imports the configuration JSON file (Configuration.json) into the Optimize-Offline module.
 
 	.EXAMPLE
 		.\Start-Optimize.ps1
 
+		This command requires no additional parameters and will import all values set in the configuration JSON file into the Optimize-Offline module and begin the optimization process.
+
 	.NOTES
-		Ensure all content within the configuration JSON file (Configuration.json) are valid and formatted properly.
+		Start-Optimize requires that the configuration JSON file is present in the root path of the Optimize-Offline module.
 #>
 [CmdletBinding()]
 Param ()
@@ -68,7 +70,7 @@ If ($ContentJSON -is [PSObject])
 	}
 }
 
-# If the ordered collection list has a key count less than two, terminate the script. Else call Optimize-Offline passing all of our set parameters to it.
+# If the ordered collection list has a key count less than two, terminate the script. Else call Optimize-Offline passing all of the set parameters to it.
 If ($ConfigParams.Count -lt 2)
 {
 	Write-Warning "There are not enough parameters set to optimize an image."
