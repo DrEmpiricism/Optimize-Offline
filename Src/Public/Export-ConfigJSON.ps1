@@ -1,5 +1,8 @@
 Function Export-ConfigJSON
 {
+  [OutputType([PSObject])]
+  Param ()
+
   $JSONTemplate = @"
 {
   "_Info": [

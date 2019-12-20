@@ -5,13 +5,13 @@ Function Set-RegistryProperties
 
     Begin
     {
-        $InstallInfo = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
         RegHives -Load
     }
     Process
     {
+        $InstallInfo = Import-DataFile Install -ErrorAction:$ErrorActionPreference
         Try { Import-LocalizedData -BindingVariable RegistryData -FileName Set-RegistryProperties.strings.psd1 -ErrorAction Stop }
-        Catch { Log -Error ('Failed to import the registry localized data file: "{0}"' -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf)); Start-Sleep 3; Return }
+        Catch { Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf)); Start-Sleep 3; Return }
 
         $RegistryData.DisableCortana | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         If ($InstallInfo.Build -ge '18362') { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowCortanaButton" -Value 0 -Type DWord }

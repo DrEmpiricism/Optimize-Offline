@@ -13,11 +13,11 @@ Function Invoke-Cleanup
 
     $MountPath = Switch ($PSBoundParameters.Keys)
     {
-        'Install' { $InstallMount }
-        'Boot' { $BootMount }
-        'Recovery' { $RecoveryMount }
+        'Install' { $InstallMount; Break }
+        'Boot' { $BootMount; Break }
+        'Recovery' { $RecoveryMount; Break }
     }
 
-    @("$MountPath\Windows\WinSxS\Backup\*.*", "$MountPath\Windows\WinSxS\Temp\PendingDeletes\*", "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*", "$MountPath\Windows\WinSxS\ManifestCache\*.bin") | Purge -Force
+    @("$MountPath\Windows\WinSxS\Temp\PendingDeletes\*", "$MountPath\Windows\WinSxS\Temp\TransformerRollbackData\*", "$MountPath\Windows\WinSxS\ManifestCache\*.bin") | Purge -Force
     @("$MountPath\Windows\INF\*.log", "$MountPath\Windows\CbsTemp\*", "$MountPath\PerfLogs", ("$MountPath\" + '$Recycle.Bin')) | Purge
 }

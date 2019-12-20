@@ -45,12 +45,12 @@ public class ISOWriter
 }
 '@ -CompilerParameters $CompilerParams
         }
-        $ISOMedia = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath ISOMedia.xml)
-        $InstallInfo = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml)
+        $ISOMedia = Import-DataFile -ISOMedia -ErrorAction:$ErrorActionPreference
+        $InstallInfo = Import-DataFile Install -ErrorAction:$ErrorActionPreference
         Switch ($BootType)
         {
-            'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys.bin" }
-            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys_noprompt.bin" }
+            'Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys.bin" -ErrorAction:$ErrorActionPreference }
+            'No-Prompt' { $BootFile = Get-Item -LiteralPath "$($ISOMedia.FullName)\efi\Microsoft\boot\efisys_noprompt.bin" -ErrorAction:$ErrorActionPreference }
         }
         $FileSystem = @{ UDF = 4 }; $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
@@ -62,7 +62,7 @@ public class ISOWriter
     {
         ForEach ($Item In Get-ChildItem -Path $ISOMedia.FullName -Force)
         {
-            If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force }
+            If ($Item -isnot [IO.FileInfo] -and $Item -isnot [IO.DirectoryInfo]) { $Item = Get-Item -LiteralPath $Item -Force -ErrorAction:$ErrorActionPreference }
             If ($Item) { $FSImage.Root.AddTree($Item.FullName, $true) }
         }
     }
@@ -70,9 +70,9 @@ public class ISOWriter
     {
         $FSImage.BootImageOptions = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
-        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force
+        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force -ErrorAction:$ErrorActionPreference
         [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)
-        If ([Math]::Round((Get-ChildItem -Path $ISOFile.FullName -File).Length / 1GB).ToString() -gt 0) { [PSCustomObject]@{ Path = $ISOFile.FullName } } Else { [PSCustomObject]@{ Path = $null } }
+        If (($WriteISO.BlockSize * $WriteISO.TotalBlocks) -eq (Get-Item -Path $ISOFile.FullName -ErrorAction:$ErrorActionPreference).Length) { $ISOFile }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }

@@ -41,13 +41,12 @@ Function Get-ImageData
                 Created          = $ImageInfo.CreatedTime
             }
             If ($ImageFile.Name -ne 'install.wim') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
-            $ImageData | Export-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath $ImageDataFile) -ErrorAction:$ErrorActionPreference
+            $ImageData | Export-DataFile -File $ImageDataFile -ErrorAction:$ErrorActionPreference
         }
         ElseIf ($PSCmdlet.ParameterSetName -eq 'Update')
         {
-            If (!(Get-ChildItem -Path $WorkFolder -Include InstallInfo.xml, CurrentVersion.xml -Recurse -File)) { Return }
-            $ImageData = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml) -ErrorAction:$ErrorActionPreference
-            $CurrentVersion = Import-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath CurrentVersion.xml) -ErrorAction:$ErrorActionPreference
+            $ImageData = Import-DataFile Install -ErrorAction:$ErrorActionPreference
+            $CurrentVersion = Import-DataFile -CurrentVersion -ErrorAction:$ErrorActionPreference
             If ($ImageData.Build -eq '18362' -and $CurrentVersion.CurrentBuildNumber -eq '18363')
             {
                 $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
@@ -59,7 +58,7 @@ Function Get-ImageData
             @('Path', 'Index') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
             $ImageData.PSObject.TypeNames.Insert(0, 'System.IO.Optimized.Wim')
             $ImageData | Add-Member -MemberType NoteProperty -Name Optimized -Value (Get-Date -Format 'G')
-            $ImageData | Export-Clixml -Path (Get-Path -Path $WorkFolder -ChildPath InstallInfo.xml) -Force -ErrorAction:$ErrorActionPreference
+            $ImageData | Export-DataFile -File InstallInfo -ErrorAction:$ErrorActionPreference
         }
         $ImageData
     }

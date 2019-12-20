@@ -21,10 +21,20 @@ Function Import-RegistryTemplates
             $REGContent | Set-Content -Path $PSItem.FullName.Replace($PSItem.Extension, '.Offline') -Encoding Unicode -Force
         }
         Get-ChildItem -Path $OptimizeOffline.RegistryTemplates -Filter *.Offline | ForEach-Object -Process {
-            Write-Output ('Importing Registry Template: "{0}"' -f $PSItem.Name.Replace($PSItem.Extension, '.reg')) | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
-            $RET = StartExe $REGEDIT -Arguments ('/S "{0}"' -f $PSItem.FullName)
-            If ($RET -ne 0) { Log -Error ('Failed to Import Registry Template: "{0}"' -f $PSItem.Name.Replace($PSItem.Extension, '.reg')) }
-            $PSItem.FullName | Purge
+            Try
+            {
+                Write-Output ('Importing Registry Template: "{0}"' -f $PSItem.Name.Replace($PSItem.Extension, '.reg')) | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
+                $RET = StartExe $REGEDIT -Arguments ('/S "{0}"' -f $PSItem.FullName) -ErrorAction Stop
+                If ($RET -ne 0) { Throw }
+            }
+            Catch
+            {
+                Log -Error ('Failed to Import Registry Template: "{0}"' -f $PSItem.Name.Replace($PSItem.Extension, '.reg'))
+            }
+            Finally
+            {
+                $PSItem.FullName | Purge
+            }
         }
     }
     End

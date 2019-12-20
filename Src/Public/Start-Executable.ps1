@@ -10,13 +10,13 @@ Function Start-Executable
 
     Begin
     {
-        $StartInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
+        $StartInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo -ErrorAction:$ErrorActionPreference
         $StartInfo.FileName = $Executable.FullName
         If (![String]::IsNullOrEmpty($Arguments)) { $StartInfo.Arguments = $Arguments }
         $StartInfo.CreateNoWindow = $true
         $StartInfo.WindowStyle = 'Hidden'
         $StartInfo.UseShellExecute = $false
-        $Process = New-Object -TypeName System.Diagnostics.Process
+        $Process = New-Object -TypeName System.Diagnostics.Process -ErrorAction:$ErrorActionPreference
         $Process.StartInfo = $StartInfo
     }
     Process

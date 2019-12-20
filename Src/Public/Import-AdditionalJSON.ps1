@@ -3,11 +3,11 @@ Function Import-AdditionalJSON
     [CmdletBinding()]
     Param ()
 
-    $AdditionalJSON = Get-Content -Path $OptimizeOffline.AdditionalJSON -Raw | ConvertFrom-Json
+    $AdditionalJSON = Get-Content -Path $OptimizeOffline.AdditionalJSON -Raw -ErrorAction:$ErrorActionPreference | ConvertFrom-Json -ErrorAction:$ErrorActionPreference
     $AdditionalParams = @{ }
-    ForEach ($Member In (Get-Member -InputObject $AdditionalJSON -MemberType NoteProperty))
+    ForEach ($Node In Get-Member -InputObject $AdditionalJSON -MemberType NoteProperty)
     {
-        $Key = $Member.Name
+        $Key = $Node.Name
         $Value = $AdditionalJSON.$Key
         $AdditionalParams.Add($Key, $Value)
     }

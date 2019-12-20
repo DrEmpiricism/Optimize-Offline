@@ -14,7 +14,7 @@ Function Set-LockScreen
     }
     Catch
     {
-        Log -Error ('Failed to Apply Lock Screen: {0}' -f $(FormatError))
+        Log -Error $OptimizedData.FailedApplyingLockScreen
         Start-Sleep 3
         Return
     }
@@ -27,7 +27,7 @@ Function Set-LockScreen
     {
         If ((Test-Path -Path (Get-Path -Path $WorkFolder -ChildPath img100.jpg)) -and (Test-Path -Path (Get-Path -Path $WorkFolder -ChildPath img103.png)))
         {
-            $BKPImage = Get-ChildItem -Path "$InstallMount\Windows\Web\Screen" -Include img100.jpg, img103.png -Recurse -Force | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path $WorkFolder -ChildPath $PSItem.Name.Insert($PSItem.Name.Length, '.bkp')) -PassThru -Force }
+            $BKPImage = Get-ChildItem -Path "$InstallMount\Windows\Web\Screen" -Include img100.jpg, img103.png -Recurse -Force | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path $WorkFolder -ChildPath $PSItem.Name.Insert($PSItem.Name.Length, '.bkp')) -PassThru -Force -ErrorAction SilentlyContinue }
             $ACL = Get-Acl -Path "$InstallMount\Windows\Web\Screen\img100.jpg"
             Try
             {
@@ -36,13 +36,13 @@ Function Set-LockScreen
             }
             Catch
             {
-                Log -Error ('Failed to Apply Lock Screen: {0}' -f $(FormatError))
-                $BKPImage | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path "$InstallMount\Windows\Web\Screen" -ChildPath $PSItem.Name.Replace('.bkp', $null)) -Force }
+                Log -Error $OptimizedData.FailedApplyingLockScreen
+                $BKPImage | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (Get-Path -Path "$InstallMount\Windows\Web\Screen" -ChildPath $PSItem.Name.Replace('.bkp', $null)) -Force -ErrorAction SilentlyContinue }
                 Return
             }
             Finally
             {
-                $ACL | Set-Acl -Path "$InstallMount\Windows\Web\Screen\img100.jpg" -Passthru | Set-Acl -Path "$InstallMount\Windows\Web\Screen\img103.png"
+                $ACL | Set-Acl -Path "$InstallMount\Windows\Web\Screen\img100.jpg" -Passthru -ErrorAction SilentlyContinue | Set-Acl -Path "$InstallMount\Windows\Web\Screen\img103.png" -ErrorAction SilentlyContinue
             }
         }
     }
