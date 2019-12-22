@@ -198,9 +198,9 @@ Function Optimize-Offline
 		If ($InstallInfo.Language -ne 'en-US' -and $Win32Calc.IsPresent) { $Win32Calc = $false }
 		If ($InstallInfo.Build -gt '17134' -and $InstallInfo.Language -ne 'en-US' -and $Dedup.IsPresent) { $Dedup = $false }
 		If ($InstallInfo.Language -ne 'en-US' -and $DaRT) { Remove-Variable -Name DaRT }
-		If ($InstallInfo.Name -like "*Eduction*" -or $InstallInfo.Name -like "*Enterprise*")
+		If ($InstallInfo.Name -like "*LTSC*")
 		{
-			If ($InstallInfo.Name -like "*LTSC*") { $DynamicParams.LTSC = $true }
+			$DynamicParams.LTSC = $true
 			If ($WindowsApps) { Remove-Variable -Name WindowsApps }
 			If ($Win32Calc.IsPresent) { $Win32Calc = $false }
 		}
