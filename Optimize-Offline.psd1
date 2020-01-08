@@ -16,7 +16,7 @@
 	RootModule             = 'Optimize-Offline.psm1'
 	ModuleVersion          = '4.0.0.3'
 	Author                 = 'Ben White'
-	Copyright              = '(c) 2019. All rights reserved.'
+	Copyright              = '(c) 2020. All rights reserved.'
 	Description            = 'The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM) files for optimal runtime environments.'
 	HelpInfoUri            = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/en-US/Optimize-Offline-help.xml'
 	PowerShellVersion      = '5.0'
