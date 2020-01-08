@@ -6,26 +6,28 @@ Optimize-Offline is a Windows Image (WIM) optimization module designed for Windo
 
 ## About Optimize-Offline ##
 
-- Primary objective is the removal of unnecessary bloat, privacy and security enhancements, cleaner aesthetics, increased performance and a significantly better user experience.
+- Expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
 - Accepts either a full Windows 10 installation ISO or a Windows 10 install.wim file.
 - Does not perform any changes to an installed or live system.
 - Checks the health of the image both before and after the module runs to ensure the image retains a healthy status.
 - Detects what Provisioned and System Applications were removed and further removes any associated drivers, services and integrated content associated with them.
-- Allows for the removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files and Optional Features.
+- Allows for the deprovisioning and removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files, Optional Features and more.
 - Allows for the integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Developer Mode, Setup content, Data Deduplication and more.
 - All optimization processes are done silently with internal error-handling.
+- All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.
 
 ## Module Disclaimer ##
 
-- Latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases)
-- It is the responsibility of the end-user to be aware of what each parameter and switch does. These are well detailed in Optimize-Offline's header.
+- The latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases)
+- It is the responsibility of the end-user to be aware of what each parameter value, which are all well documented in the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Optimize-Offline is designed for the en-US system language culture.
+- Optimize-Offline is designed for the en-US host environment.
 - Just because something can be removed does not mean it should be removed. Haphazard removal of features and/or packages can cause Windows 10 setup or runtime errors.
 - Support will not be given to users who attempt to optimize unsupported builds or previously modified images.
 
 ## Optimize-Offline Best Practices ##
 
+- Before optimizing an image, read the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md) to become familiarized with what each optimization does.
 - Keep the default project file stucture in its default state.
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
 - If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
@@ -178,8 +180,8 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
-Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type: 
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type:
+
 ```
 .\Start-Optimize.ps1
 ```
-This will import the content of the Configuration.json into the Optimize-Offline module and image optimization will begin.
