@@ -36,10 +36,7 @@ If (!(Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.js
 
 # Import the Dism module.
 Try { Get-Module -Name Dism -ListAvailable | Import-Module -MinimumVersion 3.0 -ErrorAction Stop }
-Catch { Write-Warning "Failed to import the required Dism module."; Break }
-
-# Clear the global error variable.
-$Error.Clear()
+Catch { Write-Warning "Failed to import the required Dism module."; Start-Sleep 3; Exit }
 
 # If the ordered collection list variable still exists from a previous session, remove it.
 If (Test-Path -Path Variable:\ConfigParams) { Remove-Variable -Name ConfigParams }
@@ -47,13 +44,13 @@ If (Test-Path -Path Variable:\ConfigParams) { Remove-Variable -Name ConfigParams
 # Use a Try/Catch block in case the configuration JSON file URL formatting is invalid so we can catch it, correct its formatting and continue.
 Try
 {
-	[IO.FileInfo]$ConfigJSON = (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json)
-	$ContentJSON = Get-Content -Path $ConfigJSON.FullName -Raw | ConvertFrom-Json
+	$ContentJSON = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw | ConvertFrom-Json
 }
 Catch [ArgumentException]
 {
-	$ContentJSON = (Get-Content -Path $ConfigJSON.FullName -Raw).Replace('\', '\\') | Set-Content -Path $ConfigJSON.FullName -Encoding UTF8 -Force -PassThru
+	$ContentJSON = (Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw).Replace('\', '\\') | Set-Content -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Encoding UTF8 -Force -PassThru
 	$ContentJSON = $ContentJSON | ConvertFrom-Json
+	Move-Item -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Destination $PSScriptRoot -Force
 	$Error.Remove($Error[-1])
 }
 
