@@ -18,12 +18,13 @@ Function Write-Log
 
 	Begin
 	{
+		Set-ErrorAction SilentlyContinue
 		[IO.FileInfo]$ModuleLog = $ModuleLog
 		$Timestamp = (Get-Date -Format 's')
 		$LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
 		$Header = @"
 ***************************************************************************************************
-Running Module : $($ManifestData.ModuleName) $($ManifestData.ModuleVersion)
+Running Module : $($OptimizeOffline.BaseName) $($ManifestData.ModuleVersion)
 Optimize Start : {0}
 Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name)
 Computer Name  : $Env:COMPUTERNAME
@@ -74,5 +75,6 @@ Optimizations Finalized : {0}
 	End
 	{
 		[Void]$LogMutex.ReleaseMutex()
+		Set-ErrorAction -Restore
 	}
 }

@@ -19,10 +19,6 @@ Function Get-Path
         [String]$Split = 'Parent'
     )
 
-    Begin
-    {
-        Set-ErrorAction SilentlyContinue
-    }
     Process
     {
         ForEach ($Item In $Path)
@@ -31,12 +27,12 @@ Function Get-Path
             If (Test-Path -LiteralPath $Item)
             {
                 If ((Get-Item -LiteralPath $Item -Force -ErrorAction:$ErrorActionPreference) -is [Microsoft.Win32.RegistryKey]) { $IsRegistry = $true }
-                Else { $Item = (Get-Item -LiteralPath $Item -Force -ErrorAction:$ErrorActionPreference).FullName }
+                Else { $Item = (Resolve-Path -LiteralPath $Item -ErrorAction:$ErrorActionPreference).ProviderPath }
             }
             If ($PSCmdlet.ParameterSetName -eq 'Join' -and $ChildPath)
             {
-                If ($IsRegistry -eq $true) { $PackagePath = Join-Path -Path $Item -ChildPath $ChildPath }
-                Else { $PackagePath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path -Path $Item -ChildPath $ChildPath)) }
+                If ($IsRegistry -eq $true) { Join-Path -Path $Item -ChildPath $ChildPath -ErrorAction:$ErrorActionPreference }
+                Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path -Path $Item -ChildPath $ChildPath -ErrorAction:$ErrorActionPreference)) }
             }
             ElseIf ($PSCmdlet.ParameterSetName -eq 'Split')
             {
@@ -44,26 +40,20 @@ Function Get-Path
                 {
                     'Parent'
                     {
-                        If ($IsRegistry -eq $true) { $PackagePath = Split-Path -Path $Item -Parent }
-                        Else { $PackagePath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Split-Path -Path $Item -Parent)) }
+                        If ($IsRegistry -eq $true) { Split-Path -Path $Item -Parent -ErrorAction:$ErrorActionPreference }
+                        Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Split-Path -Path $Item -Parent -ErrorAction:$ErrorActionPreference)) }
                     }
                     'Leaf'
                     {
-                        $PackagePath = Split-Path -Path $Item -Leaf
+                        Split-Path -Path $Item -Leaf -ErrorAction:$ErrorActionPreference
                     }
                 }
             }
             Else
             {
-                If ($IsRegistry -eq $true) { $PackagePath = $Item }
-                Else { $PackagePath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Item) }
+                If ($IsRegistry -eq $true) { $Item }
+                Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Item) }
             }
-            If ((Test-Path -LiteralPath $PackagePath) -and $null -eq $IsRegistry) { (Get-Item -LiteralPath $PackagePath -Force -ErrorAction:$ErrorActionPreference).FullName }
-            Else { $PackagePath }
         }
-    }
-    End
-    {
-        Set-ErrorAction -Restore
     }
 }

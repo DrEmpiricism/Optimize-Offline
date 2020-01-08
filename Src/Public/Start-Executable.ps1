@@ -10,23 +10,23 @@ Function Start-Executable
 
     Begin
     {
-        $StartInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo -ErrorAction:$ErrorActionPreference
-        $StartInfo.FileName = $Executable.FullName
-        If (![String]::IsNullOrEmpty($Arguments)) { $StartInfo.Arguments = $Arguments }
-        $StartInfo.CreateNoWindow = $true
-        $StartInfo.WindowStyle = 'Hidden'
-        $StartInfo.UseShellExecute = $false
-        $Process = New-Object -TypeName System.Diagnostics.Process -ErrorAction:$ErrorActionPreference
-        $Process.StartInfo = $StartInfo
+        $ProcessInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo -ErrorAction:$ErrorActionPreference
+        $ProcessInfo.FileName = $Executable.FullName
+        If (![String]::IsNullOrEmpty($Arguments)) { $ProcessInfo.Arguments = $Arguments }
+        $ProcessInfo.CreateNoWindow = $true
+        $ProcessInfo.WindowStyle = 'Hidden'
+        $ProcessInfo.UseShellExecute = $false
+        $ProcessRun = New-Object -TypeName System.Diagnostics.Process -ErrorAction:$ErrorActionPreference
+        $ProcessRun.StartInfo = $ProcessInfo
     }
     Process
     {
-        [Void]$Process.Start()
-        $Process.WaitForExit()
-        $Process.ExitCode
+        [Void]$ProcessRun.Start()
+        $ProcessRun.WaitForExit()
+        $ProcessRun.ExitCode
     }
     End
     {
-        If ($null -ne $Process) { $Process.Dispose() }
+        If ($null -ne $ProcessRun) { $ProcessRun.Dispose() }
     }
 }

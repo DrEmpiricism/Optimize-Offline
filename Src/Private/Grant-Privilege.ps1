@@ -11,6 +11,7 @@ Function Grant-Privilege
 
     Begin
     {
+        Set-ErrorAction SilentlyContinue
         Add-Type @'
 using System;
 using System.ComponentModel;
@@ -52,5 +53,6 @@ public class AccessToken
     End
     {
         $CurrentProcess.Close()
+        Set-ErrorAction -Restore
     }
 }

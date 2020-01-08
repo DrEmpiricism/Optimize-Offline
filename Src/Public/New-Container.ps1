@@ -11,10 +11,6 @@ Function New-Container
         [Switch]$PassThru
     )
 
-    Begin
-    {
-        Set-ErrorAction SilentlyContinue
-    }
     Process
     {
         ForEach ($Item In $Path)
@@ -25,9 +21,5 @@ Function New-Container
                 If ($PassThru.IsPresent) { $RET }
             }
         }
-    }
-    End
-    {
-        Set-ErrorAction -Restore
     }
 }

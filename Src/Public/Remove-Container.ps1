@@ -13,7 +13,6 @@ Function Remove-Container
 
     Begin
     {
-        Set-ErrorAction SilentlyContinue
         If ($Force.IsPresent) { 'SeTakeOwnershipPrivilege', 'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege }
     }
     Process
@@ -26,6 +25,5 @@ Function Remove-Container
     End
     {
         If ($Force.IsPresent) { 'SeTakeOwnershipPrivilege', 'SeBackupPrivilege', 'SeRestorePrivilege' | Grant-Privilege -Disable }
-        Set-ErrorAction -Restore
     }
 }

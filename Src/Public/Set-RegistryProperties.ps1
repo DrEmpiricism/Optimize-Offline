@@ -5,14 +5,21 @@ Function Set-RegistryProperties
 
     Begin
     {
+        Try
+        {
+            $InstallInfo = Import-DataFile Install -ErrorAction Stop
+            Import-LocalizedData -BindingVariable RegistryData -FileName Set-RegistryProperties.strings.psd1 -ErrorAction Stop
+        }
+        Catch
+        {
+            Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf))
+            Start-Sleep 3
+            Break
+        }
         RegHives -Load
     }
     Process
     {
-        $InstallInfo = Import-DataFile Install -ErrorAction:$ErrorActionPreference
-        Try { Import-LocalizedData -BindingVariable RegistryData -FileName Set-RegistryProperties.strings.psd1 -ErrorAction Stop }
-        Catch { Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf)); Start-Sleep 3; Return }
-
         $RegistryData.DisableCortana | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         If ($InstallInfo.Build -ge '18362') { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowCortanaButton" -Value 0 -Type DWord }
         ElseIf ($InstallInfo.Build -le '17763') { RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0 -Type DWord }
