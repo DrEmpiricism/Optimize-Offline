@@ -6,7 +6,7 @@
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	12/20/2019
+	Last updated:	01/08/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================
@@ -35,9 +35,10 @@ $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Path -Value (Get-Pa
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Name -Value (Get-Path -Path $OptimizeOffline.Path -Split Leaf)
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name BaseName -Value ([IO.Path]::GetFileNameWithoutExtension($OptimizeOffline.Name))
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Directory -Value (Get-Path -Path $OptimizeOffline.Path -Split Parent)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Culture -Value 'en-US'
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Resources -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Src)
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Content -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Content)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedData -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath en-US)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedData -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath $OptimizeOffline.Culture)
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Additional -Value (Get-Path -Path $OptimizeOffline.Content -ChildPath Additional)
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name Packages (Get-Path -Path $OptimizeOffline.Directory -ChildPath Packages)
 $OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedDataStrings -Value (Get-Path -Path $OptimizeOffline.LocalizedData -ChildPath Optimize-Offline.strings.psd1)
@@ -72,7 +73,7 @@ Catch { Write-Warning ('Failed to import the manifest data file: "{0}"' -f (Get-
 #region Variable Declarations
 $ConfigParams = [Collections.Specialized.OrderedDictionary]::New()
 $DynamicParams = [Collections.Hashtable]::New()
-$DefaultErrorActionPreference = $ErrorActionPreference
+$HostEnvironment = [Collections.Generic.List[Object]]::New(@('Microsoft Windows 10', 'Microsoft Windows Server 2016', 'Microsoft Windows Server 2019'))
 $TempDirectory = (Get-Path -Path $OptimizeOffline.Directory -ChildPath OfflineTemp_$(Get-Random))
 $LogFolder = (Get-Path -Path $TempDirectory -ChildPath LogOffline)
 $WorkFolder = (Get-Path -Path $TempDirectory -ChildPath WorkOffline)
@@ -104,15 +105,15 @@ New-Alias -Name Stop -Value Stop-Optimize
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'ConfigParams', 'DynamicParams', 'DefaultErrorActionPreference', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'ConfigParams', 'DynamicParams', 'HostEnvironment', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams
 # SIG # Begin signature block
 # MIIMFAYJKoZIhvcNAQcCoIIMBTCCDAECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUfdhq/FoPvp1a2bafPoWtnnLH
-# NwOgggjkMIIDZTCCAk2gAwIBAgIQcvzm3AoNiblMifO61mXaqjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU3YDLOq3MptySxyVcAOeCmMuA
+# d0SgggjkMIIDZTCCAk2gAwIBAgIQcvzm3AoNiblMifO61mXaqjANBgkqhkiG9w0B
 # AQsFADBFMRQwEgYKCZImiZPyLGQBGRYEVEVDSDEVMBMGCgmSJomT8ixkARkWBU9N
 # TklDMRYwFAYDVQQDEw1PTU5JQy5URUNILUNBMB4XDTE5MDUxNTEyMDYwN1oXDTI0
 # MDUxNTEyMTYwN1owRTEUMBIGCgmSJomT8ixkARkWBFRFQ0gxFTATBgoJkiaJk/Is
@@ -163,15 +164,15 @@ Export-ModuleMember @ExportResourceParams
 # kiaJk/IsZAEZFgRURUNIMRUwEwYKCZImiZPyLGQBGRYFT01OSUMxFjAUBgNVBAMT
 # DU9NTklDLlRFQ0gtQ0ECExoAAAAIC4Z11vsOvFYAAAAAAAgwCQYFKw4DAhoFAKCC
 # ARMwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwG
-# CisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDEcG12KwQdJWZ6pv1fxPp/Gq9NY
+# CisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDcigZFeiZJPvn0t+EYrzbgXx9T/
 # MIGyBgorBgEEAYI3AgEMMYGjMIGgoGqAaABSAGUAcwBvAHUAcgBjAGUAcwAgAE0A
 # bwBkAHUAbABlACAAZgBvAHIAIAB0AGgAZQAgAE8AcAB0AGkAbQBpAHoAZQAtAE8A
 # ZgBmAGwAaQBuAGUAIABmAHIAYQBtAGUAdwBvAHIAawAuoTKAMGh0dHBzOi8vZ2l0
 # aHViLmNvbS9EckVtcGlyaWNpc20vT3B0aW1pemUtT2ZmbGluZTANBgkqhkiG9w0B
-# AQEFAASCAQBR6JccsiRShdfv9BchmTcd+mtriDHotDQdt3jFvhiiZqeNcyvLgRXZ
-# QweJKvpGWj62lm2lAr5oMCD1p1RIux8ZU+cUNK6YNnuh/QJeJyPwQ0EAyJrOfU3Z
-# uQwgOL647GorugZUl4/vnXqtnZa8SJ9cxosTsph//AbFBmiHvzCeZixkUry890re
-# AzZ3tF8x3r7QaMeqOPqrHfdeJJ4Z1xCgfDXbZDssJexOZRVy8GXgIXeGcqGAJPwY
-# d/LeeCn3vMyDu8VegXciyw/0GaA/+8gDeNyN6SpcDrlWoh+sIW5944vXO9PENLmi
-# NnI7tlZt8Ewoy+k8N0n6KzEALzuZXdVZ
+# AQEFAASCAQAFJxowv2xfjTmcmEj4KjhkOtnVD1Yxalm9bGby4ImuOmRYUdASW6T4
+# JhsuRu01i9oiTZP7qG11h1KtPuaNwXz9GPAdOBy50WgJjgDEz99+g4TtBFMPeMgF
+# sMEdqJrTVh0OmrNAS1IUN/lOqMDZeEe9yWFUlUsUFKAf2oWPdbSvbzyx6CdM3rZe
+# I0K0vEQnK11U+8ox3FwQFpNXNNDhodEMGM/dedL1c9ZsaRsj92Qqna5g1iMUVHbT
+# Xp9OnxnjcRIpajEexnsUJ/tneX4x9urPOaCFvASW+fVRav+h7EKxNK/lCMKMq2j5
+# ReRuTXJObmeYE6wcLNqRqZYqPHc/CJUl
 # SIG # End signature block
