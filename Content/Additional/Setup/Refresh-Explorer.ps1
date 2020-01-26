@@ -7,12 +7,8 @@
 		This method does not issue an Explorer process restart because the system event buffer is flushed in the running environment using the Win32 API.
 		This method also refreshes system objects, like changed or modified registry keys, that normally require a system reboot.
 		This method is useful for quickly refreshing the desktop, taskbar, icons, wallpaper, files, environmental variables and/or visual environment.
-
-	.EXAMPLE
-		PS C:\> .\Refresh-Explorer.ps1
 #>
 
-## Add the PowerShell C# wrapper script to the C:\Windows directory.
 @"
 Add-Type @'
     using System;
@@ -43,9 +39,11 @@ Add-Type @'
 [Win32API.Explorer]::Refresh()
 "@ | Out-File -FilePath "$Env:SystemRoot\Refresh-Explorer.ps1" -Encoding UTF8 -Force
 
-## Create the necessary registry keys and properties to add 'Refresh Explorer' to the context menu.
-New-Item -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -ItemType Directory -Force
-New-Item -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer\command" -ItemType Directory -Force
-New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -Name "Icon" -Value "Explorer.exe" -PropertyType String -Force
-New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -Name "Position" -Value "Bottom" -PropertyType String -Force
-New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer\command" -Name "(default)" -Value "PowerShell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$Env:SystemRoot\Refresh-Explorer.ps1`"" -PropertyType String -Force
+If (Test-Path -Path "$Env:SystemRoot\Refresh-Explorer.ps1")
+{
+    New-Item -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -ItemType Directory -Force
+    New-Item -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer\command" -ItemType Directory -Force
+    New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -Name "Icon" -Value "Explorer.exe" -PropertyType String -Force
+    New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer" -Name "Position" -Value "Bottom" -PropertyType String -Force
+    New-ItemProperty -Path "HKLM:\SOFTWARE\Classes\DesktopBackground\shell\Refresh Explorer\command" -Name "(default)" -Value "PowerShell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$Env:SystemRoot\Refresh-Explorer.ps1`"" -PropertyType String -Force
+}
