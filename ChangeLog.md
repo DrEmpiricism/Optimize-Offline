@@ -1,5 +1,16 @@
 # ChangeLog #
 
+## Build 4.0.0.4 (01-26-2020) ##
+
+- Optimize-Offline now supports the ESD file format as a source image.
+- The Additional.json file has been nested into the Configuration.json, as having a separate JSON file for additional user content was redundant.
+- Incorporated better methods for numerous removal processes.
+- Improved the Start-Optimize.ps1 call script functionality.
+- Updated multiple Resource Functions.
+- Updated the Windows Store bundle packages.
+- Updated localized data and external help.
+- This update list is not exhaustive of all changes and updates, but outlines the major ones.
+
 ## Build 4.0.0.3 (01-08-2020) ##
 
 - Updated the Start-Optimize.ps1 call script.
@@ -45,12 +56,3 @@
 - Improved and updated run requirements utilizing a custom module manifest data file.
 - All bundle and dependency packages for the integration of the Windows Store have been updated.
 - Additionally, many other smaller code changes have been committed.
-
-## Build 3.2.7.8 (11-15-2019) ##
-
-- Corrected an issue where trying to pass both the 'Setup' and 'Recovery' values in the Optimize-Offline.cmd calling script would return an error.
-- Changed the validation set for the -DaRT parameter. It now accepts one of three values: 'Setup,' 'Recovery' and 'All.' Passing the value -DaRT "All" will integrate Dart 10 into both Windows Setup and Windows Recovery, while passing -DaRT "Setup" or -DaRT "Recovery" will integrate DaRT 10 into that environment only.
-- The AppxWhitelist and Additional config file now use the JSON format instead of Ini and XML.
-- A PassedParameters.log file is now generated after the optimized image has been finalized. This log file displays all parameters and values passed to the script that were used in the optimization processes.
-- A few function modules have been updated with very small code modifications.
-- Updated the CustomAppAssociations.xml file.
