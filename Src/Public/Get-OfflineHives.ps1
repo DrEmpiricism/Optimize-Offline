@@ -16,10 +16,10 @@ Function Get-OfflineHives
         Set-ErrorAction SilentlyContinue
         $HKLM = 0x80000002
         $Hive = [Ordered]@{
-            SOFTWARE = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\SOFTWARE')
-            SYSTEM   = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\SYSTEM')
-            DEFAULT  = (Get-Path -Path $InstallMount -ChildPath 'Windows\System32\Config\DEFAULT')
-            NTUSER   = (Get-Path -Path $InstallMount -ChildPath 'Users\Default\NTUSER.DAT')
+            SOFTWARE = (GetPath -Path $InstallMount -Child 'Windows\System32\Config\SOFTWARE')
+            SYSTEM   = (GetPath -Path $InstallMount -Child 'Windows\System32\Config\SYSTEM')
+            DEFAULT  = (GetPath -Path $InstallMount -Child 'Windows\System32\Config\DEFAULT')
+            NTUSER   = (GetPath -Path $InstallMount -Child 'Users\Default\NTUSER.DAT')
         }
         $HiveMountPoint = [Ordered]@{
             SOFTWARE = 'WIM_HKLM_SOFTWARE'

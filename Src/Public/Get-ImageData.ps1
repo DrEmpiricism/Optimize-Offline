@@ -29,7 +29,7 @@ Function Get-ImageData
                 Index            = $ImageInfo.ImageIndex
                 Name             = $ImageInfo.ImageName
                 Description      = $ImageInfo.ImageDescription
-                Size             = [Math]::Round($ImageInfo.ImageSize / 1GB).ToString() + " GB"
+                Size             = '{0:N2} GB' -f ($ImageInfo.ImageSize / 1GB)
                 Edition          = $ImageInfo.EditionID
                 Version          = $ImageInfo.Version
                 Build            = $ImageInfo.Build
@@ -40,7 +40,7 @@ Function Get-ImageData
                 InstallationType = $ImageInfo.InstallationType
                 Created          = $ImageInfo.CreatedTime
             }
-            If ($ImageFile.Name -ne 'install.wim') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
+            If ($ImageFile.BaseName -ne 'install') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
             $ImageData | Export-DataFile -File $ImageDataFile -ErrorAction:$ErrorActionPreference
         }
         ElseIf ($PSCmdlet.ParameterSetName -eq 'Update')

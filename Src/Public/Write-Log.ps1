@@ -26,7 +26,7 @@ Function Write-Log
 ***************************************************************************************************
 Running Module : $($OptimizeOffline.BaseName) $($ManifestData.ModuleVersion)
 Optimize Start : {0}
-Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[1])
 Computer Name  : $Env:COMPUTERNAME
 ***************************************************************************************************
 

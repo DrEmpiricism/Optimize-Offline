@@ -12,7 +12,8 @@ Function Set-RegistryProperties
         }
         Catch
         {
-            Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (Get-Path -Path (Get-Path -Path $OptimizeOffline.Resources -ChildPath 'Public\en-US\Set-RegistryProperties.strings.psd1') -Split Leaf))
+            Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (GetPath -Path (GetPath -Path $OptimizeOffline.Resources -Child "Public\$($OptimizeOffline.Culture)\Set-RegistryProperties.strings.psd1") -Split Leaf))
+            $OptimizeErrors.Add($Error[0])
             Start-Sleep 3
             Break
         }
@@ -254,10 +255,6 @@ Function Set-RegistryProperties
         $RegistryData.EnableThisPCDesktop | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
         RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" -Value 0 -Type DWord
-
-        $RegistryData.EnableRebootRecoveryMyPC | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery" -Name "Icon" -Value "%SystemRoot%\System32\imageres.dll,-110" -Type ExpandString -Force
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command" -Name "(default)" -Value "shutdown.exe /r /o /f /t 00" -Type String -Force
 
         $RegistryData.IncreaseIconCache | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Value 8192 -Type String

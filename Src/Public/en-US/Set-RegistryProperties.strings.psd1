@@ -37,5 +37,4 @@ RemoveAccessShareCastContextMenu    = Removing Give Access To, Share and Cast To
 RemoveRestorePreviousVersions       = Removing Restore Previous Versions from the Context Menu.
 EnableLongFilePaths                 = Enabling Long File Paths.
 EnableStrongCrypto                  = Enabling Strong Cryptography for .NET Applications.
-EnableRebootRecoveryMyPC            = Adding Reboot to Recovery to This PC.
 '@
