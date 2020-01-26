@@ -8,18 +8,18 @@ schema: 2.0.0
 # Optimize-Offline
 
 ## SYNOPSIS
-Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM files.
+Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM and ESD files.
 
 ## SYNTAX
 
 ```
 Optimize-Offline [-SourcePath] <FileInfo> [[-WindowsApps] <String>] [-SystemApps] [-Capabilities] [-Packages]
  [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-Dedup] [[-DaRT] <String>]
- [-Registry] [-Additional] [[-ISO] <String>] [<CommonParameters>]
+ [-Registry] [[-Additional] <Hashtable>] [[-ISO] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM) files to customize runtime environments.
+The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments.
 
 Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
 
@@ -31,29 +31,29 @@ All images are optimized independently - without the need for 3rd party programs
 
 ### EXAMPLE 1
 ```
-PS C:\> .\Start-Optimize.ps1
-
-An image will be optimized using the settings within the Configuration.json file.
+.\Start-Optimize.ps1
 ```
+
+Imports the configuration JSON file into the Optimize-Offline module and begins the optimization process.
 
 ### EXAMPLE 2
 ```
-PS C:\> Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
+Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
+```
 
 A Windows Installation Media (ISO) file will be optimized using manually passed parameters.
-```
 
 ### EXAMPLE 3
 ```
-PS C:\> Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional
+Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional @{ $Setup = $true; $Wallpaper = $true; $SystemLogo = $true; $LockScreen = $true; $RegistryTemplates = $true; $Drivers = $true }
+```
 
 A Windows Image (WIM) file will be optimized using manually passed parameters.
-```
 
 ## PARAMETERS
 
 ### -SourcePath
-The path to a Windows 10 Installation Media ISO or a Windows image install WIM.
+The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.
 
 ```yaml
 Type: FileInfo
@@ -68,11 +68,11 @@ Accept wildcard characters: False
 ```
 
 ### -WindowsApps
-Removes Provisioned Windows App Packages (.appx) selectively or automatically. The acceptable values for this parameter are: Select, Whitelist and All.
+Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle). The acceptable values for this parameter are: Select, Whitelist and All.
 
-- **Select**: Populates and outputs a Gridview list of all Provisioned App Packages for selective removal.
-- **Whitelist**: Automatically removes all Provisioned App Packages NOT found in the AppxWhiteList.json file.
-- **All**: Automatically removes all Provisioned App Packages found in the image.
+- **Select**: Populates and outputs a Gridview list of all Provisioned Windows App Packages for selective removal.
+- **Whitelist**: Automatically removes all Provisioned Windows App Packages NOT found in the AppxWhiteList.json file.
+- **All**: Automatically removes all Provisioned Windows App Packages found in the image.
 
 ```yaml
 Type: String
@@ -241,7 +241,7 @@ Accept wildcard characters: False
 ```
 
 ### -Registry
-Applies optimized settings into the image registry hives.
+Applies optimized settings to the image registry hives.
 
 ```yaml
 Type: SwitchParameter
@@ -256,16 +256,25 @@ Accept wildcard characters: False
 ```
 
 ### -Additional
-Integrates user-specific content in the "Content/Additional" directory based on the values set in the Additional.json file.
+Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.
+
+- **Setup**: Integrates Windows Setup files, scripts or content into the image.
+- **Wallpaper**: Integrates custom wallpaper into the image.
+- **SystemLogo**: Integrates a custom system logo into the image.
+- **LockScreen**: Converts and integrates a custom lockscreen into the image.
+- **RegistryTemplates**: Imports custom registry template (.reg) files into the registry hives of the image.
+- **Unattend**: Applies an answer file directly to the image.
+- **Drivers**: Injects driver packages into the image.
+- **NetFx3**: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.
 
 ```yaml
-Type: SwitchParameter
+Type: Hashtable
 Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: Named
-Default value: False
+Position: 4
+Default value: @{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -282,7 +291,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 4
+Position: 5
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -300,6 +309,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### System.String
 ## NOTES
 Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019.
+NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image.
 Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.
 
 ## RELATED LINKS
