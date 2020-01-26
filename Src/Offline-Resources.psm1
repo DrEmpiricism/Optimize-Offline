@@ -2,11 +2,11 @@
 #Requires -Version 5
 <#
 	===========================================================================
-	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.6.170
+	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.172
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	01/08/2020
+	Last updated:	01/26/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================
@@ -23,76 +23,6 @@ ForEach ($Function In @($PublicFunctions + $PrivateFunctions))
 }
 #endregion Import Resource Functions
 
-#region Module Declarations
-$OfflineResources = [PSCustomObject]::New()
-$OfflineResources | Add-Member -MemberType NoteProperty -Name Path -Value (Get-Path -Path $PSScriptRoot -ChildPath Offline-Resources.psm1)
-$OfflineResources | Add-member -MemberType NoteProperty -Name Name -Value (Get-Path -Path $OfflineResources.Path -Split Leaf)
-$OfflineResources | Add-Member -MemberType NoteProperty -Name BaseName -Value ([IO.Path]::GetFileNameWithoutExtension($OfflineResources.Name))
-$OfflineResources | Add-Member -MemberType NoteProperty -Name Directory -Value (Get-Path -Path $OfflineResources.Path -Split Parent)
-
-$OptimizeOffline = [PSCustomObject]::New()
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Path -Value (Get-Path -Path (Get-Path -Path $OfflineResources.Directory -Split Parent) -ChildPath Optimize-Offline.psm1)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Name -Value (Get-Path -Path $OptimizeOffline.Path -Split Leaf)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name BaseName -Value ([IO.Path]::GetFileNameWithoutExtension($OptimizeOffline.Name))
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Directory -Value (Get-Path -Path $OptimizeOffline.Path -Split Parent)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Culture -Value 'en-US'
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Resources -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Src)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Content -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Content)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedData -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath $OptimizeOffline.Culture)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Additional -Value (Get-Path -Path $OptimizeOffline.Content -ChildPath Additional)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Packages (Get-Path -Path $OptimizeOffline.Directory -ChildPath Packages)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedDataStrings -Value (Get-Path -Path $OptimizeOffline.LocalizedData -ChildPath Optimize-Offline.strings.psd1)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name ConfigurationJSON -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Configuration.json)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name ManifestDataFile -Value (Get-Path -Path $OptimizeOffline.Directory -ChildPath Optimize-Offline.psd1)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name DaRT -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath DaRT)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Dedup -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath Deduplication)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name DevMode -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath DeveloperMode)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name MicrosoftEdge -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath MicrosoftEdge)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Win32Calc -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath Win32Calc)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name WindowsStore -Value (Get-Path -Path $OptimizeOffline.Packages -ChildPath WindowsStore)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name AppxWhitelist -Value (Get-Path -Path $OptimizeOffline.Content -ChildPath AppxWhitelist.json)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name CustomAppAssociations -Value (Get-Path -Path $OptimizeOffline.Content -ChildPath CustomAppAssociations.xml)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Drivers -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath Drivers)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name InstallDrivers -Value (Get-Path -Path $OptimizeOffline.Drivers -ChildPath Install)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name BootDrivers -Value (Get-Path -Path $OptimizeOffline.Drivers -ChildPath Boot)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name RecoveryDrivers -Value (Get-Path -Path $OptimizeOffline.Drivers -ChildPath Recovery)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LockScreen -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath LockScreen)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name RegistryTemplates -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath RegistryTemplates)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Setup -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath Setup)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name SystemLogo -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath SystemLogo)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Unattend -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath Unattend)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Wallpaper -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath Wallpaper)
-$OptimizeOffline | Add-Member -MemberType NoteProperty -Name AdditionalJSON -Value (Get-Path -Path $OptimizeOffline.Additional -ChildPath Additional.json)
-#endregion Module Declarations
-
-#region Data Declarations
-Try { $ManifestData = Import-PowerShellDataFile -Path $OptimizeOffline.ManifestDataFile -ErrorAction Stop }
-Catch { Write-Warning ('Failed to import the manifest data file: "{0}"' -f (Get-Path -Path $OptimizeOffline.ManifestDataFile -Split Leaf)); Break }
-#endregion Data Declarations
-
-#region Variable Declarations
-$ConfigParams = [Collections.Specialized.OrderedDictionary]::New()
-$DynamicParams = [Collections.Hashtable]::New()
-$HostEnvironment = [Collections.Generic.List[Object]]::New(@('Microsoft Windows 10', 'Microsoft Windows Server 2016', 'Microsoft Windows Server 2019'))
-$TempDirectory = (Get-Path -Path $OptimizeOffline.Directory -ChildPath OfflineTemp_$(Get-Random))
-$LogFolder = (Get-Path -Path $TempDirectory -ChildPath LogOffline)
-$WorkFolder = (Get-Path -Path $TempDirectory -ChildPath WorkOffline)
-$ScratchFolder = (Get-Path -Path $TempDirectory -ChildPath ScratchOffline)
-$ImageFolder = (Get-Path -Path $TempDirectory -ChildPath ImageOffline)
-$InstallMount = (Get-Path -Path $TempDirectory -ChildPath InstallMountOffline)
-$BootMount = (Get-Path -Path $TempDirectory -ChildPath BootMountOffline)
-$RecoveryMount = (Get-Path -Path $TempDirectory -ChildPath RecoveryMountOffline)
-$ModuleLog = (Get-Path -Path $LogFolder -ChildPath Optimize-Offline.log)
-$RegistryLog = (Get-Path -Path $LogFolder -ChildPath RegistrySettings.log)
-$DISMLog = (Get-Path -Path $LogFolder -ChildPath DISM.log)
-$PackageLog = (Get-Path -Path $LogFolder -ChildPath PackageSummary.log)
-If (Test-Path -LiteralPath (Get-Path -Path (Get-DISMPath) -ChildPath dism.exe)) { $DISM = Get-Path -Path (Get-DISMPath) -ChildPath dism.exe }
-Else { $DISM = Get-Path -Path $Env:SystemRoot\System32 -ChildPath dism.exe }
-$REG = (Get-Path -Path $Env:SystemRoot\System32 -ChildPath reg.exe)
-$REGEDIT = (Get-Path -Path $Env:SystemRoot -ChildPath regedit.exe)
-$EXPAND = (Get-Path -Path $Env:SystemRoot\System32 -ChildPath expand.exe)
-#endregion Variable Declarations
-
 #region New Alias Creation
 New-Alias -Name Create -Value New-Container
 New-Alias -Name Purge -Value Remove-Container
@@ -100,12 +30,84 @@ New-Alias -Name StartExe -Value Start-Executable
 New-Alias -Name Log -Value Write-Log
 New-Alias -Name RegKey -Value Set-KeyProperty
 New-Alias -Name RegHives -Value Get-OfflineHives
-New-Alias -Name Stop -Value Stop-Optimize
+New-Alias -Name GetPath -Value Resolve-FullPath
 #endregion New Alias Creation
+
+#region Module Declarations
+$OfflineResources = [PSCustomObject]::New()
+$OfflineResources | Add-Member -MemberType NoteProperty -Name Path -Value (GetPath -Path $PSScriptRoot -Child Offline-Resources.psm1)
+$OfflineResources | Add-member -MemberType NoteProperty -Name Name -Value (GetPath -Path $OfflineResources.Path -Split Leaf)
+$OfflineResources | Add-Member -MemberType NoteProperty -Name BaseName -Value ([IO.Path]::GetFileNameWithoutExtension($OfflineResources.Name))
+$OfflineResources | Add-Member -MemberType NoteProperty -Name Directory -Value (GetPath -Path $OfflineResources.Path -Split Parent)
+
+$OptimizeOffline = [PSCustomObject]::New()
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Path -Value (GetPath -Path (GetPath -Path $OfflineResources.Directory -Split Parent) -Child Optimize-Offline.psm1)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Name -Value (GetPath -Path $OptimizeOffline.Path -Split Leaf)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name BaseName -Value ([IO.Path]::GetFileNameWithoutExtension($OptimizeOffline.Name))
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Directory -Value (GetPath -Path $OptimizeOffline.Path -Split Parent)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Culture -Value 'en-US'
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Resources -Value (GetPath -Path $OptimizeOffline.Directory -Child Src)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Content -Value (GetPath -Path $OptimizeOffline.Directory -Child Content)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedData -Value (GetPath -Path $OptimizeOffline.Directory -Child $OptimizeOffline.Culture)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Additional -Value (GetPath -Path $OptimizeOffline.Content -Child Additional)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Packages (GetPath -Path $OptimizeOffline.Directory -Child Packages)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LocalizedDataStrings -Value (GetPath -Path $OptimizeOffline.LocalizedData -Child Optimize-Offline.strings.psd1)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name ConfigurationJSON -Value (GetPath -Path $OptimizeOffline.Directory -Child Configuration.json)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name ManifestDataFile -Value (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline.psd1)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name DaRT -Value (GetPath -Path $OptimizeOffline.Packages -Child DaRT)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Dedup -Value (GetPath -Path $OptimizeOffline.Packages -Child Deduplication)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name DevMode -Value (GetPath -Path $OptimizeOffline.Packages -Child DeveloperMode)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name MicrosoftEdge -Value (GetPath -Path $OptimizeOffline.Packages -Child MicrosoftEdge)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Win32Calc -Value (GetPath -Path $OptimizeOffline.Packages -Child Win32Calc)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name WindowsStore -Value (GetPath -Path $OptimizeOffline.Packages -Child WindowsStore)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name AppxWhitelist -Value (GetPath -Path $OptimizeOffline.Content -Child AppxWhitelist.json)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name CustomAppAssociations -Value (GetPath -Path $OptimizeOffline.Content -Child CustomAppAssociations.xml)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Drivers -Value (GetPath -Path $OptimizeOffline.Additional -Child Drivers)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name InstallDrivers -Value (GetPath -Path $OptimizeOffline.Drivers -Child Install)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name BootDrivers -Value (GetPath -Path $OptimizeOffline.Drivers -Child Boot)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name RecoveryDrivers -Value (GetPath -Path $OptimizeOffline.Drivers -Child Recovery)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name LockScreen -Value (GetPath -Path $OptimizeOffline.Additional -Child LockScreen)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name RegistryTemplates -Value (GetPath -Path $OptimizeOffline.Additional -Child RegistryTemplates)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Setup -Value (GetPath -Path $OptimizeOffline.Additional -Child Setup)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name SystemLogo -Value (GetPath -Path $OptimizeOffline.Additional -Child SystemLogo)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Unattend -Value (GetPath -Path $OptimizeOffline.Additional -Child Unattend)
+$OptimizeOffline | Add-Member -MemberType NoteProperty -Name Wallpaper -Value (GetPath -Path $OptimizeOffline.Additional -Child Wallpaper)
+#endregion Module Declarations
+
+#region Data Declarations
+Try { $ManifestData = Import-PowerShellDataFile -Path $OptimizeOffline.ManifestDataFile -ErrorAction Stop }
+Catch { Write-Warning ('Failed to import the manifest data file: "{0}"' -f (GetPath -Path $OptimizeOffline.ManifestDataFile -Split Leaf)); Break }
+#endregion Data Declarations
+
+#region Variable Declarations
+$OptimizeParams = [PSCustomObject]::New()
+$DynamicParams = [Collections.Hashtable]::New()
+$ConfigParams = [Collections.Specialized.OrderedDictionary]::New()
+$HostEnvironment = [Collections.Generic.List[Object]]::New(@('Microsoft Windows 10', 'Microsoft Windows Server 2016', 'Microsoft Windows Server 2019'))
+$OptimizeErrors = [Collections.Generic.List[Object]]::New()
+$TempDirectory = (GetPath -Path $OptimizeOffline.Directory -Child OfflineTemp_$(Get-Random))
+$LogFolder = (GetPath -Path $TempDirectory -Child LogOffline)
+$WorkFolder = (GetPath -Path $TempDirectory -Child WorkOffline)
+$ScratchFolder = (GetPath -Path $TempDirectory -Child ScratchOffline)
+$ImageFolder = (GetPath -Path $TempDirectory -Child ImageOffline)
+$InstallMount = (GetPath -Path $TempDirectory -Child InstallMountOffline)
+$BootMount = (GetPath -Path $TempDirectory -Child BootMountOffline)
+$RecoveryMount = (GetPath -Path $TempDirectory -Child RecoveryMountOffline)
+$ModuleLog = (GetPath -Path $LogFolder -Child Optimize-Offline.log)
+$RegistryLog = (GetPath -Path $LogFolder -Child RegistrySettings.log)
+$DISMLog = (GetPath -Path $LogFolder -Child DISM.log)
+$PackageLog = (GetPath -Path $LogFolder -Child PackageSummary.log)
+$ErrorLog = (GetPath -Path $LogFolder -Child OptimizeErrors.log)
+If (Test-Path -LiteralPath (GetPath -Path (Get-DISMPath) -Child dism.exe)) { $DISM = GetPath -Path (Get-DISMPath) -Child dism.exe }
+Else { $DISM = GetPath -Path $Env:SystemRoot\System32 -Child dism.exe }
+$REG = (GetPath -Path $Env:SystemRoot\System32 -Child reg.exe)
+$REGEDIT = (GetPath -Path $Env:SystemRoot -Child regedit.exe)
+$EXPAND = (GetPath -Path $Env:SystemRoot\System32 -Child expand.exe)
+#endregion Variable Declarations
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'ConfigParams', 'DynamicParams', 'HostEnvironment', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'HostEnvironment', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'RegistryLog', 'DISMLog', 'PackageLog', 'ErrorLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams
