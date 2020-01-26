@@ -6,11 +6,14 @@
       <command:verb>Optimize</command:verb>
       <command:noun>Offline</command:noun>
       <maml:description>
-        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM files.</maml:para>
+        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM and ESD files.</maml:para>
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
+      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments.</maml:para>
+      <maml:para>Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.</maml:para>
+      <maml:para>Image optimization is configurable using the Configuration.json file in the module root directory.</maml:para>
+      <maml:para>All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -18,7 +21,7 @@
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
           <maml:name>SourcePath</maml:name>
           <maml:Description>
-            <maml:para>The path to a Windows 10 Installation Media ISO or a Windows image install WIM.</maml:para>
+            <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">FileInfo</command:parameterValue>
           <dev:type>
@@ -30,8 +33,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
           <maml:name>WindowsApps</maml:name>
           <maml:Description>
-            <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically. The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
-            <maml:para>Select: Populates and outputs a Gridview list of all Provisioned App Packages for selective removal. Whitelist: Automatically removes all Provisioned App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned App Packages found in the image.</maml:para>
+            <maml:para>Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle). The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
+            <maml:para>Select: Populates and outputs a Gridview list of all Provisioned Windows App Packages for selective removal. Whitelist: Automatically removes all Provisioned Windows App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned Windows App Packages found in the image.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
@@ -54,6 +57,19 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+          <maml:name>Additional</maml:name>
+          <maml:Description>
+            <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
+            <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
+          <dev:type>
+            <maml:name>Hashtable</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>@{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>ISO</maml:name>
           <maml:Description>
             <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
@@ -168,18 +184,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Registry</maml:name>
           <maml:Description>
-            <maml:para>Applies optimized settings into the image registry hives.</maml:para>
-          </maml:Description>
-          <dev:type>
-            <maml:name>SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>Additional</maml:name>
-          <maml:Description>
-            <maml:para>Integrates user-specific content in the "Content/Additional" directory based on the values set in the Additional.json file.</maml:para>
+            <maml:para>Applies optimized settings to the image registry hives.</maml:para>
           </maml:Description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -193,7 +198,7 @@
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
         <maml:name>SourcePath</maml:name>
         <maml:Description>
-          <maml:para>The path to a Windows 10 Installation Media ISO or a Windows image install WIM.</maml:para>
+          <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">FileInfo</command:parameterValue>
         <dev:type>
@@ -205,8 +210,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>WindowsApps</maml:name>
         <maml:Description>
-          <maml:para>Removes Provisioned Windows App Packages (.appx) selectively or automatically. The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
-          <maml:para>Select: Populates and outputs a Gridview list of all Provisioned App Packages for selective removal. Whitelist: Automatically removes all Provisioned App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned App Packages found in the image.</maml:para>
+          <maml:para>Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle). The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
+          <maml:para>Select: Populates and outputs a Gridview list of all Provisioned Windows App Packages for selective removal. Whitelist: Automatically removes all Provisioned Windows App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned Windows App Packages found in the image.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
         <dev:type>
@@ -339,19 +344,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Registry</maml:name>
         <maml:Description>
-          <maml:para>Applies optimized settings into the image registry hives.</maml:para>
-        </maml:Description>
-        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
-        <dev:type>
-          <maml:name>SwitchParameter</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>False</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>Additional</maml:name>
-        <maml:Description>
-          <maml:para>Integrates user-specific content in the "Content/Additional" directory based on the values set in the Additional.json file.</maml:para>
+          <maml:para>Applies optimized settings to the image registry hives.</maml:para>
         </maml:Description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
@@ -361,6 +354,19 @@
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+        <maml:name>Additional</maml:name>
+        <maml:Description>
+          <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
+          <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
+        <dev:type>
+          <maml:name>Hashtable</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>@{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ISO</maml:name>
         <maml:Description>
           <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
@@ -404,35 +410,29 @@
     </command:returnValues>
     <maml:alertSet>
       <maml:alert>
-        <maml:para>Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019. Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.</maml:para>
+        <maml:para>Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019. NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image. Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
-        <dev:code>.\Start-Optimize.ps1
-
-An image will be optimized using the settings within the Configuration.json file.</dev:code>
+        <dev:code>.\Start-Optimize.ps1</dev:code>
         <dev:remarks>
-          <maml:para></maml:para>
+          <maml:para>Imports the configuration JSON file into the Optimize-Offline module and begins the optimization process.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
-
-A Windows Installation Media (ISO) file will be optimized using manually passed parameters.</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"</dev:code>
         <dev:remarks>
-          <maml:para></maml:para>
+          <maml:para>A Windows Installation Media (ISO) file will be optimized using manually passed parameters.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional
-
-A Windows Image (WIM) file will be optimized using manually passed parameters.</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional @{ $Setup = $true; $Wallpaper = $true; $SystemLogo = $true; $LockScreen = $true; $RegistryTemplates = $true; $Drivers = $true }</dev:code>
         <dev:remarks>
-          <maml:para></maml:para>
+          <maml:para>A Windows Image (WIM) file will be optimized using manually passed parameters.</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>
