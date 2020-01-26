@@ -5,12 +5,12 @@
 		Start-Optimize is a configuration call script for the Optimize-Offline module.
 
 	.DESCRIPTION
-		Start-Optimize automatically imports the configuration JSON file (Configuration.json) into the Optimize-Offline module.
+		Start-Optimize automatically imports the configuration JSON file into the Optimize-Offline module.
 
 	.EXAMPLE
 		.\Start-Optimize.ps1
 
-		This command requires no additional parameters and will import all values set in the configuration JSON file into the Optimize-Offline module and begin the optimization process.
+		This command will import all values set in the configuration JSON file into the Optimize-Offline module and begin the optimization process.
 
 	.NOTES
 		Start-Optimize requires that the configuration JSON file is present in the root path of the Optimize-Offline module.
@@ -18,7 +18,7 @@
 [CmdletBinding()]
 Param ()
 
-# Ensure we are running with administrative permissions first.
+# Ensure we are running with administrative permissions.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
 	Write-Warning "Elevation is required to process optimizations. Please relaunch Start-Optimize as an administrator."
@@ -26,22 +26,21 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 	Exit
 }
 
-# Ensure the configuration JSON file is present.
+# Ensure the configuration JSON file exists.
 If (!(Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json)))
 {
-	Write-Warning "Missing the required configuration JSON file."
+	Write-Warning ('The required configuration JSON file does not exist: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json))
 	Start-Sleep 3
 	Exit
 }
 
-# Import the Dism module.
-Try { Get-Module -Name Dism -ListAvailable | Import-Module -MinimumVersion 3.0 -ErrorAction Stop }
-Catch { Write-Warning "Failed to import the required Dism module."; Start-Sleep 3; Exit }
+# If the configuration JSON or ordered collection list variables still exists from a previous session, remove them.
+If ((Test-Path -Path Variable:\ContentJSON) -or (Test-Path -Path Variable:\ConfigParams))
+{
+	Remove-Variable -Name ContentJSON, ConfigParams -ErrorAction Ignore
+}
 
-# If the ordered collection list variable still exists from a previous session, remove it.
-If (Test-Path -Path Variable:\ConfigParams) { Remove-Variable -Name ConfigParams }
-
-# Use a Try/Catch block in case the configuration JSON file URL formatting is invalid so we can catch it, correct its formatting and continue.
+# Use a Try/Catch/Finally block in case the configuration JSON file URL formatting is invalid so we can catch it, correct its formatting and continue.
 Try
 {
 	$ContentJSON = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw | ConvertFrom-Json
@@ -53,28 +52,29 @@ Catch [ArgumentException]
 	Move-Item -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Destination $PSScriptRoot -Force
 	$Error.Remove($Error[-1])
 }
-
-If ($ContentJSON -is [PSObject])
+Finally
 {
-	# Convert the JSON object into an ordered collection list. We use the PSObject.Properties method to retain the order of the list.
-	$ConfigParams = [Ordered]@{ }
 	$ContentJSON.PSObject.Properties.Remove('_Info')
-	ForEach ($Property In $ContentJSON.PSObject.Properties.Name)
+}
+
+# Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
+$ConfigParams = [Ordered]@{ }
+ForEach ($Name In $ContentJSON.PSObject.Properties.Name)
+{
+	$Value = $ContentJSON.PSObject.Properties.Item($Name).Value
+	If ($Value -is [PSCustomObject])
 	{
-		$Key = $Property
-		$Value = $ContentJSON.PSObject.Properties.Item($Property).Value
-		$ConfigParams.Add($Key, $Value)
+		$ConfigParams.$Name = [Ordered]@{ }
+		ForEach ($Property in $Value.PSObject.Properties)
+		{
+			$ConfigParams.$Name[$Property.Name] = $Property.Value
+		}
+	}
+	Else
+	{
+		$ConfigParams.$Name = $Value
 	}
 }
 
-# If the ordered collection list has a key count less than two, terminate the script. Else call Optimize-Offline passing all of the set parameters to it.
-If ($ConfigParams.Count -lt 2)
-{
-	Write-Warning "There are not enough parameters set to optimize an image."
-	Start-Sleep 3
-	Exit
-}
-Else
-{
-	Optimize-Offline @ConfigParams
-}
+# Call Optimize-Offline by passing the JSON configuration.
+Optimize-Offline @ConfigParams
