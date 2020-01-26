@@ -2,17 +2,17 @@
 
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
 
 ## About Optimize-Offline ##
 
 - Expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
-- Accepts either a full Windows 10 installation ISO or a Windows 10 install.wim file.
+- Accepts either a full Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.
 - Does not perform any changes to an installed or live system.
-- Checks the health of the image both before and after the module runs to ensure the image retains a healthy status.
-- Detects what Provisioned and System Applications were removed and further removes any associated drivers, services and integrated content associated with them.
+- Checks the health of the image both before and after optimizations are processed to ensure the image retains a healthy status.
 - Allows for the deprovisioning and removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files, Optional Features and more.
-- Allows for the integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Developer Mode, Setup content, Data Deduplication and more.
+- Detects what Provisioned and System Applications were removed and further removes any associated drivers, services and integrated content associated with them.
+- Allows for the integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Developer Mode, Win32 Calculator, Data Deduplication and more.
 - All optimization processes are done silently with internal error-handling.
 - All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.
 
@@ -51,6 +51,7 @@ The following System Applications are safe to remove:
 - CallingShellApp
 - MicrosoftEdge
 - MicrosoftEdgeDevToolsClient
+- PPIProjection
 - SecHealthUI
 - ContentDeliveryManager
 - ParentalControls
@@ -70,7 +71,7 @@ Like with all removals, care must be taken when using either of these removal pa
 
 ### About Registry Optimizations ###
 
-The -Registry switch applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
+The Registry parameter applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
 The module only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Conversely, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
 
 A short list of some of the optimizations include:
@@ -94,9 +95,9 @@ When optimizing an image with Optimize-Offline, curiosity may arise as to why th
 
 ### About Additional Content ###
 
-When the Additional parameter it used, any content specified in its configuration JSON file (Additional.json) will be integrated into the image. This eliminates the need to use an external Distribution Share to integrate content.
+When the Additional parameter is used, user-specific content added to the "Content/Additional" directory will get integrated into the image when enabled within the hashtable. This eliminates the need to use an external Distribution Share.
 
-Content validation is based on Microsoft's deployment guidelines. All content that gets transfered to the image are copied to locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
+All content that gets transfered to the image are copied to locations that are in accordance with Microsoft's deployment guidelines. For example, any system logo is copied to '\Windows\System32\oobe\info\logo', wallpaper is copied to '\Windows\Web\Wallpaper', setup content is copied to '\Windows\Setup\Scripts' and an unattend.xml is copied to '\Windows\Panther' after it is applied to the image itself (this is detailed more below).
 
 Content can be in the form of files, folders or directories, unless a specific filetype is required. Content is NOT copied haphazardly nor are original file structures ignored.
 
@@ -106,7 +107,7 @@ Any custom registry template (.reg) file to be imported into the offline image's
 
 #### Adding Drivers ####
 
-Any driver package to be added to the offline image can be placed in its respective folder in the '\Content\Additional\Drivers' directory. Within this directory you can select whether a driver package is added to just the Windows Installation (install.wim), or also to the Windows Setup and Windows Recovery environments. Either single .inf files or full driver package folders are supported.
+Any driver package to be injected into the offline image can be placed in its respective folder in the '\Content\Additional\Drivers' directory. Within this directory you can select whether a driver package is added to just the Windows Installation, or also to the Windows Setup and Windows Recovery environments. Either single .inf files or full driver packages are supported.
 
 #### Adding an Answer File ####
 
@@ -180,8 +181,8 @@ In earlier versions of Optimize-Offline, a specific registry key was appended to
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
-Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and type:
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and execute the Start-Optimize call script:
 
-```
+```PowerShell
 .\Start-Optimize.ps1
 ```
