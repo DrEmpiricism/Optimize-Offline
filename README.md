@@ -18,22 +18,20 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 
 ## Module Disclaimer ##
 
-- The latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases)
-- It is the responsibility of the end-user to be aware of what each parameter value, which are all well documented in the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
-- Optimize-Offline is designed to optimize OEM images and not images already optimized by another script/program.
-- Optimize-Offline is designed for the en-US host environment.
-- Just because something can be removed does not mean it should be removed. Haphazard removal of features and/or packages can cause Windows 10 setup or runtime errors.
-- Support will not be given to users who attempt to optimize unsupported builds or previously modified images.
+- The latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases).
+- It is the responsibility of the end-user to be aware of what each parameter value does, which are all well documented in the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
+- Optimize-Offline is designed to optimize OEM images and not images already optimized by another script or program.
+- Optimize-Offline is designed for an en-US host environment.
+- Just because something can be removed does not mean it should be removed. Haphazard removal of packages or features can prevent Windows 10 Setup from completing or cause runtime errors.
+- Support will not be given to users who attempt to optimize unsupported builds, previously modified images or modify the default code to circumvent edition requirements.
 
 ## Optimize-Offline Best Practices ##
 
-- Before optimizing an image, read the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md) to become familiarized with what each optimization does.
+- Before optimizing an image, read the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
 - Keep the default project file stucture in its default state.
-- Only OEM images should be used for optimization and not images that have already been modified by other scripts and/or programs.
+- Only OEM images should be used for optimization and not images that have already been modified by other scripts or programs.
 - If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
-- To ensure package removals and integrations are retained, it is best to update an offline image with the latest Servicing Stack Update(s) and Monthly Cumulative Update before optimizing it.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the module or the registry while optimizations are processing.
-- Read the ReadMe files in the 'Content\Additional' directories for important information regarding user-specific content.
 
 ## Parameters ##
 
@@ -48,8 +46,8 @@ This method is safer than force removing the System Application using its compon
 The following System Applications are safe to remove:
 
 - BioEnrollment (provided no biometrics will be used)
-- CallingShellApp
-- MicrosoftEdge
+- CallingShellApp (provided no mobile phone will be linked to the device)
+- MicrosoftEdge (has been replaced by Microsoft Edge Chromium, which is detailed more below)
 - MicrosoftEdgeDevToolsClient
 - PPIProjection
 - SecHealthUI
@@ -60,6 +58,11 @@ The following System Applications are safe to remove:
 - XboxGameCallableUI
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
+
+Microsoft Edge Chromium was publicly released on January 15, 2020 and runs on the same Chromium web engine as the Google Chrome browser. Microsoft Edge Chromium is designed to replace the Microsoft Edge (HTML-based) system application. Moreover, the Microsoft Edge system application can be removed while still allowing for the usage of Microsoft Edge Chromium.
+
+The Microsoft Edge Chromium online installer can be downloaded [here](https://www.microsoft.com/en-us/edge).
+The Microsoft Edge Chromium full offline MSI package can be downloaded [here](https://www.microsoft.com/en-us/edge/business/download).
 
 **Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its impact on a live system.**
 
@@ -72,7 +75,7 @@ Like with all removals, care must be taken when using either of these removal pa
 ### About Registry Optimizations ###
 
 The Registry parameter applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
-The module only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Conversely, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
+The module only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Likewise, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image edition by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
 
 A short list of some of the optimizations include:
 
@@ -81,7 +84,7 @@ A short list of some of the optimizations include:
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
 - Disables non-explicit application and system location sensor access.
-- Disables background error reporting and automatic synchronization to Microsoft.
+- Disables background error reporting and its automatic synchronization to Microsoft.
 - Disables the automatic creation of tabs and icons for Microsoft Edge.
 - Disables intrusive Microsoft feedback and notification queries.
 - Cleans-up the default Context Menu.
