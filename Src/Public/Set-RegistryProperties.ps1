@@ -7,16 +7,14 @@ Function Set-RegistryProperties
     {
         Try
         {
-            $InstallInfo = Import-DataFile Install -ErrorAction Stop
             Import-LocalizedData -BindingVariable RegistryData -FileName Set-RegistryProperties.strings.psd1 -ErrorAction Stop
         }
         Catch
         {
-            Log -Error ($OptimizedData.FailedImportingRegistryLocalizedData -f (GetPath -Path (GetPath -Path $OptimizeOffline.Resources -Child "Public\$($OptimizeOffline.Culture)\Set-RegistryProperties.strings.psd1") -Split Leaf))
-            $OptimizeErrors.Add($Error[0])
-            Start-Sleep 3
+            Log -Error ('Failed to import the registry localized data file: {0}' -f (GetPath -Path (GetPath -Path $OptimizeOffline.Resources -Child "Public\$($OptimizeOffline.Culture)\Set-RegistryProperties.strings.psd1") -Split Leaf))
             Break
         }
+        $InstallInfo = Import-DataFile Install
         RegHives -Load
     }
     Process

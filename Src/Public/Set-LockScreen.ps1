@@ -5,18 +5,16 @@ Function Set-LockScreen
 
     Try
     {
-        $JPGImage = Get-ChildItem -Path $OptimizeOffline.LockScreen -Filter *.jpg | Select-Object -First 1 | Copy-Item -Destination (GetPath -Path $WorkFolder -Child img100.jpg) -PassThru -Force -ErrorAction Stop
+        $JPGImage = Get-ChildItem -Path $OptimizeOffline.LockScreen -Filter *.jpg | Select-Object -First 1 | Copy-Item -Destination (GetPath -Path $WorkFolder -Child img100.jpg) -PassThru -Force -ErrorAction:$ErrorActionPreference
         $PNGImage = GetPath -Path $WorkFolder -Child ([IO.Path]::ChangeExtension($JPGImage.BaseName.Replace('100', '103'), '.png'))
-        Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction Stop
-        $Bitmap = New-Object System.Drawing.Bitmap($JPGImage.FullName) -ErrorAction Stop
+        Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction:$ErrorActionPreference
+        $Bitmap = New-Object System.Drawing.Bitmap($JPGImage.FullName) -ErrorAction:$ErrorActionPreference
         $FileStream = [IO.File]::Create($PNGImage)
         $Bitmap.Save($FileStream, 'png')
     }
     Catch
     {
-        Log -Error $OptimizedData.FailedApplyingLockScreen
-        $OptimizeErrors.Add($Error[0])
-        Start-Sleep 3
+        Log -Error "Failed to Apply Lock Screen"
         Return
     }
     Finally
@@ -34,15 +32,13 @@ Function Set-LockScreen
         $ACL = Get-Acl -Path $InstallLockScreenImage -ErrorAction SilentlyContinue
         Try
         {
-            Get-ChildItem -Path (GetPath -Path $InstallLockScreenImage -Split Parent) -Include img100.jpg, img103.png -Recurse -Force | Purge -Force
-            $WorkLockScreenImage, $WorkSignOutImage | Copy-Item -Destination (GetPath -Path $InstallLockScreenImage -Split Parent) -Force -ErrorAction Stop
+            Get-ChildItem -Path (GetPath -Path $InstallLockScreenImage -Split Parent) -Include img100.jpg, img103.png -Recurse -Force | Purge -Force -ErrorAction:$ErrorActionPreference
+            $WorkLockScreenImage, $WorkSignOutImage | Copy-Item -Destination (GetPath -Path $InstallLockScreenImage -Split Parent) -Force -ErrorAction:$ErrorActionPreference
         }
         Catch
         {
-            Log -Error $OptimizedData.FailedApplyingLockScreen
-            $OptimizeErrors.Add($Error[0])
+            Log -Error "Failed to Apply Lock Screen"
             $BKPImage | ForEach-Object -Process { Copy-Item -Path $PSItem.FullName -Destination (GetPath -Path (GetPath -Path $InstallLockScreenImage -Split Parent) -Child $PSItem.Name.Replace('.bkp', $null)) -Force -ErrorAction SilentlyContinue }
-            Return
         }
         Finally
         {

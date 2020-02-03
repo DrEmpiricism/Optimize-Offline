@@ -30,8 +30,7 @@ Function Get-CompressionType
         $ListBox.Size = New-Object -TypeName System.Drawing.Size(220, 20)
         $ListBox.Height = 80
         $ListBox.Font = 'Segoe UI, 9pt'
-        $CompressionList = @('None', 'Fast', 'Maximum', 'Solid')
-        ForEach ($Compression In $CompressionList) { [Void]$ListBox.Items.Add($Compression) }
+        ForEach ($CompressionType In @('None', 'Fast', 'Maximum', 'Solid')) { [Void]$ListBox.Items.Add($CompressionType) }
         $ListBox.SelectedItem = 'Fast'
         $OKButton = New-Object -TypeName System.Windows.Forms.Button
         $OKButton.Location = New-Object -TypeName System.Drawing.Size(10, 110)
