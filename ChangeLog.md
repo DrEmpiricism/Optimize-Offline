@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 4.0.0.5 (02-03-2020) ##
+
+- Corrected incorrect key syntax in the -Additional hashtable parameter.
+- Corrected an issue where some Resource Functions would try to use the main module's data strings when reporting errors, which could cause an additional incorrect variable error.
+- When an ESD is used as the source image, the metadata of the image is now refreshed after it's been exported to a WIM to ensure the image path is accurate.
+- Updated necessary Resource Functions to reflect the aforementioned changes.
+
 ## Build 4.0.0.4 (01-26-2020) ##
 
 - Optimize-Offline now supports the ESD file format as a source image.

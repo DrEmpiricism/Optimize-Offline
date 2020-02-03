@@ -6,7 +6,7 @@
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	01/26/2020
+	Last updated:	02/03/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================

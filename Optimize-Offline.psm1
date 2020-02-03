@@ -8,8 +8,8 @@
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.0.4
-	 Last updated:	01/25/2020
+	 Version:       4.0.0.5
+	 Last updated:	02/03/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -60,7 +60,7 @@ Function Optimize-Offline
 		[Switch]$Registry,
 		[Parameter(Mandatory = $false,
 			HelpMessage = 'Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable.')]
-		[Hashtable]$Additional = @{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false },
+		[Hashtable]$Additional = @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false },
 		[Parameter(Mandatory = $false,
 			HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
 		[ValidateSet('Prompt', 'No-Prompt')]
@@ -77,7 +77,7 @@ Function Optimize-Offline
 		#endregion Set Local Variables
 
 		#region Import Localized Data
-		Try { Import-LocalizedData -BindingVariable OptimizedData -FileName Optimize-Offline.strings.psd1 -ErrorAction Stop }
+		Try { Import-LocalizedData -BindingVariable OptimizeData -FileName Optimize-Offline.strings.psd1 -ErrorAction Stop }
 		Catch { Write-Warning ('Failed to import the localized data file: "{0}"' -f (GetPath -Path $OptimizeOffline.LocalizedDataStrings -Split Leaf)); Break }
 		#endregion Import Localized Data
 	}
@@ -88,8 +88,8 @@ Function Optimize-Offline
 
 		If (Get-WindowsImage -Mounted)
 		{
-			$Host.UI.RawUI.WindowTitle = $OptimizedData.ActiveMountPoints
-			Write-Host $OptimizedData.ActiveMountPoints -ForegroundColor Cyan
+			$Host.UI.RawUI.WindowTitle = $OptimizeData.ActiveMountPoints
+			Write-Host $OptimizeData.ActiveMountPoints -ForegroundColor Cyan
 			Dismount-Images; Clear-Host
 		}
 
@@ -104,7 +104,7 @@ Function Optimize-Offline
 		}
 		Catch
 		{
-			Write-Warning $OptimizedData.FailedToCreateWorkingFileStructure
+			Write-Warning $OptimizeData.FailedToCreateWorkingFileStructure
 			Get-ChildItem -Path $OptimizeOffline.Directory -Filter OfflineTemp_* -Directory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
@@ -117,8 +117,8 @@ Function Optimize-Offline
 			[Void](Get-PSDrive)
 			If (Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install.* -File)
 			{
-				$Host.UI.RawUI.WindowTitle = ($OptimizedData.ExportingMedia -f $SourcePath.Name)
-				Write-Host ($OptimizedData.ExportingMedia -f $SourcePath.Name) -ForegroundColor Cyan
+				$Host.UI.RawUI.WindowTitle = ($OptimizeData.ExportingMedia -f $SourcePath.Name)
+				Write-Host ($OptimizeData.ExportingMedia -f $SourcePath.Name) -ForegroundColor Cyan
 				$ISOMedia = Create -Path (GetPath -Path $TempDirectory -Child $SourcePath.BaseName) -PassThru
 				$ISOMedia | Export-DataFile -File ISOMedia
 				ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
@@ -139,7 +139,7 @@ Function Optimize-Offline
 			}
 			Else
 			{
-				Write-Warning ($OptimizedData.InvalidWindowsInstallMedia -f $SourcePath.Name)
+				Write-Warning ($OptimizeData.InvalidWindowsInstallMedia -f $SourcePath.Name)
 				Do
 				{
 					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
@@ -151,8 +151,8 @@ Function Optimize-Offline
 		}
 		ElseIf ($SourcePath.Extension -eq '.WIM' -or $SourcePath.Extension -eq '.ESD')
 		{
-			$Host.UI.RawUI.WindowTitle = ($OptimizedData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
-			Write-Host ($OptimizedData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
+			$Host.UI.RawUI.WindowTitle = ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
+			Write-Host ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
 			If ($SourcePath.Extension -eq '.ESD') { $DynamicParams.ESD = $true }
 			Copy-Item -Path $SourcePath.FullName -Destination $ImageFolder
 			Get-ChildItem -Path $ImageFolder -Filter $SourcePath.Name | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
@@ -166,7 +166,7 @@ Function Optimize-Offline
 		{
 			Do
 			{
-				$Host.UI.RawUI.WindowTitle = $OptimizedData.SelectWindowsEdition
+				$Host.UI.RawUI.WindowTitle = $OptimizeData.SelectWindowsEdition
 				$EditionList = Get-WindowsImage -ImagePath $InstallWim | Select-Object -Property @{ Label = 'Index'; Expression = { ($PSItem.ImageIndex) } }, @{ Label = 'Name'; Expression = { ($PSItem.ImageName) } }, @{ Label = 'Size (GB)'; Expression = { '{0:N2}' -f ($PSItem.ImageSize / 1GB) } } | Out-GridView -Title "Select the Windows 10 Edition to Optimize." -OutputMode Single
 				$ImageIndex = $EditionList.Index
 			}
@@ -181,28 +181,28 @@ Function Optimize-Offline
 		}
 		Catch
 		{
-			Write-Warning ($OptimizedData.FailedToRetrieveImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
+			Write-Warning ($OptimizeData.FailedToRetrieveImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
 			$TempDirectory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
 
 		If (!$InstallInfo.Version.StartsWith(10))
 		{
-			Write-Warning ($OptimizedData.UnsupportedImageVersion -f $InstallInfo.Version)
+			Write-Warning ($OptimizeData.UnsupportedImageVersion -f $InstallInfo.Version)
 			$TempDirectory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
 
 		If ($InstallInfo.Architecture -ne 'amd64')
 		{
-			Write-Warning ($OptimizedData.UnsupportedImageArch -f $InstallInfo.Architecture)
+			Write-Warning ($OptimizeData.UnsupportedImageArch -f $InstallInfo.Architecture)
 			$TempDirectory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
 
 		If ($InstallInfo.InstallationType.Contains('Server') -or $InstallInfo.InstallationType.Contains('WindowsPE'))
 		{
-			Write-Warning ($OptimizedData.UnsupportedImageType -f $InstallInfo.InstallationType)
+			Write-Warning ($OptimizeData.UnsupportedImageType -f $InstallInfo.InstallationType)
 			$TempDirectory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
@@ -229,7 +229,7 @@ Function Optimize-Offline
 		}
 		Else
 		{
-			Write-Warning ($OptimizedData.UnsupportedImageBuild -f $InstallInfo.Build)
+			Write-Warning ($OptimizeData.UnsupportedImageBuild -f $InstallInfo.Build)
 			$TempDirectory | Purge -ErrorAction SilentlyContinue
 			Break
 		}
@@ -250,8 +250,8 @@ Function Optimize-Offline
 					LogPath              = $DISMLog
 					ErrorAction          = 'Stop'
 				}
-				$Host.UI.RawUI.WindowTitle = ($OptimizedData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf))
-				Write-Host ($OptimizedData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf)) -ForegroundColor Cyan
+				$Host.UI.RawUI.WindowTitle = ($OptimizeData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf))
+				Write-Host ($OptimizeData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf)) -ForegroundColor Cyan
 				[Void](Export-WindowsImage @ExportToWimParams)
 				$InstallWim | Purge -ErrorAction SilentlyContinue
 				$InstallWim = Get-ChildItem -Path $WorkFolder -Filter install.wim | Move-Item -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
@@ -259,7 +259,18 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Write-Warning ($OptimizedData.FailedExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf))
+				Write-Warning ($OptimizeData.FailedExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf))
+				$TempDirectory | Purge -ErrorAction SilentlyContinue
+				Break
+			}
+
+			Try
+			{
+				$InstallInfo = $InstallWim | Get-ImageData -Index $ImageIndex -ErrorAction Stop
+			}
+			Catch
+			{
+				Write-Warning ($OptimizeData.FailedToRetrieveImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
 				$TempDirectory | Purge -ErrorAction SilentlyContinue
 				Break
 			}
@@ -267,7 +278,7 @@ Function Optimize-Offline
 
 		Try
 		{
-			Log -Info ($OptimizedData.SupportedImageBuild -f $InstallInfo.Build)
+			Log -Info ($OptimizeData.SupportedImageBuild -f $InstallInfo.Build)
 			Start-Sleep 3; $Timer.Start(); $Error.Clear()
 			$InstallMount | Create -ErrorAction Stop
 			$MountInstallParams = @{
@@ -278,7 +289,7 @@ Function Optimize-Offline
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			Log -Info ($OptimizedData.MountingImage -f $InstallInfo.Name)
+			Log -Info ($OptimizeData.MountingImage -f $InstallInfo.Name)
 			[Void](Mount-WindowsImage @MountInstallParams)
 			RegHives -Load
 			Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue | Export-DataFile -File CurrentVersion -ErrorAction SilentlyContinue
@@ -286,7 +297,7 @@ Function Optimize-Offline
 		}
 		Catch
 		{
-			Log -Error ($OptimizedData.FailedMountingImage -f $InstallInfo.Name)
+			Log -Error ($OptimizeData.FailedMountingImage -f $InstallInfo.Name)
 			$OptimizeErrors.Add($Error[0])
 			Stop-Optimize
 		}
@@ -307,7 +318,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedToRetrieveImageMetadata -f (GetPath -Path $BootWim -Split Leaf))
+				Log -Error ($OptimizeData.FailedToRetrieveImageMetadata -f (GetPath -Path $BootWim -Split Leaf))
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -326,12 +337,12 @@ Function Optimize-Offline
 					LogPath          = $DISMLog
 					ErrorAction      = 'Stop'
 				}
-				Log -Info ($OptimizedData.MountingImage -f $BootInfo.Name)
+				Log -Info ($OptimizeData.MountingImage -f $BootInfo.Name)
 				[Void](Mount-WindowsImage @MountBootParams)
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedMountingImage -f $BootInfo.Name)
+				Log -Error ($OptimizeData.FailedMountingImage -f $BootInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -345,7 +356,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedToRetrieveImageMetadata -f (GetPath -Path $RecoveryWim -Split Leaf))
+				Log -Error ($OptimizeData.FailedToRetrieveImageMetadata -f (GetPath -Path $RecoveryWim -Split Leaf))
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -364,12 +375,12 @@ Function Optimize-Offline
 					LogPath          = $DISMLog
 					ErrorAction      = 'Stop'
 				}
-				Log -Info ($OptimizedData.MountingImage -f $RecoveryInfo.Name)
+				Log -Info ($OptimizeData.MountingImage -f $RecoveryInfo.Name)
 				[Void](Mount-WindowsImage @MountRecoveryParams)
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedMountingImage -f $RecoveryInfo.Name)
+				Log -Error ($OptimizeData.FailedMountingImage -f $RecoveryInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -377,12 +388,12 @@ Function Optimize-Offline
 
 		If ((Repair-WindowsImage -Path $InstallMount -CheckHealth).ImageHealthState -eq 'Healthy')
 		{
-			Log -Info $OptimizedData.PreOptimizedImageHealthHealthy
+			Log -Info $OptimizeData.PreOptimizedImageHealthHealthy
 			Start-Sleep 3; Clear-Host
 		}
 		Else
 		{
-			Log -Error $OptimizedData.PreOptimizedImageHealthCorrupted
+			Log -Error $OptimizeData.PreOptimizedImageHealthCorrupted
 			Stop-Optimize
 		}
 		#endregion Image Preparation
@@ -407,7 +418,7 @@ Function Optimize-Offline
 								LogPath          = $DISMLog
 								ErrorAction      = 'Stop'
 							}
-							Log -Info ($OptimizedData.RemovingWindowsApp -f $PSItem.DisplayName)
+							Log -Info ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
 							[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 							$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 						}
@@ -415,7 +426,7 @@ Function Optimize-Offline
 					}
 					Catch
 					{
-						Log -Error $OptimizedData.FailedRemovingWindowsApps
+						Log -Error $OptimizeData.FailedRemovingWindowsApps
 						$OptimizeErrors.Add($Error[0])
 						Stop-Optimize
 					}
@@ -438,7 +449,7 @@ Function Optimize-Offline
 										LogPath          = $DISMLog
 										ErrorAction      = 'Stop'
 									}
-									Log -Info ($OptimizedData.RemovingWindowsApp -f $PSItem.DisplayName)
+									Log -Info ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
 									[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 									$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 								}
@@ -447,7 +458,7 @@ Function Optimize-Offline
 						}
 						Catch
 						{
-							Log -Error $OptimizedData.FailedRemovingWindowsApps
+							Log -Error $OptimizeData.FailedRemovingWindowsApps
 							$OptimizeErrors.Add($Error[0])
 							Stop-Optimize
 						}
@@ -466,7 +477,7 @@ Function Optimize-Offline
 								LogPath          = $DISMLog
 								ErrorAction      = 'Stop'
 							}
-							Log -Info ($OptimizedData.RemovingWindowsApp -f $PSItem.DisplayName)
+							Log -Info ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
 							[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 							$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 						}
@@ -474,7 +485,7 @@ Function Optimize-Offline
 					}
 					Catch
 					{
-						Log -Error $OptimizedData.FailedRemovingWindowsApps
+						Log -Error $OptimizeData.FailedRemovingWindowsApps
 						$OptimizeErrors.Add($Error[0])
 						Stop-Optimize
 					}
@@ -490,7 +501,7 @@ Function Optimize-Offline
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove System Apps."
-			Write-Warning $OptimizedData.SystemAppsWarning
+			Write-Warning $OptimizeData.SystemAppsWarning
 			Start-Sleep 5
 			$InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
 			RegHives -Load
@@ -510,9 +521,9 @@ Function Optimize-Offline
 				{
 					$InboxAppsPackages | ForEach-Object -Process {
 						$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
-						Log -Info ($OptimizedData.RemovingSystemApp -f $PSItem.Name)
+						Log -Info ($OptimizeData.RemovingSystemApp -f $PSItem.Name)
 						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
-						If ($RET -eq 1) { Log -Error ($OptimizedData.FailedRemovingSystemApp -f $PSItem.Name); Return }
+						If ($RET -eq 1) { Log -Error ($OptimizeData.FailedRemovingSystemApp -f $PSItem.Name); Return }
 						$RemovedSystemApps.Add($PSItem.Name, $PSItem.PackageName)
 						Start-Sleep 2
 					}
@@ -520,7 +531,7 @@ Function Optimize-Offline
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedRemovingSystemApps
+					Log -Error $OptimizeData.FailedRemovingSystemApps
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -536,7 +547,7 @@ Function Optimize-Offline
 		#region Removed Package Clean-up
 		If ($DynamicParams.WindowsApps -or $DynamicParams.SystemApps)
 		{
-			Log -Info $OptimizedData.RemovedPackageCleanup
+			Log -Info $OptimizeData.RemovedPackageCleanup
 			If ($DynamicParams.WindowsApps)
 			{
 				If ((Get-AppxProvisionedPackage -Path $InstallMount).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
@@ -665,7 +676,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedPackageCleanup
+				Log -Error $OptimizeData.FailedPackageCleanup
 				$OptimizeErrors.Add($Error[0])
 				Start-Sleep 3
 			}
@@ -687,12 +698,12 @@ Function Optimize-Offline
 						LogPath          = $DISMLog
 						ErrorAction      = 'Stop'
 					}
-					Log -Info $OptimizedData.DisablingDefenderOptionalFeature
+					Log -Info $OptimizeData.DisablingDefenderOptionalFeature
 					[Void](Disable-WindowsOptionalFeature @DisableDefenderOptionalFeature)
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedDisablingDefenderOptionalFeature
+					Log -Error $OptimizeData.FailedDisablingDefenderOptionalFeature
 					$OptimizeErrors.Add($Error[0])
 					Start-Sleep 3
 				}
@@ -705,13 +716,13 @@ Function Optimize-Offline
 		{
 			Try
 			{
-				Log -Info $OptimizedData.ImportingCustomAppAssociations
+				Log -Info $OptimizeData.ImportingCustomAppAssociations
 				$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Import-DefaultAppAssociations:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, $OptimizeOffline.CustomAppAssociations, $ScratchFolder, $DISMLog) -ErrorAction Stop
 				If ($RET -ne 0) { Throw }
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedImportingCustomAppAssociations
+				Log -Error $OptimizeData.FailedImportingCustomAppAssociations
 				$OptimizeErrors.Add($Error[0])
 				Start-Sleep 3
 			}
@@ -736,14 +747,14 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
+						Log -Info ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
 						[Void](Remove-WindowsCapability @RemoveCapabilityParams)
 					}
 					$DynamicParams.Capabilities = $true
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedRemovingWindowsCapabilities
+					Log -Error $OptimizeData.FailedRemovingWindowsCapabilities
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -769,14 +780,14 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.RemovingWindowsPackage -f $PSItem.PackageName.Replace('Package', $null).Split('~')[0].TrimEnd('-'))
+						Log -Info ($OptimizeData.RemovingWindowsPackage -f $PSItem.PackageName.Replace('Package', $null).Split('~')[0].TrimEnd('-'))
 						[Void](Remove-WindowsPackage @RemovePackageParams)
 					}
 					$DynamicParams.Packages = $true
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedRemovingWindowsPackages
+					Log -Error $OptimizeData.FailedRemovingWindowsPackages
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -793,7 +804,7 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log -Info ($OptimizedData.DisablingUnsafeOptionalFeature -f $Feature)
+					Log -Info ($OptimizeData.DisablingUnsafeOptionalFeature -f $Feature)
 					$DisableOptionalFeatureParams = @{
 						Path             = $InstallMount
 						FeatureName      = $Feature
@@ -807,7 +818,7 @@ Function Optimize-Offline
 				}
 				Catch
 				{
-					Log -Error ($OptimizedData.FailedDisablingUnsafeOptionalFeature -f $Feature)
+					Log -Error ($OptimizeData.FailedDisablingUnsafeOptionalFeature -f $Feature)
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -835,14 +846,14 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.DisablingOptionalFeature -f $PSItem.FeatureName)
+						Log -Info ($OptimizeData.DisablingOptionalFeature -f $PSItem.FeatureName)
 						[Void](Disable-WindowsOptionalFeature @DisableFeatureParams)
 					}
 					$DynamicParams.DisabledOptionalFeatures = $true
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedDisablingOptionalFeatures
+					Log -Error $OptimizeData.FailedDisablingOptionalFeatures
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -866,14 +877,14 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.EnablingOptionalFeature -f $PSItem.FeatureName)
+						Log -Info ($OptimizeData.EnablingOptionalFeature -f $PSItem.FeatureName)
 						[Void](Enable-WindowsOptionalFeature @EnableFeatureParams)
 					}
 					$DynamicParams.EnabledOptionalFeatures = $true
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedEnablingOptionalFeatures
+					Log -Error $OptimizeData.FailedEnablingOptionalFeatures
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -889,14 +900,14 @@ Function Optimize-Offline
 			[Void](StartExe $EXPAND -Arguments ('"{0}" F:* "{1}"' -f (GetPath -Path $OptimizeOffline.DevMode -Child "Microsoft-OneCore-DeveloperMode-Desktop-Package~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"), $DevModeExpand.FullName))
 			Try
 			{
-				Log -Info $OptimizedData.IntegratingDeveloperMode
+				Log -Info $OptimizeData.IntegratingDeveloperMode
 				$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Add-Package /PackagePath:"{1}" /ScratchDir:"{2}" /LogPath:"{3}"' -f $InstallMount, (GetPath -Path $DevModeExpand.FullName -Child update.mum), $ScratchFolder, $DISMLog) -ErrorAction Stop
 				If ($RET -eq 0) { $DynamicParams.DeveloperMode = $true }
 				Else { Throw }
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingDeveloperMode
+				Log -Error $OptimizeData.FailedIntegratingDeveloperMode
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -913,7 +924,7 @@ Function Optimize-Offline
 		#region Windows Store Integration
 		If ($WindowsStore.IsPresent -and (Test-Path -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.appxbundle) -and !(Get-AppxProvisionedPackage -Path $InstallMount | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore))
 		{
-			Log -Info $OptimizedData.IntegratingWindowsStore
+			Log -Info $OptimizeData.IntegratingWindowsStore
 			$StoreBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.appxbundle -File | Select-Object -ExpandProperty FullName
 			$PurchaseBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.StorePurchaseApp*.appxbundle -File | Select-Object -ExpandProperty FullName
 			$XboxBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.XboxIdentityProvider*.appxbundle -File | Select-Object -ExpandProperty FullName
@@ -977,7 +988,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingWindowsStore
+				Log -Error $OptimizeData.FailedIntegratingWindowsStore
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -998,14 +1009,14 @@ Function Optimize-Offline
 		{
 			Try
 			{
-				Log -Info $OptimizedData.IntegratingMicrosoftEdge
+				Log -Info $OptimizeData.IntegratingMicrosoftEdge
 				@((GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"),
 					(GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~$($InstallInfo.Language)~10.0.$($InstallInfo.Build).1.cab")) | ForEach-Object -Process { [Void](Add-WindowsPackage -Path $InstallMount -PackagePath $PSItem -IgnoreCheck -ScratchDirectory $ScratchFolder -LogPath $DISMLog -ErrorAction Stop) }
 				$DynamicParams.MicrosoftEdge = $true
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingMicrosoftEdge
+				Log -Error $OptimizeData.FailedIntegratingMicrosoftEdge
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1038,7 +1049,7 @@ Function Optimize-Offline
 		{
 			Try
 			{
-				Log -Info $OptimizedData.IntegratingWin32Calc
+				Log -Info $OptimizeData.IntegratingWin32Calc
 				$ExpandCalcParams = @{
 					ImagePath        = '{0}\Win32Calc.wim' -f $OptimizeOffline.Win32Calc
 					Index            = 1
@@ -1055,7 +1066,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingWin32Calc
+				Log -Error $OptimizeData.FailedIntegratingWin32Calc
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1107,7 +1118,7 @@ Function Optimize-Offline
 		{
 			Try
 			{
-				Log -Info $OptimizedData.IntegratingDataDedup
+				Log -Info $OptimizeData.IntegratingDataDedup
 				@((GetPath -Path $OptimizeOffline.Dedup -Child "Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"),
 					(GetPath -Path $OptimizeOffline.Dedup -Child "Microsoft-Windows-FileServer-ServerCore-Package~31bf3856ad364e35~$($InstallInfo.Architecture)~$($InstallInfo.Language)~10.0.$($InstallInfo.Build).1.cab"),
 					(GetPath -Path $OptimizeOffline.Dedup -Child "Microsoft-Windows-Dedup-Package~31bf3856ad364e35~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"),
@@ -1127,7 +1138,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingDataDedup
+				Log -Error $OptimizeData.FailedIntegratingDataDedup
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1152,7 +1163,7 @@ Function Optimize-Offline
 			{
 				If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.Boot)
 				{
-					Log -Info ($OptimizedData.IntegratingDaRT10 -f $CodeName, $BootInfo.Name)
+					Log -Info ($OptimizeData.IntegratingDaRT10 -f $CodeName, $BootInfo.Name)
 					$ExpandDaRTBootParams = @{
 						ImagePath        = '{0}\MSDaRT10_{1}.wim' -f $OptimizeOffline.DaRT, $CodeName
 						Index            = 1
@@ -1174,7 +1185,7 @@ Function Optimize-Offline
 				}
 				If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.Recovery)
 				{
-					Log -Info ($OptimizedData.IntegratingDaRT10 -f $CodeName, $RecoveryInfo.Name)
+					Log -Info ($OptimizeData.IntegratingDaRT10 -f $CodeName, $RecoveryInfo.Name)
 					$ExpandDaRTRecoveryParams = @{
 						ImagePath        = '{0}\MSDaRT10_{1}.wim' -f $OptimizeOffline.DaRT, $CodeName
 						Index            = 1
@@ -1197,7 +1208,7 @@ Function Optimize-Offline
 			}
 			Catch
 			{
-				Log -Error $OptimizedData.FailedIntegratingDaRT10
+				Log -Error $OptimizeData.FailedIntegratingDaRT10
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1220,7 +1231,7 @@ Function Optimize-Offline
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingRegistrySettings
+					Log -Error $OptimizeData.FailedApplyingRegistrySettings
 					$OptimizeErrors.Add($Error[0])
 					Stop-Optimize
 				}
@@ -1231,26 +1242,26 @@ Function Optimize-Offline
 			}
 			Else
 			{
-				Log -Error ($OptimizedData.MissingRequiredRegistryData -f (GetPath -Path (GetPath -Path $OptimizeOffline.Resources -Child "Public\$($OptimizeOffline.Culture)\Set-RegistryProperties.strings.psd1") -Split Leaf))
+				Log -Error ($OptimizeData.MissingRequiredRegistryData -f (GetPath -Path (GetPath -Path $OptimizeOffline.Resources -Child "Public\$($OptimizeOffline.Culture)\Set-RegistryProperties.strings.psd1") -Split Leaf))
 				Start-Sleep 3
 			}
 		}
 		#endregion Apply Optimized Registry Settings
 
 		#region Additional Content Integration
-		If ($Additional.Values -contains $true)
+		If ($Additional.ContainsValue($true))
 		{
 			If ($Additional.Setup -and (Test-Path -Path (GetPath -Path $OptimizeOffline.Setup -Child *)))
 			{
 				Try
 				{
-					Log -Info $OptimizedData.ApplyingSetupContent
+					Log -Info $OptimizeData.ApplyingSetupContent
 					(GetPath -Path $InstallMount -Child 'Windows\Setup\Scripts') | Create
 					Get-ChildItem -Path $OptimizeOffline.Setup -Exclude RebootRecovery.png, RefreshExplorer.png, README.md | Copy-Item -Destination (GetPath -Path $InstallMount -Child 'Windows\Setup\Scripts') -Recurse -Force -ErrorAction Stop
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingSetupContent
+					Log -Error $OptimizeData.FailedApplyingSetupContent
 					$OptimizeErrors.Add($Error[0])
 					(GetPath -Path $InstallMount -Child 'Windows\Setup\Scripts') | Purge -ErrorAction SilentlyContinue
 				}
@@ -1263,13 +1274,13 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log -Info $OptimizedData.ApplyingWallpaper
+					Log -Info $OptimizeData.ApplyingWallpaper
 					Get-ChildItem -Path $OptimizeOffline.Wallpaper -Directory | Copy-Item -Destination (GetPath -Path $InstallMount -Child 'Windows\Web\Wallpaper') -Recurse -Force -ErrorAction Stop
 					Get-ChildItem -Path (GetPath -Path $OptimizeOffline.Wallpaper -Child *) -Include *.jpg, *.png, *.bmp, *.gif -File | Copy-Item -Destination (GetPath -Path $InstallMount -Child 'Windows\Web\Wallpaper') -Force -ErrorAction Stop
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingWallpaper
+					Log -Error $OptimizeData.FailedApplyingWallpaper
 					$OptimizeErrors.Add($Error[0])
 				}
 				Finally
@@ -1281,13 +1292,13 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log -Info $OptimizedData.ApplyingSystemLogo
+					Log -Info $OptimizeData.ApplyingSystemLogo
 					(GetPath -Path $InstallMount -Child 'Windows\System32\oobe\info\logo') | Create
 					Copy-Item -Path (GetPath -Path $OptimizeOffline.SystemLogo -Child *.bmp) -Destination (GetPath -Path $InstallMount -Child 'Windows\System32\oobe\info\logo') -Recurse -Force -ErrorAction Stop
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingSystemLogo
+					Log -Error $OptimizeData.FailedApplyingSystemLogo
 					$OptimizeErrors.Add($Error[0])
 					(GetPath -Path $InstallMount -Child 'Windows\System32\oobe\info\logo') | Purge -ErrorAction SilentlyContinue
 				}
@@ -1300,12 +1311,12 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log -Info $OptimizedData.ApplyingLockScreen
+					Log -Info $OptimizeData.ApplyingLockScreen
 					Set-LockScreen -ErrorAction Stop
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingLockScreen
+					Log -Error $OptimizeData.FailedApplyingLockScreen
 					$OptimizeErrors.Add($Error[0])
 				}
 				Finally
@@ -1317,12 +1328,12 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log -Info $OptimizedData.ImportingRegistryTemplates
+					Log -Info $OptimizeData.ImportingRegistryTemplates
 					Import-RegistryTemplates -ErrorAction Stop
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedImportingRegistryTemplates
+					Log -Error $OptimizeData.FailedImportingRegistryTemplates
 					$OptimizeErrors.Add($Error[0])
 				}
 				Finally
@@ -1341,7 +1352,7 @@ Function Optimize-Offline
 						LogPath          = $DISMLog
 						ErrorAction      = 'Stop'
 					}
-					Log -Info $OptimizedData.ApplyingAnswerFile
+					Log -Info $OptimizeData.ApplyingAnswerFile
 					[Void](Use-WindowsUnattend @ApplyUnattendParams)
 					(GetPath -Path $InstallMount -Child 'Windows\Panther') | Create
 					Copy-Item -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml) -Destination (GetPath -Path $InstallMount -Child 'Windows\Panther') -Force -ErrorAction Stop
@@ -1349,7 +1360,7 @@ Function Optimize-Offline
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedApplyingAnswerFile
+					Log -Error $OptimizeData.FailedApplyingAnswerFile
 					$OptimizeErrors.Add($Error[0])
 					(GetPath -Path $InstallMount -Child 'Windows\Panther') | Purge -ErrorAction SilentlyContinue
 					Start-Sleep 3
@@ -1371,13 +1382,13 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.InjectingDriverPackages -f $InstallInfo.Name)
+						Log -Info ($OptimizeData.InjectingDriverPackages -f $InstallInfo.Name)
 						[Void](Add-WindowsDriver @InstallDriverParams)
 						$DynamicParams.InstallDrivers = $true
 					}
 					Catch
 					{
-						Log -Error ($OptimizedData.FailedInjectingDriverPackages -f $InstallInfo.Name)
+						Log -Error ($OptimizeData.FailedInjectingDriverPackages -f $InstallInfo.Name)
 						$OptimizeErrors.Add($Error[0])
 						Start-Sleep 3
 					}
@@ -1395,13 +1406,13 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.InjectingDriverPackages -f $BootInfo.Name)
+						Log -Info ($OptimizeData.InjectingDriverPackages -f $BootInfo.Name)
 						[Void](Add-WindowsDriver @BootDriverParams)
 						$DynamicParams.BootDrivers = $true
 					}
 					Catch
 					{
-						Log -Error ($OptimizedData.FailedInjectingDriverPackages -f $BootInfo.Name)
+						Log -Error ($OptimizeData.FailedInjectingDriverPackages -f $BootInfo.Name)
 						$OptimizeErrors.Add($Error[0])
 						Start-Sleep 3
 					}
@@ -1419,13 +1430,13 @@ Function Optimize-Offline
 							LogPath          = $DISMLog
 							ErrorAction      = 'Stop'
 						}
-						Log -Info ($OptimizedData.InjectingDriverPackages -f $RecoveryInfo.Name)
+						Log -Info ($OptimizeData.InjectingDriverPackages -f $RecoveryInfo.Name)
 						[Void](Add-WindowsDriver @RecoveryDriverParams)
 						$DynamicParams.RecoveryDrivers = $true
 					}
 					Catch
 					{
-						Log -Error ($OptimizedData.FailedInjectingDriverPackages -f $RecoveryInfo.Name)
+						Log -Error ($OptimizeData.FailedInjectingDriverPackages -f $RecoveryInfo.Name)
 						$OptimizeErrors.Add($Error[0])
 						Start-Sleep 3
 					}
@@ -1446,13 +1457,13 @@ Function Optimize-Offline
 						LogPath          = $DISMLog
 						ErrorAction      = 'Stop'
 					}
-					Log -Info $OptimizedData.EnablingNetFx3
+					Log -Info $OptimizeData.EnablingNetFx3
 					[Void](Enable-WindowsOptionalFeature @EnableNetFx3Params)
 					$DynamicParams.NetFx3 = $true
 				}
 				Catch
 				{
-					Log -Error $OptimizedData.FailedEnablingNetFx3
+					Log -Error $OptimizeData.FailedEnablingNetFx3
 					$OptimizeErrors.Add($Error[0])
 					Start-Sleep 3
 				}
@@ -1463,7 +1474,7 @@ Function Optimize-Offline
 		#region Image Finalization
 		Try
 		{
-			Log -Info $OptimizedData.CleanupStartMenu
+			Log -Info $OptimizeData.CleanupStartMenu
 			$LayoutModTemplate = @"
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
     xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1"
@@ -1501,7 +1512,7 @@ Function Optimize-Offline
 		}
 		Catch
 		{
-			Log -Error $OptimizedData.FailedCleanupStartMenu
+			Log -Error $OptimizeData.FailedCleanupStartMenu
 			$OptimizeErrors.Add($Error[0])
 			(GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') | Purge -ErrorAction SilentlyContinue
 		}
@@ -1512,7 +1523,7 @@ Function Optimize-Offline
 
 		If ($DynamicParams.Count -gt 0)
 		{
-			Log -Info $OptimizedData.CreatingPackageSummaryLog
+			Log -Info $OptimizeData.CreatingPackageSummaryLog
 			$PackageLog = New-Item -Path $PackageLog -ItemType File -Force -ErrorAction SilentlyContinue
 			If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force -ErrorAction SilentlyContinue }
 			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force -ErrorAction SilentlyContinue }
@@ -1523,7 +1534,7 @@ Function Optimize-Offline
 
 		If ((Repair-WindowsImage -Path $InstallMount -CheckHealth).ImageHealthState -eq 'Healthy')
 		{
-			Log -Info $OptimizedData.PostOptimizedImageHealthHealthy
+			Log -Info $OptimizeData.PostOptimizedImageHealthHealthy
 			@"
 This $($InstallInfo.Name) installation was optimized with $($OptimizeOffline.BaseName) version $($ManifestData.ModuleVersion)
 on $(Get-Date -UFormat "%m/%d/%Y at %r")
@@ -1532,7 +1543,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		}
 		Else
 		{
-			Log -Error $OptimizedData.PostOptimizedImageHealthCorrupted
+			Log -Error $OptimizeData.PostOptimizedImageHealthCorrupted
 			Stop-Optimize
 		}
 
@@ -1548,12 +1559,12 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 					LogPath          = $DISMLog
 					ErrorAction      = 'Stop'
 				}
-				Log -Info ($OptimizedData.SavingDismountingImage -f $BootInfo.Name)
+				Log -Info ($OptimizeData.SavingDismountingImage -f $BootInfo.Name)
 				[Void](Dismount-WindowsImage @DismountBootParams)
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedSavingDismountingImage -f $BootInfo.Name)
+				Log -Error ($OptimizeData.FailedSavingDismountingImage -f $BootInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1571,12 +1582,12 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 					LogPath          = $DISMLog
 					ErrorAction      = 'Stop'
 				}
-				Log -Info ($OptimizedData.SavingDismountingImage -f $RecoveryInfo.Name)
+				Log -Info ($OptimizeData.SavingDismountingImage -f $RecoveryInfo.Name)
 				[Void](Dismount-WindowsImage @DismountRecoveryParams)
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedSavingDismountingImage -f $RecoveryInfo.Name)
+				Log -Error ($OptimizeData.FailedSavingDismountingImage -f $RecoveryInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Stop-Optimize
 			}
@@ -1586,7 +1597,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		{
 			Try
 			{
-				Log -Info ($OptimizedData.RebuildingExportingImage -f $BootInfo.Name)
+				Log -Info ($OptimizeData.RebuildingExportingImage -f $BootInfo.Name)
 				Get-WindowsImage -ImagePath $BootWim | ForEach-Object -Process {
 					$ExportBootParams = @{
 						SourceImagePath      = $BootWim
@@ -1603,7 +1614,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedRebuildingExportingImage -f $BootInfo.Name)
+				Log -Error ($OptimizeData.FailedRebuildingExportingImage -f $BootInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Start-Sleep 3
 			}
@@ -1622,13 +1633,13 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 					LogPath              = $DISMLog
 					ErrorAction          = 'Stop'
 				}
-				Log -Info ($OptimizedData.RebuildingExportingImage -f $RecoveryInfo.Name)
+				Log -Info ($OptimizeData.RebuildingExportingImage -f $RecoveryInfo.Name)
 				[Void](Export-WindowsImage @ExportRecoveryParams)
 				Get-ChildItem -Path $WorkFolder -Filter winre.wim | Move-Item -Destination $WinREPath -Force
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedRebuildingExportingImage -f $RecoveryInfo.Name)
+				Log -Error ($OptimizeData.FailedRebuildingExportingImage -f $RecoveryInfo.Name)
 				$OptimizeErrors.Add($Error[0])
 				Start-Sleep 3
 			}
@@ -1644,12 +1655,12 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 				LogPath          = $DISMLog
 				ErrorAction      = 'Stop'
 			}
-			Log -Info ($OptimizedData.SavingDismountingImage -f $InstallInfo.Name)
+			Log -Info ($OptimizeData.SavingDismountingImage -f $InstallInfo.Name)
 			[Void](Dismount-WindowsImage @DismountInstallParams)
 		}
 		Catch
 		{
-			Log -Error ($OptimizedData.FailedSavingDismountingImage -f $InstallInfo.Name)
+			Log -Error ($OptimizeData.FailedSavingDismountingImage -f $InstallInfo.Name)
 			$OptimizeErrors.Add($Error[0])
 			Stop-Optimize
 		}
@@ -1662,15 +1673,14 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		{
 			Do
 			{
-				$CompressionList = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($PSItem) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single
-				$CompressionType = $CompressionList | Select-Object -ExpandProperty Compression
+				$CompressionType = @('Solid', 'Maximum', 'Fast', 'None') | Select-Object -Property @{ Label = 'Compression'; Expression = { ($PSItem) } } | Out-GridView -Title "Select Final Image Compression." -OutputMode Single | Select-Object -ExpandProperty Compression
 			}
-			While ($CompressionList.Length -eq 0)
+			While ($CompressionType.Length -eq 0)
 		}
 
 		Try
 		{
-			Log -Info ($OptimizedData.RebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
+			Log -Info ($OptimizeData.RebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
 			Switch ($CompressionType)
 			{
 				'Solid'
@@ -1699,7 +1709,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		}
 		Catch
 		{
-			Log -Error ($OptimizedData.FailedRebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
+			Log -Error ($OptimizeData.FailedRebuildingExportingCompressed -f $InstallInfo.Name, $CompressionType)
 			$OptimizeErrors.Add($Error[0])
 			Start-Sleep 3
 		}
@@ -1716,20 +1726,20 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			}
 			Catch
 			{
-				Log -Error ($OptimizedData.FailedToUpdateImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
+				Log -Error ($OptimizeData.FailedToUpdateImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
 				$OptimizeErrors.Add($Error[0])
 				Start-Sleep 3
 			}
 		}
 		Else
 		{
-			Log -Error ($OptimizedData.MissingRequiredDataFiles -f (GetPath -Path $InstallWim -Split Leaf))
+			Log -Error ($OptimizeData.MissingRequiredDataFiles -f (GetPath -Path $InstallWim -Split Leaf))
 			Start-Sleep 3
 		}
 
 		If ($ISOMedia.Exists)
 		{
-			Log -Info $OptimizedData.OptimizingInstallMedia
+			Log -Info $OptimizeData.OptimizingInstallMedia
 			Optimize-InstallMedia
 			Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination (GetPath -Path $ISOMedia.FullName -Child sources) -Force -ErrorAction SilentlyContinue
 			If ($ISO)
@@ -1740,12 +1750,12 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 				{
 					Try
 					{
-						Log -Info ($OptimizedData.CreatingISO -f $ISO)
+						Log -Info ($OptimizeData.CreatingISO -f $ISO)
 						$ISOFile = New-ISOMedia -BootType $ISO -ErrorAction Stop
 					}
 					Catch
 					{
-						Log -Error ($OptimizedData.FailedCreatingISO -f $ISO)
+						Log -Error ($OptimizeData.FailedCreatingISO -f $ISO)
 						$OptimizeErrors.Add($Error[0])
 						Start-Sleep 3
 					}
@@ -1755,7 +1765,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 
 		Try
 		{
-			Log -Info $OptimizedData.FinalizingOptimizations
+			Log -Info $OptimizeData.FinalizingOptimizations
 			$ErrorActionPreference = 'SilentlyContinue'
 			$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
 			If ($ISOFile) { Move-Item -Path $ISOFile -Destination $SaveDirectory.FullName }
@@ -1769,8 +1779,8 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		{
 			$Timer.Stop()
 			Start-Sleep 5
-			Log -Info ($OptimizedData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), $OptimizeErrors.Count) -Finalized
-			@($DISMLog, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge
+			Log -Info ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), $OptimizeErrors.Count) -Finalized
+			@($DISMLog, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
 			If ($OptimizeErrors.Count -gt 0) { Export-ErrorLog }
 			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
