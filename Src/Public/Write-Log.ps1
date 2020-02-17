@@ -1,24 +1,23 @@
 Function Write-Log
 {
-	[CmdletBinding(DefaultParameterSetName = 'Info')]
+	[CmdletBinding(DefaultParameterSetName = 'None')]
 	Param
 	(
-		[Parameter(ParameterSetName = 'Info')]
-		[String]$Info,
-		[Parameter(ParameterSetName = 'Error')]
-		[String]$Error,
-		[Parameter(ParameterSetName = 'Info')]
+		[Parameter(Mandatory = $true,
+			Position = 0)]
+		[String]$Message,
+		[ValidateSet('Info', 'Error')]
+		[String]$Type = 'Info',
+		[Management.Automation.ErrorRecord]$ErrorRecord,
 		[Parameter(ParameterSetName = 'Finalized')]
 		[Switch]$Finalized,
-		[Parameter(ParameterSetName = 'Info')]
-		[Parameter(ParameterSetName = 'Error')]
 		[Parameter(ParameterSetName = 'Failed')]
-		[Switch]$Failed
+		[Switch]$Failed,
+		[Switch]$Quiet
 	)
 
 	Begin
 	{
-		Set-ErrorAction SilentlyContinue
 		[IO.FileInfo]$ModuleLog = $ModuleLog
 		$Timestamp = (Get-Date -Format 's')
 		$LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
@@ -46,35 +45,46 @@ Optimizations Finalized : {0}
 			$ModuleLog = New-Item -Path $ModuleLog -ItemType File -Force
 			$Header -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Force
 		}
-		Switch ($PSBoundParameters.Keys)
+		Switch ($PSBoundParameters.Type)
 		{
-			'Info'
-			{
-				"$Timestamp [INFO]: $Info" | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
-				$Host.UI.RawUI.WindowTitle = $Info
-				Write-Host $Info -ForegroundColor Cyan
-			}
 			'Error'
 			{
-				"$Timestamp [ERROR]: $Error" | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
-				$Host.UI.RawUI.WindowTitle = $Error
-				Write-Host $Error -ForegroundColor Red
+				"$Timestamp [ERROR]: $Message" | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
+				If (!$Quiet.IsPresent) { $Host.UI.RawUI.WindowTitle = $Message; Write-Host $Message -ForegroundColor Red }
+				If ($PSBoundParameters.ContainsKey('ErrorRecord') -and $null -ne $ErrorRecord)
+				{
+					$OptimizeErrors.Add($ErrorRecord)
+					$ExceptionMessage = '{0} ({1}: {2}:{3} char:{4})' -f $ErrorRecord.Exception.Message, $ErrorRecord.CategoryInfo.ToString(), $ErrorRecord.InvocationInfo.ScriptName, $ErrorRecord.InvocationInfo.ScriptLineNumber, $ErrorRecord.InvocationInfo.OffsetInLine
+					"$Timestamp [ERROR]: $ExceptionMessage" | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
+					If (!$Quiet.IsPresent) { Write-Host $ExceptionMessage -ForegroundColor Red }
+				}
+				Break
 			}
+			Default
+			{
+				"$Timestamp [INFO]: $Message" | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
+				If (!$Quiet.IsPresent) { $Host.UI.RawUI.WindowTitle = $Message; Write-Host $Message -ForegroundColor Cyan }
+				Break
+			}
+		}
+		Switch ($PSCmdlet.ParameterSetName)
+		{
 			'Finalized'
 			{
 				$Footer -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
 				$Host.UI.RawUI.WindowTitle = "Optimizations Completed."
+				Break
 			}
 			'Failed'
 			{
 				$Footer.Replace('Optimizations Finalized : {0}', 'Optimizations Failed : {0}') -f $(Get-Date -UFormat "%m/%d/%Y %r") | Out-File -FilePath $ModuleLog.FullName -Encoding UTF8 -Append -Force
 				$Host.UI.RawUI.WindowTitle = "Optimizations Failed."
+				Break
 			}
 		}
 	}
 	End
 	{
 		[Void]$LogMutex.ReleaseMutex()
-		Set-ErrorAction -Restore
 	}
 }
