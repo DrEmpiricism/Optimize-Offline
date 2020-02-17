@@ -1,5 +1,15 @@
 # ChangeLog #
 
+## Build 4.0.0.6 (02-17-2020) ##
+
+- Combined and ordered the Optimize-Offline module's initializing and finalizing processes more optimally.
+- The clean-up of Xbox integrated content has been modified to eliminate potential errors when trying to run paid apps or games downloaded from the Windows Store.
+- Errors are now handled simultaneously when a log entry is written that contains an error record.
+- The boot and recovery images will no longer be automatically mounted by default; rather, Optimize-Offline will now only mount them if any parameters for optimization requires their mounting (i.e. applying Microsoft DaRT 10 or integrating drivers to Windows Setup or Windows Recovery environments).
+- Simplified multiple processes and Resource Functions to further improve the overall speed of image optimization.
+- Updated localized data and external help.
+- Updated the Windows Store bundle packages.
+
 ## Build 4.0.0.5 (02-03-2020) ##
 
 - Corrected incorrect key syntax in the -Additional hashtable parameter.

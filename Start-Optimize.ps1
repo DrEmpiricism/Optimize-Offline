@@ -18,6 +18,8 @@
 [CmdletBinding()]
 Param ()
 
+$Error.Clear()
+
 # Ensure we are running with administrative permissions.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
