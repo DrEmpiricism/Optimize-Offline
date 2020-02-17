@@ -34,21 +34,14 @@ All images are optimized independently - without the need for 3rd party programs
 .\Start-Optimize.ps1
 ```
 
-Imports the configuration JSON file into the Optimize-Offline module and begins the optimization process.
+This command automatically starts optimizing an image by importing the configuration JSON file into the module.
 
 ### EXAMPLE 2
 ```
-Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"
+Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"
 ```
 
-A Windows Installation Media (ISO) file will be optimized using manually passed parameters.
-
-### EXAMPLE 3
-```
-Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional @{ $Setup = $true; $Wallpaper = $true; $SystemLogo = $true; $LockScreen = $true; $RegistryTemplates = $true; $Drivers = $true }
-```
-
-A Windows Image (WIM) file will be optimized using manually passed parameters.
+This command starts optimizing an image by manually passing parameters to the module.
 
 ## PARAMETERS
 
@@ -63,7 +56,7 @@ Aliases:
 Required: True
 Position: 1
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByValue)
 Accept wildcard characters: False
 ```
 
@@ -274,7 +267,7 @@ Aliases:
 
 Required: False
 Position: 4
-Default value: @{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }
+Default value: @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -298,15 +291,16 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
+This module supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
-### System.IO.FileInfo
-### System.Collections.Specialized.OrderedDictionary
+### System.IO.FileInfo, System.Collections.Specialized.OrderedDictionary
+### You can pipe a System.IO.FileInfo object to this module.
 ## OUTPUTS
 
-### System.String
+### None
+### This module does not generate any output.
 ## NOTES
 Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019.
 NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image.
@@ -314,5 +308,9 @@ Bootable ISO media creation is only applicable if a Windows Installation Media I
 
 ## RELATED LINKS
 
-[https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md)
+[ReadMe](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md)
+
+[Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md)
+
+[ChangeLog](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md)
 

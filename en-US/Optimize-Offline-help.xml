@@ -10,15 +10,12 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments.</maml:para>
-      <maml:para>Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.</maml:para>
-      <maml:para>Image optimization is configurable using the Configuration.json file in the module root directory.</maml:para>
-      <maml:para>All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
+      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
         <maml:name>Optimize-Offline</maml:name>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
           <maml:name>SourcePath</maml:name>
           <maml:Description>
             <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
@@ -67,7 +64,7 @@
             <maml:name>Hashtable</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>@{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }</dev:defaultValue>
+          <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>ISO</maml:name>
@@ -195,7 +192,7 @@
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
-      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
         <maml:name>SourcePath</maml:name>
         <maml:Description>
           <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
@@ -364,7 +361,7 @@
           <maml:name>Hashtable</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>@{ $Setup = $false; $Wallpaper = $false; $SystemLogo = $false; $LockScreen = $false; $RegistryTemplates = $false; $Unattend = $false; $Drivers = $false; $NetFx3 = $false }</dev:defaultValue>
+        <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ISO</maml:name>
@@ -383,7 +380,7 @@
     <command:inputTypes>
       <command:inputType>
         <dev:type>
-          <maml:name>System.IO.FileInfo</maml:name>
+          <maml:name>System.IO.FileInfo, System.Collections.Specialized.OrderedDictionary</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -391,7 +388,7 @@
       </command:inputType>
       <command:inputType>
         <dev:type>
-          <maml:name>System.Collections.Specialized.OrderedDictionary</maml:name>
+          <maml:name>You can pipe a System.IO.FileInfo object to this module.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -401,7 +398,15 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>System.String</maml:name>
+          <maml:name>None.</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>This module does not generate any output.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -418,28 +423,29 @@
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
         <dev:code>.\Start-Optimize.ps1</dev:code>
         <dev:remarks>
-          <maml:para>Imports the configuration JSON file into the Optimize-Offline module and begins the optimization process.</maml:para>
+          <maml:para>This command automatically starts optimizing an image by importing the configuration JSON file into the module.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win10Pro\Win10Pro_Full.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -ISO "No-Prompt"</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
         <dev:remarks>
-          <maml:para>A Windows Installation Media (ISO) file will be optimized using manually passed parameters.</maml:para>
-        </dev:remarks>
-      </command:example>
-      <command:example>
-        <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Win Images\install.wim" -WindowsApps "Whitelist" -SystemApps -Capabilities -Features -Dedup -Registry -DaRT "Recovery" -Additional @{ $Setup = $true; $Wallpaper = $true; $SystemLogo = $true; $LockScreen = $true; $RegistryTemplates = $true; $Drivers = $true }</dev:code>
-        <dev:remarks>
-          <maml:para>A Windows Image (WIM) file will be optimized using manually passed parameters.</maml:para>
+          <maml:para>This command starts optimizing an image by manually passing parameters to the module.</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>
     <command:relatedLinks>
       <maml:navigationLink>
-        <maml:linkText>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md</maml:linkText>
+        <maml:linkText>ReadMe</maml:linkText>
         <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Help Topics</maml:linkText>
+        <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>ChangeLog</maml:linkText>
+        <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md</maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
   </command:command>
