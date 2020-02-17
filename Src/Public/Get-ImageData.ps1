@@ -19,46 +19,51 @@ Function Get-ImageData
 
     Process
     {
-        If ($PSCmdlet.ParameterSetName -eq 'ImageData')
+        Switch ($PSCmdlet.ParameterSetName)
         {
-            $ArchString = @{ [UInt32]0 = 'x86'; [UInt32]5 = 'arm'; [UInt32]6 = 'ia64'; [UInt32]9 = 'amd64'; [UInt32]12 = 'arm64' }
-            $ImageDataFile = $ImageFile.BaseName.Replace($ImageFile.BaseName[0], $ImageFile.BaseName[0].ToString().ToUpper()).Insert($ImageFile.BaseName.Length, 'Info.xml')
-            $ImageInfo = (Get-WindowsImage -ImagePath $ImageFile.FullName -Index $Index -ErrorAction:$ErrorActionPreference)
-            $ImageData = [PSCustomObject][Ordered]@{
-                Path             = $ImageInfo.ImagePath
-                Index            = $ImageInfo.ImageIndex
-                Name             = $ImageInfo.ImageName
-                Description      = $ImageInfo.ImageDescription
-                Size             = '{0:N2} GB' -f ($ImageInfo.ImageSize / 1GB)
-                Edition          = $ImageInfo.EditionID
-                Version          = $ImageInfo.Version
-                Build            = $ImageInfo.Build
-                Release          = $null
-                CodeName         = $null
-                Architecture     = $ArchString[$ImageInfo.Architecture]
-                Language         = $ImageInfo.Languages[$ImageInfo.DefaultLanguageIndex]
-                InstallationType = $ImageInfo.InstallationType
-                Created          = $ImageInfo.CreatedTime
-            }
-            If ($ImageFile.BaseName -ne 'install') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
-            $ImageData | Export-DataFile -File $ImageDataFile -ErrorAction:$ErrorActionPreference
-        }
-        ElseIf ($PSCmdlet.ParameterSetName -eq 'Update')
-        {
-            $ImageData = Import-DataFile Install -ErrorAction:$ErrorActionPreference
-            $CurrentVersion = Import-DataFile -CurrentVersion -ErrorAction:$ErrorActionPreference
-            If ($ImageData.Build -eq '18362' -and $CurrentVersion.CurrentBuildNumber -eq '18363')
+            'ImageData'
             {
-                $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
-                $ImageData.Build = $CurrentVersion.CurrentBuildNumber
+                $ArchString = @{ [UInt32]0 = 'x86'; [UInt32]5 = 'arm'; [UInt32]6 = 'ia64'; [UInt32]9 = 'amd64'; [UInt32]12 = 'arm64' }
+                $ImageDataFile = $ImageFile.BaseName.Replace($ImageFile.BaseName[0], $ImageFile.BaseName[0].ToString().ToUpper()).Insert($ImageFile.BaseName.Length, 'Info.xml')
+                $ImageInfo = (Get-WindowsImage -ImagePath $ImageFile.FullName -Index $Index -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction:$ErrorActionPreference)
+                $ImageData = [PSCustomObject][Ordered]@{
+                    Path             = $ImageInfo.ImagePath
+                    Index            = $ImageInfo.ImageIndex
+                    Name             = $ImageInfo.ImageName
+                    Description      = $ImageInfo.ImageDescription
+                    Size             = '{0:N2} GB' -f ($ImageInfo.ImageSize / 1GB)
+                    Edition          = $ImageInfo.EditionID
+                    Version          = $ImageInfo.Version
+                    Build            = $ImageInfo.Build
+                    Release          = $null
+                    CodeName         = $null
+                    Architecture     = $ArchString[$ImageInfo.Architecture]
+                    Language         = $ImageInfo.Languages[$ImageInfo.DefaultLanguageIndex]
+                    InstallationType = $ImageInfo.InstallationType
+                    Created          = $ImageInfo.CreatedTime
+                }
+                If ($ImageFile.BaseName -ne 'install') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
+                $ImageData | Export-DataFile -File $ImageDataFile -ErrorAction:$ErrorActionPreference
+                Break
             }
-            $ImageData.Release = $CurrentVersion.ReleaseID
-            If ($CurrentVersion.CurrentBuildNumber -eq '18363' -and $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] -eq '19H1') { $ImageData.CodeName = '19H2' }
-            Else { $ImageData.CodeName = $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] }
-            @('Path', 'Index') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
-            $ImageData.PSObject.TypeNames.Insert(0, 'System.IO.Optimized.Wim')
-            $ImageData | Add-Member -MemberType NoteProperty -Name Optimized -Value (Get-Date -Format 'G')
-            $ImageData | Export-DataFile -File InstallInfo -ErrorAction:$ErrorActionPreference
+            'Update'
+            {
+                $ImageData = Import-DataFile Install -ErrorAction:$ErrorActionPreference
+                $CurrentVersion = Import-DataFile -CurrentVersion -ErrorAction:$ErrorActionPreference
+                If ($ImageData.Build -eq '18362' -and $CurrentVersion.CurrentBuildNumber -eq '18363')
+                {
+                    $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
+                    $ImageData.Build = $CurrentVersion.CurrentBuildNumber
+                }
+                $ImageData.Release = $CurrentVersion.ReleaseID
+                If ($CurrentVersion.CurrentBuildNumber -eq '18363' -and $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] -eq '19H1') { $ImageData.CodeName = '19H2' }
+                Else { $ImageData.CodeName = $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] }
+                @('Path', 'Index') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
+                $ImageData.PSObject.TypeNames.Insert(0, 'System.IO.Optimized.Wim')
+                $ImageData | Add-Member -MemberType NoteProperty -Name Optimized -Value (Get-Date -Format 'G')
+                $ImageData | Export-DataFile -File InstallInfo -ErrorAction:$ErrorActionPreference
+                Break
+            }
         }
         $ImageData
     }

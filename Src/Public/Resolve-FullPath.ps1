@@ -27,15 +27,15 @@ Function Resolve-FullPath
     {
         ForEach ($Item In $Path)
         {
-            If ((Get-Item -LiteralPath (Split-Path -Path $Item -Qualifier) -ErrorAction:$ErrorActionPreference) -is [Microsoft.Win32.RegistryKey]) { $ItemType.Registry = $true }
-            ElseIf ((Get-Item -LiteralPath (Split-Path -Path $Item -Qualifier) -ErrorAction:$ErrorActionPreference) -is [IO.DirectoryInfo]) { $ItemType.Directory = $true }
+            If ((Get-Item -LiteralPath (Split-Path -Path $Item -Qualifier) -ErrorAction Ignore) -is [Microsoft.Win32.RegistryKey]) { $ItemType.Registry = $true }
+            ElseIf ((Get-Item -LiteralPath (Split-Path -Path $Item -Qualifier) -ErrorAction Ignore) -is [IO.DirectoryInfo]) { $ItemType.Directory = $true }
             Else { $ItemType.File = $true }
             If ($ItemType.ContainsValue($true))
             {
                 If ($PSCmdlet.ParameterSetName -eq 'Join' -and $Child)
                 {
-                    If ($ItemType.Registry) { Join-Path -Path $Item -ChildPath $Child -ErrorAction:$ErrorActionPreference }
-                    Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path -Path $Item -ChildPath $Child -ErrorAction:$ErrorActionPreference)) }
+                    If ($ItemType.Registry) { Join-Path -Path $Item -ChildPath $Child -ErrorAction Ignore }
+                    Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path -Path $Item -ChildPath $Child -ErrorAction Ignore)) }
                 }
                 ElseIf ($PSCmdlet.ParameterSetName -eq 'Split')
                 {
@@ -43,12 +43,12 @@ Function Resolve-FullPath
                     {
                         'Parent'
                         {
-                            If ($ItemType.Registry) { Split-Path -Path $Item -Parent -ErrorAction:$ErrorActionPreference }
-                            Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Split-Path -Path $Item -Parent -ErrorAction:$ErrorActionPreference)) }
+                            If ($ItemType.Registry) { Split-Path -Path $Item -Parent -ErrorAction Ignore }
+                            Else { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Split-Path -Path $Item -Parent -ErrorAction Ignore)) }
                         }
                         'Leaf'
                         {
-                            Split-Path -Path $Item -Leaf -ErrorAction:$ErrorActionPreference
+                            Split-Path -Path $Item -Leaf -ErrorAction Ignore
                         }
                     }
                 }

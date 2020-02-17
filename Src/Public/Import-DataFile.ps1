@@ -18,8 +18,20 @@ Function Import-DataFile
 
 	Switch ($PSCmdlet.ParameterSetName)
 	{
-		'Image' { Import-Clixml -Path (GetPath -Path $WorkFolder -Child ($Image + 'Info.xml')) -ErrorAction:$ErrorActionPreference }
-		'CurrentVersion' { Import-Clixml -Path (GetPath -Path $WorkFolder -Child CurrentVersion.xml) -ErrorAction:$ErrorActionPreference }
-		'ISOMedia' { Import-Clixml -Path (GetPath -Path $WorkFolder -Child ISOMedia.xml) -ErrorAction:$ErrorActionPreference }
+		'Image'
+		{
+			If (Test-Path -Path (GetPath -Path $WorkFolder -Child ($Image + 'Info.xml'))) { Import-Clixml -Path (GetPath -Path $WorkFolder -Child ($Image + 'Info.xml')) -ErrorAction:$ErrorActionPreference }
+			Break
+		}
+		'CurrentVersion'
+		{
+			If (Test-Path -Path (GetPath -Path $WorkFolder -Child CurrentVersion.xml)) { Import-Clixml -Path (GetPath -Path $WorkFolder -Child CurrentVersion.xml) -ErrorAction:$ErrorActionPreference }
+			Break
+		}
+		'ISOMedia'
+		{
+			If (Test-Path -Path (GetPath -Path $WorkFolder -Child ISOMedia.xml)) { Import-Clixml -Path (GetPath -Path $WorkFolder -Child ISOMedia.xml) -ErrorAction:$ErrorActionPreference }
+			Break
+		}
 	}
 }

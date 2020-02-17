@@ -13,7 +13,6 @@ Function Get-OfflineHives
 
     Begin
     {
-        Set-ErrorAction SilentlyContinue
         $HKLM = 0x80000002
         $Hive = [Ordered]@{
             SOFTWARE = (GetPath -Path $InstallMount -Child 'Windows\System32\Config\SOFTWARE')
@@ -59,9 +58,5 @@ Function Get-OfflineHives
                 Break
             }
         }
-    }
-    End
-    {
-        Set-ErrorAction -Restore
     }
 }

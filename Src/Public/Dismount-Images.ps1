@@ -3,28 +3,18 @@ Function Dismount-Images
     [CmdletBinding()]
     Param ()
 
-    Begin
+    If (Get-WindowsImage -Mounted)
     {
-        $ProgressPreference = 'SilentlyContinue'
-        Set-ErrorAction SilentlyContinue
-        $MountPath = @()
-        $MountPath += (Get-WindowsImage -Mounted | Where-Object -Property ImagePath -Match winre.wim | Select-Object -ExpandProperty MountPath)
-        $MountPath += (Get-WindowsImage -Mounted | Where-Object -Property ImagePath -Match install.wim | Select-Object -ExpandProperty MountPath)
-        $MountPath += (Get-WindowsImage -Mounted | Where-Object -Property ImagePath -Match boot.wim | Select-Object -ExpandProperty MountPath)
-    }
-    Process
-    {
+        $Host.UI.RawUI.WindowTitle = $OptimizeData.ActiveMountPoints
+        Write-Host $OptimizeData.ActiveMountPoints -ForegroundColor Cyan
         If (RegHives -Test) { RegHives -Unload }
         If (Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline'))
         {
             [GC]::Collect()
             Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') | ForEach-Object -Process { [Void](StartExe $REG -Arguments ('UNLOAD {0}' -f $PSItem)) }
         }
-        $MountPath.ForEach{ [Void](Dismount-WindowsImage -Path $PSItem -Discard) }
-    }
-    End
-    {
-        If (!(Get-WindowsImage -Mounted)) { [Void](Clear-WindowsCorruptMountPoint) }
-        Set-ErrorAction -Restore
+        Get-WindowsImage -Mounted | ForEach-Object -Process {
+            If ($PSItem.ImagePath -match 'boot.wim' -or $PSItem.ImagePath -match 'winre.wim' -or $PSItem.ImagePath -match 'install.wim') { [Void](Dismount-WindowsImage -Path $PSItem.MountPath -Discard -ErrorAction SilentlyContinue) }
+        }
     }
 }

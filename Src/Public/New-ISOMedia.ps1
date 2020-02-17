@@ -14,7 +14,7 @@ Function New-ISOMedia
             CompilerOptions       = '/unsafe'
             WarningLevel          = 4
             TreatWarningsAsErrors = $true
-        }
+        } -ErrorAction:$ErrorActionPreference
         If (!('ISOWriter' -as [Type]))
         {
             Add-Type @'
@@ -55,8 +55,8 @@ public class ISOWriter
         $FileSystem = @{ UDF = 4 }; $PlatformId = @{ EFI = 0xEF }
         ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 }).Open()
         $BootStream.LoadFromFile($BootFile.FullName)
-        ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI }).AssignBootImage($BootStream)
-        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $InstallInfo.Name; WorkingDirectory = $WorkFolder }).ChooseImageDefaultsForMediaType(13)
+        ($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI } -ErrorAction:$ErrorActionPreference).AssignBootImage($BootStream)
+        ($FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; VolumeName = $InstallInfo.Name; WorkingDirectory = $WorkFolder } -ErrorAction:$ErrorActionPreference).ChooseImageDefaultsForMediaType(13)
     }
     Process
     {
@@ -70,7 +70,7 @@ public class ISOWriter
     {
         $FSImage.BootImageOptions = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
-        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force -ErrorAction SilentlyContinue
+        $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force -ErrorAction:$ErrorActionPreference
         If ($ISOFile.Exists)
         {
             [ISOWriter]::Create($ISOFile.FullName, $WriteISO.ImageStream, $WriteISO.BlockSize, $WriteISO.TotalBlocks)

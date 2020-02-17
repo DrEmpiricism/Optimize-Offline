@@ -9,7 +9,6 @@ Function Import-Win32API
         [Switch]$Unload
     )
 
-    Set-ErrorAction SilentlyContinue
     $Win32APIParams = @{ Namespace = 'Win32API'; PassThru = $true }
     Switch ($PSCmdlet.ParameterSetName)
     {
@@ -27,5 +26,4 @@ Function Import-Win32API
         }
     }
     Add-Type @Win32APIParams
-    Set-ErrorAction -Restore
 }

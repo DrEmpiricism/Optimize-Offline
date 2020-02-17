@@ -17,7 +17,7 @@ Function Export-DataFile
     Process
     {
         If ([IO.Path]::GetExtension($File) -ne '.XML') { $File = [IO.Path]::ChangeExtension($File, '.xml') }
-        $Data | Export-Clixml -Path (GetPath -Path $WorkFolder -Child $File) -Force -ErrorAction:$ErrorActionPreference
+        $Data | Export-Clixml -Path (GetPath -Path $WorkFolder -Child $File) -Force -ErrorAction SilentlyContinue
         If ($PassThru.IsPresent) { GetPath -Path $WorkFolder -Child $File }
     }
 }
