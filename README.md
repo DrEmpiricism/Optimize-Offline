@@ -1,5 +1,3 @@
-> [Module Help Topics and Optimization Details](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md)
-
 # Optimize-Offline #
 
 Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
@@ -8,10 +6,10 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 
 - Expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
 - Accepts either a full Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.
-- Does not perform any changes to an installed or live system.
-- Checks the health of the image both before and after optimizations are processed to ensure the image retains a healthy status.
+- Does not perform any changes to a live system or running environment.
+- Checks the integrity and health of the image both before and after optimizations are processed to ensure the image retains a healthy status.
 - Allows for the deprovisioning and removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files, Optional Features and more.
-- Detects what Provisioned and System Applications were removed and further removes any associated drivers, services and integrated content associated with them.
+- Detects what Provisioned and System Applications were removed and further cleans-up any associated drivers, services and integrated content associated with them.
 - Allows for the integration of drivers, Microsoft DaRT 10, Windows Store, Microsoft Edge, Developer Mode, Win32 Calculator, Data Deduplication and more.
 - All optimization processes are done silently with internal error-handling.
 - All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.
@@ -19,7 +17,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 ## Module Disclaimer ##
 
 - The latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases).
-- It is the responsibility of the end-user to be aware of what each parameter value does, which are all well documented in the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
+- It is the responsibility of the end-user to be aware of what each parameter value does, which are all well documented in the [Module Help Topics and Optimization Details](docs/Optimize-Offline-help.md).
 - Optimize-Offline is designed to optimize OEM images and not images already optimized by another script or program.
 - Optimize-Offline is designed for an en-US host environment.
 - Just because something can be removed does not mean it should be removed. Haphazard removal of packages or features can prevent Windows 10 Setup from completing or cause runtime errors.
@@ -27,7 +25,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 
 ## Optimize-Offline Best Practices ##
 
-- Before optimizing an image, read the [Help Topics](https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md).
+- Before optimizing an image, read the [Module Help Topics and Optimization Details](docs/Optimize-Offline-help.md).
 - Keep the default project file stucture in its default state.
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts or programs.
 - If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
@@ -70,7 +68,7 @@ The Microsoft Edge Chromium full offline MSI package can be downloaded [here](ht
 
 The Capabilities parameter allows for the removal of Features on Demand (FOD) installed in the image and the Packages parameter allows for the removal of Windows Cabinet File Packages.
 
-Like with all removals, care must be taken when using either of these removal parameters, particularly the Packages parameter. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It is recommended to read the  [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
+Like with all removals, care must be taken when using either of these removal parameters, particularly the Packages parameter. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It is recommended to read the [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
 
 ### About Registry Optimizations ###
 
@@ -116,11 +114,11 @@ Any driver package to be injected into the offline image can be placed in its re
 
 When an unattend.xml answer file is added to the '\Content\Additional\Unattend' folder, Optimize-Offline applies the answer file directly to the image, creates the '\Windows\Panther' directory within the image and finally copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista and has remained as such since.
 
-During Windows installation, Windows Setup automatically looks for answer files for custom installations in certain locations.  %WINDIR%\Panther and the installation media are the first locations checked for an answer file. An unattend.xml located in the %WINDIR%\Panther directory will act just like an autounattend.xml does and can contain all the same content. This is an alternative way to run a custom answer file for Windows Setup automatically as opposed to setting an autounattend.xml to the root of the installation media type being used. Moreover, you can also use multiple answer files by applying one to the image and adding an autounattend.xml to the bootable media. For example, the unattend.xml applied to the image can contain OOBE and Windows Setup parameters while the autounattend.xml can contain only parameters for the WindowsPE pass that sets up the partitions and disks for installation.
+During Windows installation, Windows Setup automatically looks for answer files in specific locations for custom installations.  The %WINDIR%\Panther directory and the installation media are the first locations checked for an answer file. An unattend.xml that gets applied directly to the image, and is located in the %WINDIR%\Panther directory, will act identically to an autounattend.xml placed on the installation media does with the exception of the WindowsPE configuration pass. Since the WindowsPE configuration pass configures disk partitions and layouts, an answer file containing these parameters must be placed in an autounattend.xml. Additionally, you can use multiple answer files to setup Windows by applying an unattend.xml to the image and adding an autounattend.xml to the installation media. For example, the unattend.xml applied to the image can contain OOBE and Windows Setup parameters while the autounattend.xml can contain only parameters for the WindowsPE pass that sets up the partitions and disk layouts for installation.
 
-It is recommended to create an unattend.xml using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an unattend.xml for you, just like with Windows 10 features, answer file variables can change between builds. Likewise, having faulty or unsupported variables in an answer file can prevent Windows Setup from completing.
+It is highly recommended to create any answer files using the Windows System Image Manager that is included in the Windows ADK. Though there are some online answer file generators that will "quickly" create an answer file for you, answer file parameters and variables can change between builds. Likewise, having faulty or unsupported parameters and/or variables in an answer file can prevent Windows Setup from completing.
 
-It is also in good practice to have a good idea what each Configuration Pass does and what actions its child parameters takes during the Windows setup process. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
+It is also in good practice to have a good idea what each configuration pass does and what actions its child parameters takes during the Windows setup process. All information regarding Configuration Passes can be found in the [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview)
 
 **Having incorrect, null or incomplete values in your answer file, most notably the WindowsPE Configuration Pass, WILL prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain the proper drive index numbers, partition type IDs and sizes are entered.**
 
@@ -138,7 +136,7 @@ Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replac
 
 > Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
 
-With Optimize-Offline, the Data Deduplication packages and Dedup-Core Windows Feature can be integrated into the offline image. PowerShell can then be used to enable and manage Data Deduplication using its storage cmdlets. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
+With Optimize-Offline, the Data Deduplication packages can be integrated into the offline image. PowerShell's storage cmdlets can then be used to enable and manage Data Deduplication after the optimized image has been installed. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
 
 ### About Developer Mode ###
 
@@ -150,15 +148,15 @@ Developer Mode should ONLY be enabled on systems that require settings it provid
 
 ### Integrating Windows Store ###
 
-For Windows 10 Enterprise LTSC 2019, the latest Windows Store package bundle and dependency packages can be integrated into the image, as this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Windows Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu.
+For Windows 10 Enterprise LTSC 2019, the latest Windows Store package bundles and dependency packages can be integrated into the image, as this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Windows Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu.
 
 ### Integrating Microsoft Edge ###
 
-For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge - can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain Microsoft Edge in its OEM state.
+For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge (HTML-based) - can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain Microsoft Edge in its OEM state.
 
 ### Solid Image Compression ###
 
-Solid image compression uses the undocumented LZMS compression format to concatenate all file data within a regular WIM file into a solid WIM archive (ESD file). By doing this, a 4GB WIM file is able to be compressed to a size of 2GB or less. However, as with other forms of high-ratio compression, LZMS compression can take quite a while to complete and should NOT be selected as the final image compression type if the end-user is impatient or requires the optimized image quickly.
+Solid image compression uses the undocumented LZMS compression format to concatenate all file data within a regular WIM file into a solid WIM archive (ESD file). By doing this, a 4GB WIM file is able to be compressed to a size of 2GB or less. However, as with other forms of high-ratio compression, LZMS compression can take quite a while to complete and is extremely system intensive. Solid compression should NOT be selected as the final image compression type if the end-user is impatient or has limited system resources.
 
 ### ISO File Structure Optimization ###
 
@@ -168,7 +166,7 @@ This is a process that occurs automatically when a Windows Installation ISO is u
 
 When a Windows Installation Media ISO is used as the source image for optimizing, Optimize-Offline expands the entire media structure of the ISO into its own directory and allows for the creation of a new bootable Windows Installation Media ISO containing the newly optimized Windows Image after all processes have completed.
 
-The -ISO parameter allows for two values to be passed to it: 'Prompt' and 'No-Prompt.' This value sets the binary bootcode the image will be created with. An ISO created with the 'No-Prompt' bootcode will not require a keypress to begin Windows Setup allowing for a completely unattended Windows installation, while an ISO created with the 'Prompt' bootcode will require a keypress before Windows Setup will start.
+The ISO parameter allows for two values to be passed to it: 'Prompt' and 'No-Prompt.' This value sets the binary bootcode the image will be created with. An ISO created with the 'No-Prompt' bootcode will not require a keypress to begin Windows Setup allowing for a completely unattended Windows installation, while an ISO created with the 'Prompt' bootcode will require a keypress before Windows Setup will start.
 
 Optimize-Offline calls the COM IMAPI2 interface for file system image building and also opens a binary stream that writes a bootfile sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party tools like oscdimg.
 
