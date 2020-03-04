@@ -1,3 +1,3 @@
 If adding additional user content, place an unattend.xml to be imported into the image here.
 
-This unattend.xml answer file acts indentically to an autounattend.xml answer file placed in the root of the installation media.
+Because this unattend.xml answer file gets applied directly to the image, and is copied to the %WINDIR%\Panther directoy, it will act indentically to an autounattend.xml answer file placed on the installation media with the exception of the WindowsPE configuration pass. Any WindowsPE configuration pass parameters must be placed in an autounattend.xml in order to set up disk partitions and layouts.
