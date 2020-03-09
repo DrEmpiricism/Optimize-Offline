@@ -26,7 +26,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 ## Optimize-Offline Best Practices ##
 
 - Before optimizing an image, read the [Module Help Topics and Optimization Details](docs/Optimize-Offline-help.md).
-- Keep the default project file stucture in its default state.
+- Keep the project file stucture in its default state.
 - Only OEM images should be used for optimization and not images that have already been modified by other scripts or programs.
 - If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the module or the registry while optimizations are processing.
@@ -124,7 +124,9 @@ It is also in good practice to have a good idea what each configuration pass doe
 
 ### About Microsoft DaRT 10 ###
 
-Integrates the Microsoft 10 Diagnostic and Recovery Toolset with additional debugging tools. Since these tools run in a Preinstallation Environment and are quite powerful, it is wise to be aware of what they do prior to using them and to NOT integrate them into images that will be used by multiple people.
+With Optimize-Offline, the Microsoft 10 Diagnostic and Recovery Toolset and the Windows 10 Debugging Tools can be integrated into Windows Setup and/or the Windows Recovery allowing for the troubleshooting of system issues from a Preinstallation Environment. Likewise, it is NOT recommended to integrate Microsoft DaRT 10 into images accessible by multiple people or the default Recovery Environement because any user will be able to attain access to these tools by rebooting the device into Windows Recovery. Only integrate Microsoft DaRT 10 into the default Recovery Environment if the device will require specific credentials to gain access to the Operating System and the ability to reboot into the Recovery Environment is removed from the log-in screen using Group Policy.
+
+It is also recommended to be well versed and aware of all recovery tools Microsoft DaRT 10 supplied prior to integrating it into the image(s) by thoroughly reviewing the Microsoft DaRT 10 [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
 > Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
