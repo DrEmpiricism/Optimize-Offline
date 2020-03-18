@@ -1151,7 +1151,7 @@ Function Optimize-Offline
 					Stop-Optimize
 				}
 				If (!(Test-Path -Path (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll') -Force }
-				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\setup.exe') | Out-File -FilePath (GetPath -Path $BootMount -Child 'Windows\System32\winpeshl.ini') -Encoding UTF8 -Force
+				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\setup.exe') | Out-File -FilePath (GetPath -Path $BootMount -Child 'Windows\System32\winpeshl.ini') -Force
 			}
 			If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.RecoveryImage)
 			{
@@ -1177,7 +1177,7 @@ Function Optimize-Offline
 					Stop-Optimize
 				}
 				If (!(Test-Path -Path (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll') -Force }
-				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\sources\recovery\recenv.exe') | Out-File -FilePath (GetPath -Path $RecoveryMount -Child 'Windows\System32\winpeshl.ini') -Encoding UTF8 -Force
+				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\sources\recovery\recenv.exe') | Out-File -FilePath (GetPath -Path $RecoveryMount -Child 'Windows\System32\winpeshl.ini') -Force
 			}
 			Start-Sleep 3; Clear-Host
 		}
@@ -1713,7 +1713,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		#endregion Image Finalization
 	}
 	End
- {
+ 	{
 		#region Post-Processing Block
 		((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $LocalScope.Variables).InputObject).ForEach{ Remove-Variable -Name $PSItem -ErrorAction Ignore }
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference
