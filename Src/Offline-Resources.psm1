@@ -3,11 +3,11 @@
 #Requires -Version 5
 <#
 	===========================================================================
-	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.172
+	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.173
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	02/17/2020
+	Last updated:	03/17/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================

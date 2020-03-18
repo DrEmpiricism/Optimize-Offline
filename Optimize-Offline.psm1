@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.172
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.173
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.0.6
-	 Last updated:	02/17/2020
+	 Version:       4.0.0.7
+	 Last updated:	03/17/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -27,7 +27,7 @@ Function Optimize-Offline
 			ValueFromPipeline = $true,
 			HelpMessage = 'The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.')]
 		[ValidateScript( {
-				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.ESD') { $PSItem.FullName }
+				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.ESD') { $true }
 				Else { Throw ('Invalid source path: "{0}"' -f $PSItem.FullName) }
 			})]
 		[IO.FileInfo]$SourcePath,
@@ -74,19 +74,20 @@ Function Optimize-Offline
 		Clear-Host
 		Test-Requirements
 		If (Get-WindowsImage -Mounted) { Dismount-Images; Clear-Host }
+		[Void](Clear-WindowsCorruptMountPoint)
+		$Global:Error.Clear()
 		#endregion Pre-Processing Block
 	}
 	Process
 	{
 		#region Create the Working File Structure
+		Set-Location -Path $OptimizeOffline.Directory
+		[Environment]::CurrentDirectory = (Get-Location -PSProvider FileSystem).ProviderPath
+		@(Get-ChildItem -Path $OptimizeOffline.Directory -Filter OfflineTemp_* -Directory), (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log') | Purge -ErrorAction Ignore
+		$Timer = New-Object -TypeName Diagnostics.Stopwatch
 		Try
 		{
-			@(Get-ChildItem -Path $OptimizeOffline.Directory -Filter OfflineTemp_* -Directory), (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log') | Purge -ErrorAction Ignore
-			Set-Location -Path $OptimizeOffline.Directory
-			[Environment]::CurrentDirectory = (Get-Location -PSProvider FileSystem).ProviderPath
-			$Timer = New-Object -TypeName System.Diagnostics.Stopwatch
 			@($TempDirectory, $ImageFolder, $WorkFolder, $ScratchFolder, $LogFolder) | Create -ErrorAction Stop
-			[Void](Clear-WindowsCorruptMountPoint)
 		}
 		Catch
 		{
@@ -97,12 +98,23 @@ Function Optimize-Offline
 		#endregion Create the Working File Structure
 
 		#region Media Export
-		If ($SourcePath.Extension -eq '.ISO')
+		Switch ($SourcePath.Extension)
 		{
-			$ISOMount = (Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
-			[Void](Get-PSDrive)
-			If (Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install.* -File)
+			'.ISO'
 			{
+				$ISOMount = (Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
+				[Void](Get-PSDrive)
+				If (!(Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install.* -File))
+				{
+					$PSCmdlet.WriteWarning($OptimizeData.InvalidWindowsInstallMedia -f $SourcePath.Name)
+					Do
+					{
+						[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
+					}
+					While ((Get-DiskImage -ImagePath $SourcePath.FullName).Attached -eq $true)
+					$TempDirectory | Purge
+					Break
+				}
 				$Host.UI.RawUI.WindowTitle = ($OptimizeData.ExportingMedia -f $SourcePath.Name)
 				Write-Host ($OptimizeData.ExportingMedia -f $SourcePath.Name) -ForegroundColor Cyan
 				$ISOMedia = Create -Path (GetPath -Path $TempDirectory -Child $SourcePath.BaseName) -PassThru
@@ -129,28 +141,18 @@ Function Optimize-Offline
 					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
 				}
 				While ((Get-DiskImage -ImagePath $SourcePath.FullName).Attached -eq $true)
-			}
-			Else
-			{
-				$PSCmdlet.WriteWarning($OptimizeData.InvalidWindowsInstallMedia -f $SourcePath.Name)
-				Do
-				{
-					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
-				}
-				While ((Get-DiskImage -ImagePath $SourcePath.FullName).Attached -eq $true)
-				$TempDirectory | Purge
 				Break
 			}
-		}
-		ElseIf ($SourcePath.Extension -eq '.WIM' -or $SourcePath.Extension -eq '.ESD')
-		{
-			$Host.UI.RawUI.WindowTitle = ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
-			Write-Host ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
-			If ($SourcePath.Extension -eq '.ESD') { $DynamicParams.ESD = $true }
-			Copy-Item -Path $SourcePath.FullName -Destination $ImageFolder
-			Get-ChildItem -Path $ImageFolder -Filter $SourcePath.Name | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-			$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
-			If ($ISO) { Remove-Variable -Name ISO }
+			Default
+			{
+				$Host.UI.RawUI.WindowTitle = ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
+				Write-Host ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
+				If ($SourcePath.Extension -eq '.ESD') { $DynamicParams.ESD = $true }
+				Get-ChildItem -Path $SourcePath.FullName -Filter $SourcePath.Name | Copy-Item -Destination $ImageFolder -PassThru | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
+				$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
+				If ($ISO) { Remove-Variable -Name ISO }
+				Break
+			}
 		}
 		#endregion Media Export
 
@@ -202,12 +204,6 @@ Function Optimize-Offline
 
 		If ($InstallInfo.Build -ge '17134' -and $InstallInfo.Build -le '18362')
 		{
-			If ($InstallInfo.Build -eq '18362' -and $InstallInfo.Language -ne $OptimizeOffline.Culture -and $MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
-			If ($InstallInfo.Build -lt '17763' -and $MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
-			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
-			If ($InstallInfo.Language -ne $OptimizeOffline.Culture -and $Win32Calc.IsPresent) { $Win32Calc = $false }
-			If ($InstallInfo.Build -gt '17134' -and $InstallInfo.Language -ne $OptimizeOffline.Culture -and $Dedup.IsPresent) { $Dedup = $false }
-			If ($InstallInfo.Language -ne $OptimizeOffline.Culture -and $DaRT) { Remove-Variable -Name DaRT }
 			If ($InstallInfo.Name -like "*LTSC*")
 			{
 				$DynamicParams.LTSC = $true
@@ -218,6 +214,14 @@ Function Optimize-Offline
 			{
 				If ($WindowsStore.IsPresent) { $WindowsStore = $false }
 				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
+			}
+			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
+			If ($InstallInfo.Language -ne $OptimizeOffline.Culture)
+			{
+				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
+				If ($Win32Calc.IsPresent) { $Win32Calc = $false }
+				If ($Dedup.IsPresent) { $Dedup = $false }
+				If ($DaRT) { Remove-Variable -Name DaRT }
 			}
 		}
 		Else
@@ -259,6 +263,7 @@ Function Optimize-Offline
 			{
 				$InstallWim | Purge
 			}
+
 			Try
 			{
 				$InstallWim = Get-ChildItem -Path $WorkFolder -Filter install.wim | Move-Item -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
@@ -275,7 +280,8 @@ Function Optimize-Offline
 		Try
 		{
 			Log ($OptimizeData.SupportedImageBuild -f $InstallInfo.Build)
-			Start-Sleep 3; $Timer.Start(); $Error.Clear()
+			Start-Sleep 3
+			$Timer.Start()
 			$InstallMount | Create
 			$MountInstallParams = @{
 				ImagePath        = $InstallWim
@@ -304,7 +310,7 @@ Function Optimize-Offline
 			$WinREPath = GetPath -Path $InstallMount -Child 'Windows\System32\Recovery\winre.wim'
 			If (Test-Path -Path $WinREPath)
 			{
-				$RecoveryWim = Copy-Item -Path $WinREPath -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
+				$RecoveryWim = Move-Item -Path $WinREPath -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
 				If ($RecoveryWim) { $DynamicParams.RecoveryImage = $true }
 			}
 		}
@@ -483,6 +489,7 @@ Function Optimize-Offline
 					Break
 				}
 			}
+
 			If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 			Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
 			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
@@ -883,8 +890,8 @@ Function Optimize-Offline
 			$PurchaseLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.StorePurchaseApp*.xml -File | Select-Object -ExpandProperty FullName
 			$XboxLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.XboxIdentityProvider*.xml -File | Select-Object -ExpandProperty FullName
 			$InstallerLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.DesktopAppInstaller*.xml -File | Select-Object -ExpandProperty FullName
-			$DependencyPackages = @()
-			$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyPackages = [Collections.Generic.List[String]]::New()
+			$DependencyPackages = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
 			$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
 			$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
 			If (!$DynamicParams.DeveloperMode)
@@ -928,8 +935,8 @@ Function Optimize-Offline
 					ErrorAction           = 'Stop'
 				}
 				[Void](Add-AppxProvisionedPackage @XboxPackage)
-				$DependencyPackages = @()
-				$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
+				$DependencyPackages.Clear()
+				$DependencyPackages = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
 				$InstallerPackage = @{
 					Path                  = $InstallMount
 					PackagePath           = $InstallerBundle
@@ -1097,9 +1104,12 @@ Function Optimize-Offline
 			If ($DynamicParams.DataDeduplication)
 			{
 				RegHives -Load
-				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-DCOM-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%systemroot%\\system32\\svchost.exe|Svc=RPCSS|Name=@fssmres.dll,-103|Desc=@fssmres.dll,-104|EmbedCtxt=@fssmres.dll,-100|" -Type String
-				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-SMB-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=@fssmres.dll,-105|Desc=@fssmres.dll,-106|EmbedCtxt=@fssmres.dll,-100|" -Type String
-				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-Winmgmt-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%systemroot%\\system32\\svchost.exe|Svc=Winmgmt|Name=@fssmres.dll,-101|Desc=@fssmres.dll,-102|EmbedCtxt=@fssmres.dll,-100|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-DCOM-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%systemroot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-SMB-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-Winmgmt-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%systemroot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-DCOM-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=135|App=%systemroot%\\system32\\svchost.exe|Svc=RPCSS|Name=File Server Remote Management (DCOM-In)|Desc=Inbound rule to allow DCOM traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-SMB-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=445|App=System|Name=File Server Remote Management (SMB-In)|Desc=Inbound rule to allow SMB traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules" -Name "FileServer-ServerManager-Winmgmt-TCP-In" -Value "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=RPC|App=%systemroot%\\system32\\svchost.exe|Svc=Winmgmt|Name=File Server Remote Management (WMI-In)|Desc=Inbound rule to allow WMI traffic to manage the File Services role.|EmbedCtxt=File Server Remote Management|" -Type String
 				RegHives -Unload
 			}
 		}
@@ -1110,10 +1120,16 @@ Function Optimize-Offline
 		{
 			If ($InstallInfo.Build -eq '17134') { $CodeName = 'RS4' }
 			ElseIf ($InstallInfo.Build -eq '17763') { $CodeName = 'RS5' }
-			ElseIf ($InstallInfo.Build -ge '18362') { $CodeName = '19H2' }
-			Try
+			ElseIf ($InstallInfo.Build -eq '18362') { $CodeName = '19H2' }
+			$WinpeshlString = @'
+[LaunchApps]
+%WINDIR%\System32\wpeinit.exe
+%WINDIR%\System32\netstart.exe
+
+'@
+			If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.BootImage)
 			{
-				If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.BootImage)
+				Try
 				{
 					$ExpandDaRTBootParams = @{
 						ImagePath        = '{0}\MSDaRT10_{1}.wim' -f $OptimizeOffline.DaRT, $CodeName
@@ -1128,15 +1144,18 @@ Function Optimize-Offline
 					}
 					Log ($OptimizeData.IntegratingDaRT10 -f $CodeName, $BootInfo.Name)
 					[Void](Expand-WindowsImage @ExpandDaRTBootParams)
-					If (!(Test-Path -Path (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll') -Force -ErrorAction Stop }
-					@'
-[LaunchApps]
-%WINDIR%\System32\wpeinit.exe
-%WINDIR%\System32\netstart.exe
-%SYSTEMDRIVE%\setup.exe
-'@ | Out-File -FilePath (GetPath -Path $BootMount -Child 'Windows\System32\winpeshl.ini') -Force -ErrorAction Stop
 				}
-				If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.RecoveryImage)
+				Catch
+				{
+					Log $OptimizeData.FailedIntegratingDaRT10 -Type Error -ErrorRecord $Error[0]
+					Stop-Optimize
+				}
+				If (!(Test-Path -Path (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $BootMount -Child 'Windows\System32\fmapi.dll') -Force }
+				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\setup.exe') | Out-File -FilePath (GetPath -Path $BootMount -Child 'Windows\System32\winpeshl.ini') -Encoding UTF8 -Force
+			}
+			If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.RecoveryImage)
+			{
+				Try
 				{
 					$ExpandDaRTRecoveryParams = @{
 						ImagePath        = '{0}\MSDaRT10_{1}.wim' -f $OptimizeOffline.DaRT, $CodeName
@@ -1151,24 +1170,16 @@ Function Optimize-Offline
 					}
 					Log ($OptimizeData.IntegratingDaRT10 -f $CodeName, $RecoveryInfo.Name)
 					[Void](Expand-WindowsImage @ExpandDaRTRecoveryParams)
-					If (!(Test-Path -Path (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll') -Force -ErrorAction Stop }
-					@'
-[LaunchApps]
-%WINDIR%\System32\wpeinit.exe
-%WINDIR%\System32\netstart.exe
-%SYSTEMDRIVE%\sources\recovery\recenv.exe
-'@ | Out-File -FilePath (GetPath -Path $RecoveryMount -Child 'Windows\System32\winpeshl.ini') -Force -ErrorAction Stop
 				}
+				Catch
+				{
+					Log $OptimizeData.FailedIntegratingDaRT10 -Type Error -ErrorRecord $Error[0]
+					Stop-Optimize
+				}
+				If (!(Test-Path -Path (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll'))) { Copy-Item -Path (GetPath -Path $InstallMount -Child 'Windows\System32\fmapi.dll') -Destination (GetPath -Path $RecoveryMount -Child 'Windows\System32\fmapi.dll') -Force }
+				$WinpeshlString.Insert(77, '%SYSTEMDRIVE%\sources\recovery\recenv.exe') | Out-File -FilePath (GetPath -Path $RecoveryMount -Child 'Windows\System32\winpeshl.ini') -Encoding UTF8 -Force
 			}
-			Catch
-			{
-				Log $OptimizeData.FailedIntegratingDaRT10 -Type Error -ErrorRecord $Error[0]
-				Stop-Optimize
-			}
-			Finally
-			{
-				Start-Sleep 3; Clear-Host
-			}
+			Start-Sleep 3; Clear-Host
 		}
 		#endregion Microsoft DaRT 10 Integration
 
@@ -1570,6 +1581,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			Log ($OptimizeData.FailedSavingDismountingImage -f $InstallInfo.Name) -Type Error -ErrorRecord $Error[0]
 			Stop-Optimize
 		}
+
 		Try
 		{
 			$CompressionType = Get-CompressionType -ErrorAction Stop
@@ -1692,22 +1704,21 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Finally
 		{
 			$Timer.Stop()
-			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), $OptimizeErrors.Count) -Finalized
-			@($DISMLog, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
-			If ($OptimizeErrors.Count -gt 0) { Export-ErrorLog -ErrorAction Ignore }
-			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
+			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), ($Error.Count + $OptimizeErrors.Count)) -Finalized
+			If ($Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
+			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
-			$TempDirectory | Purge
+			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
 		}
 		#endregion Image Finalization
 	}
 	End
-	{
+ {
 		#region Post-Processing Block
 		((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $LocalScope.Variables).InputObject).ForEach{ Remove-Variable -Name $PSItem -ErrorAction Ignore }
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference
 		$Global:ProgressPreference = $LocalScope.ProgressPreference
-		$Error.Clear()
+		$Global:Error.Clear()
 		#endregion Post-Processing Block
 	}
 }

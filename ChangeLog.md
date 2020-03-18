@@ -1,5 +1,13 @@
 # ChangeLog #
 
+## Build 4.0.0.7 (03-17-2020) ##
+
+- Updated multiple Resource Functions.
+- Updated the firewall registry settings that get applied when the Deduplication packages are integrated into the image.
+- Removed unsupported language packages from the 'Packages' directory. These will be re-added if/when additional languages are supported by Optimize-Offline.
+- Optimized and trimmed down multiple module processes.
+- This list is not exhaustive of all changes made to Optimize-Offline or its Resource Functions, but outlines the major ones.
+
 ## Build 4.0.0.6 (02-17-2020) ##
 
 - Combined and ordered the Optimize-Offline module's initializing and finalizing processes more optimally.
