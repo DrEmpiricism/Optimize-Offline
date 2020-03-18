@@ -9,7 +9,7 @@
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
 	 Version:       4.0.0.7
-	 Last updated:	03/17/2020
+	 Last updated:	03/18/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
