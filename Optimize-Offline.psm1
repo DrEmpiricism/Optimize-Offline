@@ -755,7 +755,6 @@ Function Optimize-Offline
 		#endregion Windows Capability and Cabinet File Package Removal
 
 		#region Disable Unsafe Optional Features
-		#@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
 		ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 		{
 			If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled)
