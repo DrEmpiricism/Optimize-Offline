@@ -24,7 +24,7 @@ Function Set-KeyProperty
             'Binary' { [Byte[]]$Value = $Value; Break }
             'DWord' { [Int32]$Value = $Value; Break }
             'ExpandString' { [String]$Value = $Value; Break }
-            'MultiString' { [Array[]]$Value = $Value; Break }
+            'MultiString' { [String[]]$Value = $Value; Break }
             'QWord' { [Int64]$Value = $Value; Break }
             'String' { [String]$Value = $Value; Break }
         }

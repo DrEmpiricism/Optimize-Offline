@@ -3,10 +3,10 @@ Function Export-ErrorLog
     [CmdletBinding()]
     Param ()
 
-    If ($OptimizeErrors.Count -gt 0)
+    If ($Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0)
     {
         $Index = 0
-        ($OptimizeErrors | ForEach-Object -Process {
+        ($Error + $OptimizeErrors | ForEach-Object -Process {
                 [PSCustomObject]@{
                     Index     = $Index
                     Exception = $PSItem.Exception.Message
@@ -19,6 +19,6 @@ Function Export-ErrorLog
                     Column    = $PSItem.InvocationInfo.OffsetInLine
                 }
                 $Index++
-            } | Out-String).Trim() | Out-File -FilePath $ErrorLog -Encoding UTF8 -Force -ErrorAction:$ErrorActionPreference
+            } | Out-String).Trim() | Out-File -FilePath $ErrorLog -Encoding UTF8 -Force -ErrorAction Ignore
     }
 }

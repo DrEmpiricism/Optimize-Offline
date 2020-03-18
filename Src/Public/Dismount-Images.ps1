@@ -14,7 +14,7 @@ Function Dismount-Images
             Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline') | ForEach-Object -Process { [Void](StartExe $REG -Arguments ('UNLOAD {0}' -f $PSItem)) }
         }
         Get-WindowsImage -Mounted | ForEach-Object -Process {
-            If ($PSItem.ImagePath -match 'boot.wim' -or $PSItem.ImagePath -match 'winre.wim' -or $PSItem.ImagePath -match 'install.wim') { [Void](Dismount-WindowsImage -Path $PSItem.MountPath -Discard -ErrorAction SilentlyContinue) }
+            If ($PSItem.ImagePath -match 'boot.wim' -or $PSItem.ImagePath -match 'winre.wim' -or $PSItem.ImagePath -match 'install.wim') { [Void](Dismount-WindowsImage -Path $PSItem.MountPath -Discard) }
         }
     }
 }

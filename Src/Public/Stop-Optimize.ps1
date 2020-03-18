@@ -10,7 +10,7 @@ Function Stop-Optimize
 	If ($OptimizeErrors.Count -gt 0) { Export-ErrorLog -ErrorAction Ignore }
 	Get-ChildItem -Path $LogFolder -Filter *.log | Move-Item -Destination $SaveDirectory.FullName -Force
 	$TempDirectory | Purge
-	$Error.Clear()
+	$Global:Error.Clear()
 	((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $LocalScope.Variables).InputObject).ForEach{ Remove-Variable -Name $PSItem -ErrorAction Ignore }
 	(Get-Process -Id $PID).Kill()
 }
