@@ -27,3 +27,4 @@ $RECYCLE.BIN/
 *.Package.ps1
 CustomMenu.inf
 *.zip
+ChangeLog_Full.md
