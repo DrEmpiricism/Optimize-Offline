@@ -19,6 +19,7 @@ EnableLaunchToThisPC                = Enabling File Explorer Launch to This PC.
 DisableJPEGQualityReduction         = Disabling Wallpaper .JPEG Quality Reduction.
 DisableAcrylicBlur                  = Disabling the Sign-in Screen Acrylic Blur.
 DisableShortcutText                 = Disabling the Trailing Text for Shortcuts.
+EnableCMDWinXMenu                   = Enabling Command Prompt on the Win+X Quick Link Menu.
 DisableEdgeShortcutPrelaunch        = Disabling Microsoft Edge Desktop Shortcut Creation and Pre-Launching.
 DisablePinnedIcons                  = Disabling Pinned Windows Store, Windows Mail and People Icons.
 ReduceStartMenuDelay                = Reducing Start Menu Delay.
@@ -35,6 +36,7 @@ DisableStickyKeysPrompt             = Disabling the Sticky Keys Prompt.
 DisableEnhancedPointerPrecision     = Disabling Enhanced Pointer Precision.
 RemoveAccessShareCastContextMenu    = Removing Give Access To, Share and Cast To Device from the Context Menu.
 RemoveRestorePreviousVersions       = Removing Restore Previous Versions from the Context Menu.
+EnableRebootRecoveryMyPC            = Adding Reboot to Recovery to This PC.
 EnableLongFilePaths                 = Enabling Long File Paths.
 EnableStrongCrypto                  = Enabling Strong Cryptography for .NET Applications.
 '@
