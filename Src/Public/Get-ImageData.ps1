@@ -55,9 +55,13 @@ Function Get-ImageData
                     $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
                     $ImageData.Build = $CurrentVersion.CurrentBuildNumber
                 }
-                $ImageData.Release = $CurrentVersion.ReleaseID
                 If ($CurrentVersion.CurrentBuildNumber -eq '18363' -and $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] -eq '19H1') { $ImageData.CodeName = '19H2' }
-                Else { $ImageData.CodeName = $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] }
+                Else
+                {
+                    If ($ImageData.Build -eq '19041' -and $null -eq $ImageData.CodeName) { $ImageData.CodeName = '20H1' }
+                    Else { $ImageData.CodeName = $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] }
+                }
+                $ImageData.Release = $CurrentVersion.ReleaseId
                 @('Path', 'Index') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
                 $ImageData.PSObject.TypeNames.Insert(0, 'System.IO.Optimized.Wim')
                 $ImageData | Add-Member -MemberType NoteProperty -Name Optimized -Value (Get-Date -Format 'G')
