@@ -1,6 +1,6 @@
 # Optimize-Offline #
 
-Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for Windows 10 versions 1803-to-1909 64-bit architectures.
+Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for Windows 10 versions 1803-to-2004 64-bit architectures.
 
 ## About Optimize-Offline ##
 
