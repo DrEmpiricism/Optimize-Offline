@@ -6,7 +6,7 @@
       <command:verb>Optimize</command:verb>
       <command:noun>Offline</command:noun>
       <maml:description>
-        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM and ESD files.</maml:para>
+        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM and ESD files.</maml:para>
       </maml:description>
     </command:details>
     <maml:description>
@@ -353,15 +353,15 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>Additional</maml:name>
         <maml:Description>
-          <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
-          <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
+          <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, LayoutModification, Unattend, Drivers and NetFx3.</maml:para>
+          <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. LayoutModification: Imports a custom LayoutModification.xml to provision the Start layout. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
         <dev:type>
           <maml:name>Hashtable</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
+        <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ISO</maml:name>
@@ -428,7 +428,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; LayoutModification = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
         <dev:remarks>
           <maml:para>This command starts optimizing an image by manually passing parameters to the module.</maml:para>
         </dev:remarks>

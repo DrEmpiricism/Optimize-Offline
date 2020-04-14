@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.173
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.174
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.0.7
-	 Last updated:	03/18/2020
+	 Version:       4.0.0.8
+	 Last updated:	04/14/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -58,7 +58,7 @@ Function Optimize-Offline
 		[Parameter(HelpMessage = 'Applies optimized settings to the image registry hives.')]
 		[Switch]$Registry,
 		[Parameter(HelpMessage = 'Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable.')]
-		[Hashtable]$Additional = @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false },
+		[Hashtable]$Additional = @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false },
 		[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
 		[ValidateSet('Prompt', 'No-Prompt')]
 		[String]$ISO
@@ -92,7 +92,7 @@ Function Optimize-Offline
 		Catch
 		{
 			$PSCmdlet.WriteWarning($OptimizeData.FailedToCreateWorkingFileStructure)
-			Get-ChildItem -Path $OptimizeOffline.Directory -Filter OfflineTemp_* -Directory | Purge
+			Get-ChildItem -Path $OptimizeOffline.Directory -Filter OfflineTemp_* -Directory | Purge -ErrorAction Ignore
 			Break
 		}
 		#endregion Create the Working File Structure
@@ -202,7 +202,7 @@ Function Optimize-Offline
 			Break
 		}
 
-		If ($InstallInfo.Build -ge '17134' -and $InstallInfo.Build -le '18362')
+		If ($InstallInfo.Build -ge '17134' -and $InstallInfo.Build -le '19041')
 		{
 			If ($InstallInfo.Name -like "*LTSC*")
 			{
@@ -215,7 +215,8 @@ Function Optimize-Offline
 				If ($WindowsStore.IsPresent) { $WindowsStore = $false }
 				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
 			}
-			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
+			If ($InstallInfo.Build -eq '17134' -or $InstallInfo.Build -eq '19041' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
+			If ($InstallInfo.Build -eq '19041' -and $Dedup.IsPresent) { $Dedup = $false }
 			If ($InstallInfo.Language -ne $OptimizeOffline.Culture)
 			{
 				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
@@ -282,7 +283,7 @@ Function Optimize-Offline
 			Log ($OptimizeData.SupportedImageBuild -f $InstallInfo.Build)
 			Start-Sleep 3
 			$Timer.Start()
-			$InstallMount | Create
+			$InstallMount | Create -ErrorAction Stop
 			$MountInstallParams = @{
 				ImagePath        = $InstallWim
 				Index            = $ImageIndex
@@ -295,9 +296,7 @@ Function Optimize-Offline
 			}
 			Log ($OptimizeData.MountingImage -f $InstallInfo.Name)
 			[Void](Mount-WindowsImage @MountInstallParams)
-			RegHives -Load
-			Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" | Export-DataFile -File CurrentVersion
-			RegHives -Unload
+			$DynamicParams.InstallImage = $true
 		}
 		Catch
 		{
@@ -315,6 +314,13 @@ Function Optimize-Offline
 			}
 		}
 
+		If ($DynamicParams.InstallImage)
+		{
+			RegHives -Load
+			Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" | Export-DataFile -File CurrentVersion
+			RegHives -Unload
+		}
+
 		If ($DynamicParams.BootImage)
 		{
 			Try
@@ -328,7 +334,7 @@ Function Optimize-Offline
 			}
 			Try
 			{
-				$BootMount | Create
+				$BootMount | Create -ErrorAction Stop
 				$MountBootParams = @{
 					Path             = $BootMount
 					ImagePath        = $BootWim
@@ -362,7 +368,7 @@ Function Optimize-Offline
 			}
 			Try
 			{
-				$RecoveryMount | Create
+				$RecoveryMount | Create -ErrorAction Stop
 				$MountRecoveryParams = @{
 					Path             = $RecoveryMount
 					ImagePath        = $RecoveryWim
@@ -400,6 +406,14 @@ Function Optimize-Offline
 		{
 			$Host.UI.RawUI.WindowTitle = "Remove Provisioned App Packages."
 			$AppxPackages = Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
+			If ($InstallInfo.Build -eq '19041')
+			{
+				$AppxPackages = $AppxPackages | ForEach-Object -Process {
+					$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
+					If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
+					[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
+				}
+			}
 			$RemovedAppxPackages = [Collections.Hashtable]::New()
 			Switch ($PSBoundParameters.WindowsApps)
 			{
@@ -435,7 +449,16 @@ Function Optimize-Offline
 					{
 						Try
 						{
-							$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							If ($InstallInfo.Build -eq '19041')
+							{
+								$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop
+								If ($WhitelistJSON.Contains('Microsoft.549981C3F5F10')) { $WhitelistJSON = $WhitelistJSON.Replace('Microsoft.549981C3F5F10', 'CortanaApp.View.App') }
+								$WhitelistJSON = $WhitelistJSON | ConvertFrom-Json -ErrorAction Stop
+							}
+							Else
+							{
+								$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							}
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 								{
@@ -489,7 +512,6 @@ Function Optimize-Offline
 					Break
 				}
 			}
-
 			If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 			Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
 			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
@@ -506,13 +528,13 @@ Function Optimize-Offline
 			$InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
 			RegHives -Load
 			$InboxAppsPackages = Get-ChildItem -Path $InboxAppsKey -Name | ForEach-Object -Process {
-				$Name = $PSItem.Split('_')[0]; $PackageName = $PSItem
-				If ($Name -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $Name = 'Microsoft.Windows.FilePicker' }
-				If ($Name -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $Name = 'Microsoft.Windows.FileExplorer' }
-				If ($Name -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $Name = 'Microsoft.Windows.AppResolverUX' }
-				If ($Name -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $Name = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
-				[PSCustomObject]@{ Name = $Name; PackageName = $PackageName }
-			} | Sort-Object -Property Name | Out-GridView -Title "Remove System Apps." -PassThru
+				$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
+				If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
+				If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
+				If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
+				If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
+				[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
+			} | Sort-Object -Property DisplayName | Out-GridView -Title "Remove System Apps." -PassThru
 			If ($InboxAppsPackages)
 			{
 				Clear-Host
@@ -521,10 +543,10 @@ Function Optimize-Offline
 				{
 					$InboxAppsPackages | ForEach-Object -Process {
 						$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
-						Log ($OptimizeData.RemovingSystemApp -f $PSItem.Name)
+						Log ($OptimizeData.RemovingSystemApp -f $PSItem.DisplayName)
 						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
-						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.Name) -Type Error; Return }
-						$RemovedSystemApps.Add($PSItem.Name, $PSItem.PackageName)
+						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Return }
+						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
 						Start-Sleep 2
 					}
 					$DynamicParams.SystemApps = $true
@@ -565,6 +587,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\GameBar" -Name "ShowStartupPanel" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
@@ -755,6 +778,7 @@ Function Optimize-Offline
 		#endregion Windows Capability and Cabinet File Package Removal
 
 		#region Disable Unsafe Optional Features
+		#@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
 		ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 		{
 			If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled)
@@ -1120,6 +1144,7 @@ Function Optimize-Offline
 			If ($InstallInfo.Build -eq '17134') { $CodeName = 'RS4' }
 			ElseIf ($InstallInfo.Build -eq '17763') { $CodeName = 'RS5' }
 			ElseIf ($InstallInfo.Build -eq '18362') { $CodeName = '19H2' }
+			ElseIf ($InstallInfo.Build -eq '19041') { $CodeName = '20H1' }
 			$WinpeshlString = @'
 [LaunchApps]
 %WINDIR%\System32\wpeinit.exe
@@ -1263,6 +1288,23 @@ Function Optimize-Offline
 				Import-RegistryTemplates
 				Start-Sleep 3
 			}
+			If ($Additional.LayoutModification -and (Test-Path -Path (GetPath -Path $OptimizeOffline.LayoutModification -Child *.xml)))
+			{
+				Try
+				{
+					Log $OptimizeData.ApplyingLayoutModification
+					Copy-Item -Path (GetPath -Path $OptimizeOffline.LayoutModification -Child *.xml) -Destination (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Force -ErrorAction Stop
+					$DynamicParams.LayoutModification = $true
+				}
+				Catch
+				{
+					Log $OptimizeData.FailedApplyingLayoutModification -Type Error -ErrorRecord $Error[0]
+				}
+				Finally
+				{
+					Start-Sleep 3
+				}
+			}
 			If ($Additional.Unattend -and (Test-Path -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml)))
 			{
 				Try
@@ -1306,7 +1348,7 @@ Function Optimize-Offline
 						}
 						Log ($OptimizeData.InjectingDriverPackages -f $InstallInfo.Name)
 						[Void](Add-WindowsDriver @InstallDriverParams)
-						$DynamicParams.InstallDrivers = $true
+						$DynamicParams.InstallImageDrivers = $true
 					}
 					Catch
 					{
@@ -1392,10 +1434,9 @@ Function Optimize-Offline
 		}
 		#endregion Additional Content Integration
 
-		#region Image Finalization
-		Try
+		#region Start Menu Clean-up
+		If (!$DynamicParams.LayoutModification)
 		{
-			Log $OptimizeData.CleanupStartMenu
 			$LayoutTemplate = @"
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
     xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1"
@@ -1407,51 +1448,91 @@ Function Optimize-Offline
             <defaultlayout:StartLayout GroupCellWidth="6">
                 <start:Group Name="$($InstallInfo.Name)">
                     <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
-                    <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationID="Microsoft.Windows.ControlPanel" />
-                    <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
-                    <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell ISE.lnk" />
+                    <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\Master Control Panel.lnk" />
+					<start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
+					<start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationID="Microsoft.Windows.AdministrativeTools" />
                     <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk" />
-                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk" />
+                    <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationID="Microsoft.Windows.Shell.RunDialog" />
                 </start:Group>
             </defaultlayout:StartLayout>
         </StartLayoutCollection>
     </DefaultLayoutOverride>
 </LayoutModificationTemplate>
 "@
-			If ($RemovedSystemApps -contains 'Microsoft.Windows.FileExplorer') { $LayoutTemplate = $LayoutTemplate -replace 'UWP File Explorer.lnk', 'File Explorer.lnk' }
+			Try
+			{
+				Log $OptimizeData.CleanupStartMenu
+				$MCPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+				$MCPShortcut = $MCPShell.CreateShortcut((GetPath -Path $InstallMount -Child 'Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\System Tools\Master Control Panel.lnk'))
+				$MCPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
+				$MCPShortcut.Arguments = "shell:::{ED7BA470-8E54-465E-825C-99712043E01C}"
+				$MCPShortcut.WorkingDirectory = "%SystemRoot%"
+				$MCPShortcut.Description = "Windows Control Panel All Tasks."
+				$MCPShortcut.IconLocation = "%SystemRoot%\System32\imageres.dll,-27"
+				$MCPShortcut.Save()
+				[void][Runtime.InteropServices.Marshal]::ReleaseComObject($MCPShell)
+			}
+			Catch
+			{
+				$LayoutTemplate = $LayoutTemplate.Replace('Master Control Panel.lnk', 'Control Panel.lnk')
+			}
+			Finally
+			{
+				[Void][Runtime.InteropServices.Marshal]::ReleaseComObject($MCPShell)
+			}
+			If ($RemovedSystemApps -contains 'Microsoft.Windows.FileExplorer') { $LayoutTemplate = $LayoutTemplate.Replace('UWP File Explorer.lnk', 'File Explorer.lnk') }
 			Else
 			{
-				$UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
-				$UWPShortcut = $UWPShell.CreateShortcut((GetPath -Path $InstallMount -Child 'Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk'))
-				$UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
-				$UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
-				$UWPShortcut.WorkingDirectory = "%SystemRoot%"
-				$UWPShortcut.Description = "UWP File Explorer"
-				$UWPShortcut.Save()
+				Try
+				{
+					$UWPShell = New-Object -ComObject WScript.Shell -ErrorAction Stop
+					$UWPShortcut = $UWPShell.CreateShortcut((GetPath -Path $InstallMount -Child 'Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk'))
+					$UWPShortcut.TargetPath = "%SystemRoot%\explorer.exe"
+					$UWPShortcut.Arguments = "shell:AppsFolder\c5e2524a-ea46-4f67-841f-6a9465d9d515_cw5n1h2txyewy!App"
+					$UWPShortcut.WorkingDirectory = "%SystemRoot%"
+					$UWPShortcut.Description = "UWP File Explorer"
+					$UWPShortcut.Save()
+				}
+				Catch
+				{
+					$LayoutTemplate = $LayoutTemplate.Replace('UWP File Explorer.lnk', 'File Explorer.lnk')
+				}
+				Finally
+				{
+					[Void][Runtime.InteropServices.Marshal]::ReleaseComObject($UWPShell)
+				}
 			}
-			$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
+			Try
+			{
+				$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
+			}
+			Catch
+			{
+				Log $OptimizeData.FailedCleanupStartMenu -Type Error
+			}
+			Finally
+			{
+				Start-Sleep 3; Clear-Host
+			}
 		}
-		Catch
-		{
-			Log $OptimizeData.FailedCleanupStartMenu -Type Error -ErrorRecord $Error[0]
-			(GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') | Purge
-		}
-		Finally
-		{
-			[Void][Runtime.InteropServices.Marshal]::ReleaseComObject($UWPShell); Start-Sleep 3; Clear-Host
-		}
+		#endregion Start Menu Clean-up
 
-		If ($DynamicParams.Count -gt 0)
-		{
-			Log $OptimizeData.CreatingPackageSummaryLog
-			$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
-			If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.InstallDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+		#region Create Package Summary
+		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process {
+			If ($DynamicParams.Keys -contains $PSItem)
+			{
+				Log $OptimizeData.CreatingPackageSummaryLog
+				$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
+				If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+				If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+				If ($DynamicParams.InstallImageDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+				If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+				If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			}
 		}
+		#endregion Create Package Summary
 
+		#region Image Finalization
 		If ((Repair-WindowsImage -Path $InstallMount -CheckHealth -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).ImageHealthState -eq 'Healthy')
 		{
 			Log $OptimizeData.PostOptimizedImageHealthHealthy
@@ -1703,8 +1784,8 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Finally
 		{
 			$Timer.Stop()
-			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), ($Error.Count + $OptimizeErrors.Count)) -Finalized
-			If ($Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
+			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $Timer.Elapsed.Minutes.ToString(), ($Global:Error.Count + $OptimizeErrors.Count)) -Finalized
+			If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
 			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
 			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
@@ -1712,7 +1793,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		#endregion Image Finalization
 	}
 	End
- 	{
+ {
 		#region Post-Processing Block
 		((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $LocalScope.Variables).InputObject).ForEach{ Remove-Variable -Name $PSItem -ErrorAction Ignore }
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference

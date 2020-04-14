@@ -8,7 +8,7 @@ schema: 2.0.0
 # Optimize-Offline
 
 ## SYNOPSIS
-Offline optimization framework for Windows 10 image versions 1803-to-1909 with 64-bit architectures contained within WIM and ESD files.
+Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM and ESD files.
 
 ## SYNTAX
 
@@ -38,7 +38,7 @@ This command automatically starts optimizing an image by importing the configura
 
 ### EXAMPLE 2
 ```
-Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"
+Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; LayoutModification = $true; Drivers = $true } -ISO "No-Prompt"
 ```
 
 This command starts optimizing an image by manually passing parameters to the module.
@@ -249,13 +249,14 @@ Accept wildcard characters: False
 ```
 
 ### -Additional
-Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.
+Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, LayoutModification, Unattend, Drivers and NetFx3.
 
 - **Setup**: Integrates Windows Setup files, scripts or content into the image.
 - **Wallpaper**: Integrates custom wallpaper into the image.
 - **SystemLogo**: Integrates a custom system logo into the image.
 - **LockScreen**: Converts and integrates a custom lockscreen into the image.
 - **RegistryTemplates**: Imports custom registry template (.reg) files into the registry hives of the image.
+- **LayoutModification**: Imports a custom LayoutModification.xml to provision the Start layout.
 - **Unattend**: Applies an answer file directly to the image.
 - **Drivers**: Injects driver packages into the image.
 - **NetFx3**: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.
@@ -267,7 +268,7 @@ Aliases:
 
 Required: False
 Position: 4
-Default value: @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }
+Default value: @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

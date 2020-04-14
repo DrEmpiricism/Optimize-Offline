@@ -3,11 +3,11 @@
 #Requires -Version 5
 <#
 	===========================================================================
-	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.173
+	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.174
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	03/18/2020
+	Last updated:	04/14/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================
@@ -49,24 +49,25 @@ $OptimizeOffline.Packages = (Resolve-FullPath -Path $OptimizeOffline.Directory -
 $OptimizeOffline.LocalizedDataStrings = (Resolve-FullPath -Path $OptimizeOffline.LocalizedData -Child Optimize-Offline.strings.psd1)
 $OptimizeOffline.ConfigurationJSON = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Configuration.json)
 $OptimizeOffline.ManifestDataFile = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Optimize-Offline.psd1)
-$OptimizeOffline.DaRT = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DaRT)
-$OptimizeOffline.Dedup = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Deduplication)
-$OptimizeOffline.DevMode = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DeveloperMode)
-$OptimizeOffline.MicrosoftEdge = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child MicrosoftEdge)
-$OptimizeOffline.Win32Calc = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Win32Calc)
-$OptimizeOffline.WindowsStore = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child WindowsStore)
 $OptimizeOffline.AppxWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child AppxWhitelist.json)
 $OptimizeOffline.CustomAppAssociations = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CustomAppAssociations.xml)
+$OptimizeOffline.DevMode = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DeveloperMode)
+$OptimizeOffline.WindowsStore = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child WindowsStore)
+$OptimizeOffline.MicrosoftEdge = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child MicrosoftEdge)
+$OptimizeOffline.Win32Calc = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Win32Calc)
+$OptimizeOffline.Dedup = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Deduplication)
+$OptimizeOffline.DaRT = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DaRT)
+$OptimizeOffline.Setup = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Setup)
+$OptimizeOffline.Wallpaper = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Wallpaper)
+$OptimizeOffline.SystemLogo = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child SystemLogo)
+$OptimizeOffline.LockScreen = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child LockScreen)
+$OptimizeOffline.RegistryTemplates = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child RegistryTemplates)
+$OptimizeOffline.LayoutModification = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child LayoutModification)
+$OptimizeOffline.Unattend = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Unattend)
 $OptimizeOffline.Drivers = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Drivers)
 $OptimizeOffline.InstallDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Install)
 $OptimizeOffline.BootDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Boot)
 $OptimizeOffline.RecoveryDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Recovery)
-$OptimizeOffline.LockScreen = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child LockScreen)
-$OptimizeOffline.RegistryTemplates = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child RegistryTemplates)
-$OptimizeOffline.Setup = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Setup)
-$OptimizeOffline.SystemLogo = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child SystemLogo)
-$OptimizeOffline.Unattend = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Unattend)
-$OptimizeOffline.Wallpaper = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Wallpaper)
 #endregion Module Path Declarations
 
 #region Data Declarations

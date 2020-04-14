@@ -5,10 +5,10 @@
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
   ],
   "SourcePath": "Path:\\To\\SourceImage",
-  "WindowsApps": "All",
+  "WindowsApps": "Select",
   "SystemApps": true,
   "Capabilities": true,
-  "Packages": true,
+  "Packages": false,
   "Features": true,
   "DeveloperMode": false,
   "WindowsStore": false,
@@ -23,6 +23,7 @@
     "SystemLogo": false,
     "LockScreen": false,
     "RegistryTemplates": false,
+    "LayoutModification": false,
     "Unattend": false,
     "Drivers": false,
     "NetFx3": false
