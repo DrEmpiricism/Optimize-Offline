@@ -10,7 +10,7 @@ Function New-ISOMedia
 
     Begin
     {
-        $CompilerParams = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters -Property @{
+        $CompilerParams = New-Object -TypeName CodeDom.Compiler.CompilerParameters -Property @{
             CompilerOptions       = '/unsafe'
             WarningLevel          = 4
             TreatWarningsAsErrors = $true

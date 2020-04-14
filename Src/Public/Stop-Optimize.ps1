@@ -7,7 +7,7 @@ Function Stop-Optimize
 	Dismount-Images
 	$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
 	@($DISMLog, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
-	If ($OptimizeErrors.Count -gt 0) { Export-ErrorLog -ErrorAction Ignore }
+	If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog -ErrorAction Ignore }
 	Get-ChildItem -Path $LogFolder -Filter *.log | Move-Item -Destination $SaveDirectory.FullName -Force
 	$TempDirectory | Purge
 	$Global:Error.Clear()

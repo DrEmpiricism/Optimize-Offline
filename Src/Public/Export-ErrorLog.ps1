@@ -3,10 +3,10 @@ Function Export-ErrorLog
     [CmdletBinding()]
     Param ()
 
-    If ($Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0)
+    If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0)
     {
         $Index = 0
-        ($Error + $OptimizeErrors | ForEach-Object -Process {
+        ($Global:Error + $OptimizeErrors | ForEach-Object -Process {
                 [PSCustomObject]@{
                     Index     = $Index
                     Exception = $PSItem.Exception.Message
