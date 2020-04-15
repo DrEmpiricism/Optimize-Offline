@@ -8,8 +8,8 @@
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.0.8
-	 Last updated:	04/14/2020
+	 Version:       4.0.0.9
+	 Last updated:	04/15/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -215,7 +215,7 @@ Function Optimize-Offline
 				If ($WindowsStore.IsPresent) { $WindowsStore = $false }
 				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
 			}
-			If ($InstallInfo.Build -eq '17134' -or $InstallInfo.Build -eq '19041' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
+			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
 			If ($InstallInfo.Build -eq '19041' -and $Dedup.IsPresent) { $Dedup = $false }
 			If ($InstallInfo.Language -ne $OptimizeOffline.Culture)
 			{
@@ -778,7 +778,9 @@ Function Optimize-Offline
 		#endregion Windows Capability and Cabinet File Package Removal
 
 		#region Disable Unsafe Optional Features
-		#@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
+		<#
+		@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
+		#>
 		ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 		{
 			If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled)
@@ -1449,8 +1451,8 @@ Function Optimize-Offline
                 <start:Group Name="$($InstallInfo.Name)">
                     <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationID="Microsoft.Windows.Computer" />
                     <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\Master Control Panel.lnk" />
-					<start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
-					<start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationID="Microsoft.Windows.AdministrativeTools" />
+                    <start:DesktopApplicationTile Size="1x1" Column="4" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk" />
+                    <start:DesktopApplicationTile Size="1x1" Column="4" Row="1" DesktopApplicationID="Microsoft.Windows.AdministrativeTools" />
                     <start:DesktopApplicationTile Size="1x1" Column="5" Row="0" DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\UWP File Explorer.lnk" />
                     <start:DesktopApplicationTile Size="1x1" Column="5" Row="1" DesktopApplicationID="Microsoft.Windows.Shell.RunDialog" />
                 </start:Group>
@@ -1518,17 +1520,16 @@ Function Optimize-Offline
 		#endregion Start Menu Clean-up
 
 		#region Create Package Summary
-		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process {
-			If ($DynamicParams.Keys -contains $PSItem)
-			{
-				Log $OptimizeData.CreatingPackageSummaryLog
-				$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
-				If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-				If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-				If ($DynamicParams.InstallImageDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-				If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-				If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			}
+		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process { If ($DynamicParams.ContainsKey($PSItem)) { $DynamicParams.PackageSummary = $true } }
+		If ($DynamicParams.PackageSummary)
+		{
+			Log $OptimizeData.CreatingPackageSummaryLog
+			$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
+			If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.InstallImageDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, BootCritical, Version | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 		}
 		#endregion Create Package Summary
 
@@ -1695,6 +1696,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 						Else { $ImageFiles = 'install.wim' }
 						Throw
 					}
+					Break
 				}
 				Default
 				{
@@ -1712,6 +1714,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 					[Void](Export-WindowsImage @ExportInstallParams)
 					If ($DynamicParams.BootImage) { $ImageFiles = @('install.wim', 'boot.wim') }
 					Else { $ImageFiles = 'install.wim' }
+					Break
 				}
 			}
 		}

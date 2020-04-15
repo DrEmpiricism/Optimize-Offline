@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 4.0.0.9 (04-15-2020) ##
+
+- Added the Developer Mode package for Windows 10 build 19041.
+- Originally multiple package summary logs would be created and overwritten. This has been fixed.
+- Removed a registry setting that applied a telemetry registry value to the WOW6432Node offline hive causing some UAC functionality issues.
+- Corrected a typo in the external help files.
+
 ## Build 4.0.0.8 (04-14-2020) ##
 
 - Added support for Windows 10 build 19041 (20H1).
@@ -36,22 +43,3 @@
 - Corrected an issue where some Resource Functions would try to use the main module's data strings when reporting errors, which could cause an additional incorrect variable error.
 - When an ESD is used as the source image, the metadata of the image is now refreshed after it's been exported to a WIM to ensure the image path is accurate.
 - Updated necessary Resource Functions to reflect the aforementioned changes.
-
-## Build 4.0.0.4 (01-26-2020) ##
-
-- Optimize-Offline now supports the ESD file format as a source image.
-- The Additional.json file has been nested into the Configuration.json, as having a separate JSON file for additional user content was redundant.
-- Incorporated better methods for numerous removal processes.
-- Improved the Start-Optimize.ps1 call script functionality.
-- Updated multiple Resource Functions.
-- Updated the Windows Store bundle packages.
-- Updated localized data and external help.
-- This update list is not exhaustive of all changes and updates, but outlines the major ones.
-
-## Build 4.0.0.3 (01-08-2020) ##
-
-- Updated the Start-Optimize.ps1 call script.
-- Updated multiple Resource Functions.
-- Added additional error-handling for Resource Function processes.
-- Fixed an error that would prevent the use of solid compression for the final image.
-- Localized data has been updated.
