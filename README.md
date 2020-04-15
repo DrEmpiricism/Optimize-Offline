@@ -37,7 +37,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 
 System Applications are a lot like Provisioned Application Packages (Windows Apps) in respect that they are provisioned and installed during the setup of Windows. During the Windows Setup component pass, setup looks for these System Applications in the default registry and provisions them for installation only if their entries are present. By removing these entries, Windows Setup does not provision them for installation.
 
-This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevent both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
+This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevents both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
 
 #### System Applications universally safe to remove ####
 
@@ -53,7 +53,7 @@ The following System Applications are safe to remove:
 - ParentalControls
 - SecureAssessmentBrowser
 - XGpuEjectDialog
-- XboxGameCallableUI
+- XboxGameCallableUI (provided no integrated Xbox gaming features will be used)
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
