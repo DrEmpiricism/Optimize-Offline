@@ -140,7 +140,7 @@ Accept wildcard characters: False
 ```
 
 ### -DeveloperMode
-Integrates the Developer Mode Feature into he image.
+Integrates the Developer Mode Feature into the image.
 
 ```yaml
 Type: SwitchParameter
