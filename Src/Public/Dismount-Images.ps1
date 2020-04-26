@@ -7,7 +7,7 @@ Function Dismount-Images
     {
         $Host.UI.RawUI.WindowTitle = $OptimizeData.ActiveMountPoints
         Write-Host $OptimizeData.ActiveMountPoints -ForegroundColor Cyan
-        If (RegHives -Test) { RegHives -Unload }
+        RegHives -Unload
         If (Invoke-Expression -Command ('REG QUERY HKLM | FINDSTR Optimize-Offline'))
         {
             [GC]::Collect()
