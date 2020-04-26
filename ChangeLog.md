@@ -1,5 +1,13 @@
 # ChangeLog #
 
+## Build 4.0.0.10 (04-25-2020) ##
+
+- Added additional subscribed content that will be disabled when the ContentDeliveryManager system application is removed.
+- Added the disabling of the Get More out of Windows notification that displays during OOBE and during reboots for builds 18362+.
+- Updated registry values applied to the image registry hives.
+- Updated the Get-OfflineHives function.
+- Updated the Windows Store bundle packages.
+
 ## Build 4.0.0.9 (04-15-2020) ##
 
 - Added the Developer Mode package for Windows 10 build 19041.
@@ -36,10 +44,3 @@
 - Simplified multiple processes and Resource Functions to further improve the overall speed of image optimization.
 - Updated localized data and external help.
 - Updated the Windows Store bundle packages.
-
-## Build 4.0.0.5 (02-03-2020) ##
-
-- Corrected incorrect key syntax in the -Additional hashtable parameter.
-- Corrected an issue where some Resource Functions would try to use the main module's data strings when reporting errors, which could cause an additional incorrect variable error.
-- When an ESD is used as the source image, the metadata of the image is now refreshed after it's been exported to a WIM to ensure the image path is accurate.
-- Updated necessary Resource Functions to reflect the aforementioned changes.
