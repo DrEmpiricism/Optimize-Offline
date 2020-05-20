@@ -50,10 +50,14 @@ The following System Applications are safe to remove:
 - PPIProjection
 - SecHealthUI
 - ContentDeliveryManager
+- FileExplorer
+- NarratorQuickStart
 - ParentalControls
 - SecureAssessmentBrowser
 - XGpuEjectDialog
 - XboxGameCallableUI (provided no integrated Xbox gaming features will be used)
+- UndockedDevKit
+- NcsiUwpApp
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
@@ -78,6 +82,7 @@ The module only applies those registry entries and values applicable to the imag
 A short list of some of the optimizations include:
 
 - Completely disables Cortana without disabling the default search feature.
+- Disables history collection and Bing Search integration by the default search feature.
 - Disables a significant amount of telemetry, logging, tracking, monitoring and background feedback submission.
 - Prevents bloatware link creation and disables a plethora of annoying default features.
 - Disables Windows' annoying pop-up notifications and tips.
