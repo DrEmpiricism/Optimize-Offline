@@ -1497,7 +1497,7 @@ Function Optimize-Offline
 			{
 				[Void][Runtime.InteropServices.Marshal]::ReleaseComObject($MCPShell)
 			}
-			If ($RemovedSystemApps -contains 'Microsoft.Windows.FileExplorer') { $LayoutTemplate = $LayoutTemplate.Replace('UWP File Explorer.lnk', 'File Explorer.lnk') }
+			If ($RemovedSystemApps.'Microsoft.Windows.FileExplorer') { $LayoutTemplate = $LayoutTemplate.Replace('UWP File Explorer.lnk', 'File Explorer.lnk') }
 			Else
 			{
 				Try
