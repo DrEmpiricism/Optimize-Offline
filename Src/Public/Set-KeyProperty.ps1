@@ -6,6 +6,7 @@ Function Set-KeyProperty
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
+        [Alias('FullName', 'PSPath')]
         [String[]]$Path,
         [Parameter(Mandatory = $true)]
         [String]$Name,

@@ -8,7 +8,7 @@ Function Resolve-FullPath
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
-        [Alias('FullName')]
+        [Alias('FullName', 'PSPath')]
         [String[]]$Path,
         [Parameter(ParameterSetName = 'Join',
             Position = 1)]

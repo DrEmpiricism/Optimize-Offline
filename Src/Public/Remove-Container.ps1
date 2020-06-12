@@ -6,7 +6,7 @@ Function Remove-Container
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [Alias('FullName')]
+        [Alias('FullName', 'PSPath')]
         [String[]]$Path,
         [Switch]$Force
     )

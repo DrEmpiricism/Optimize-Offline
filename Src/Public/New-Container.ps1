@@ -7,6 +7,7 @@ Function New-Container
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
+        [Alias('FullName', 'PSPath')]
         [String[]]$Path,
         [Switch]$PassThru
     )
