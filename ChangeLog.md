@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 4.0.1.1 (06-12-2020) ##
+
+- Updated multiple Resource Functions.
+- Added a requirement check for PowerShell version 5.
+- Updated the registry settings that restore the default Windows Photo Viewer.
+- Updated the Windows Store bundle packages.
+
 ## Build 4.0.1.0 (05-19-2020) ##
 
 - Corrected an issue where some users had an error when integrating Microsoft DaRT 10.
@@ -31,11 +38,3 @@
 - Updated the Windows Store bundle packages.
 - This list is not exhaustive of all changes made to Optimize-Offline or its Resource Functions, but outlines the major ones.
 **NOTE: Because the Data Deduplication and Developer Mode packages are not yet available for Windows 10 19041, they cannot be integrated into build 19041. When these packages are available, they will be added to Optimize-Offline. Likewise, Windows 10 build 19041 is still an Insider Preview, so more optimizations will be added in future Optimize-Offline builds.**
-
-## Build 4.0.0.7 (03-17-2020) ##
-
-- Updated multiple Resource Functions.
-- Updated the firewall registry settings that get applied when the Deduplication packages are integrated into the image.
-- Removed unsupported language packages from the 'Packages' directory. These will be re-added if/when additional languages are supported by Optimize-Offline.
-- Optimized and trimmed down multiple module processes.
-- This list is not exhaustive of all changes made to Optimize-Offline or its Resource Functions, but outlines the major ones.
