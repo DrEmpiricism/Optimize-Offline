@@ -210,11 +210,11 @@ Function Set-RegistryProperties
 
         $RegistryData.EnableClassicPersonalizationPanel | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "(default)" -Value "Personalization (Classic)" -Type String
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "InfoTip" -Value "@%SystemRoot%\\System32\\themecpl.dll,-2#immutable1" -Type ExpandString
+        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "InfoTip" -Value '@%SystemRoot%\\System32\\themecpl.dll,-2#immutable1' -Type ExpandString
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "System.ApplicationName" -Value "Microsoft.Personalization" -Type String
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "System.ControlPanel.Category" -Value 1 -Type DWord
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "System.Software.TasksFileUrl" -Value "Internal" -Type String
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\themecpl.dll,-1" -Type ExpandString
+        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\\System32\\themecpl.dll,-1" -Type String
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}\shell\Open\Command" -Name "(default)" -Value "explorer.exe shell:::{ED834ED6-4B5A-4bfe-8F11-A626DCB6A921}" -Type String
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace\{580722FF-16A7-44C1-BF74-7E1ACD00F4F9}" -Name "(default)" -Value "Personalization" -Type String
         RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel" -Name "StartupPage" -Value 1 -Type DWord
@@ -237,17 +237,22 @@ Function Set-RegistryProperties
         @('.3ds', '.3mf', '.dae', '.dxf', '.obj', '.ply', '.stl', '.wrl') | ForEach-Object -Process { Purge -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\SystemFileAssociations\$($PSItem)\shell\3D Print" }
 
         $RegistryData.RestoreWindowsPhotoViewer | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
-        @('.bmp', '.cr2', '.dib', '.gif', '.ico', '.jfif', '.jpe', '.jpeg', '.jpg', '.jxr', '.png', '.tif', '.tiff', '.wdp') | ForEach-Object -Process {
-            RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\$($PSItem)" -Name "(default)" -Value "PhotoViewer.FileAssoc.Tiff" -Type String
-            RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($PSItem)\OpenWithProgids" -Name "PhotoViewer.FileAssoc.Tiff" -Value 0 -Type Binary
+        @('.Bmp', '.Cr2', '.Dib', '.Gif', '.JFIF', '.Jpe', '.Jpeg', '.Jpg', '.Jxr', '.Png', '.Tif', '.Tiff', '.Wdp') | ForEach-Object -Process {
+            If ($PSItem -in @('.JFIF', '.Jpeg', '.Gif', '.Png', '.Wdp'))
+            {
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)" -Name "EditFlags" -Value 65536 -Type DWord
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)" -Name "ImageOptionFlags" -Value 1 -Type DWord
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)" -Name "FriendlyTypeName" -Value '@%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll,-3055' -Type ExpandString
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)\DefaultIcon" -Name "(default)" -Value "%SystemRoot%\System32\imageres.dll,-72" -Type String
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)\shell\open" -Name "MuiVerb" -Value '@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043' -Type ExpandString
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)\shell\open\command" -Name "(default)" -Value '%SystemRoot%\System32\rundll32.exe "%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll", ImageView_Fullscreen %1' -Type ExpandString
+                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\PhotoViewer.FileAssoc$($PSItem)\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Type String
+            }
+            If ($PSItem -in @('.Cr2', '.Tif')) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name $PSItem.ToLower() -Value "PhotoViewer.FileAssoc.Tiff" -Type String }
+            ElseIf ($PSItem -in @('.Dib', '.Bmp')) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name $PSItem.ToLower() -Value "PhotoViewer.FileAssoc.Bitmap" -Type String }
+            ElseIf ($PSItem -in @('.Jpg', '.Jpe', '.Jpeg')) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name $PSItem.ToLower() -Value "PhotoViewer.FileAssoc.Jpeg" -Type String }
+            Else { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations" -Name $PSItem.ToLower() -Value "PhotoViewer.FileAssoc$($PSItem)" -Type String }
         }
-        @('Paint.Picture', 'giffile', 'jpegfile', 'pngfile') | ForEach-Object -Process {
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($PSItem)\shell\open" -Name "MuiVerb" -Value "@%ProgramFiles%\Windows Photo Viewer\photoviewer.dll,-3043" -Type ExpandString
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\$($PSItem)\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen `"%1`"" -Type ExpandString
-        }
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open" -Name "MuiVerb" -Value "@photoviewer.dll,-3043" -Type String
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\command" -Name "(Default)" -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen `"%1`"" -Type ExpandString
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" -Type String
 
         $RegistryData.RemoveUserFoldersExplorer | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         @("HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}", "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}",
@@ -289,7 +294,7 @@ Function Set-RegistryProperties
             "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\PropertySheetHandlers\{596AB062-B4D2-4215-9F74-E9109B0A8153}") | Purge
 
         $RegistryData.EnableRebootRecoveryMyPC | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
-        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery" -Name "Icon" -Value "%SystemRoot%\System32\imageres.dll,-110" -Type ExpandString -Force
+        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery" -Name "Icon" -Value "%SystemRoot%\System32\imageres.dll,-110" -Type String -Force
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\shell\Reboot to Recovery\command" -Name "(default)" -Value "shutdown.exe /r /o /f /t 00" -Type String -Force
 
         $RegistryData.EnableLongFilePaths | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
