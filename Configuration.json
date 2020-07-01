@@ -15,7 +15,10 @@
   "MicrosoftEdge": false,
   "Win32Calc": true,
   "Dedup": true,
-  "DaRT": "Setup",
+  "DaRT": [
+    "Setup",
+    "Recovery"
+  ],
   "Registry": true,
   "Additional": {
     "Setup": false,

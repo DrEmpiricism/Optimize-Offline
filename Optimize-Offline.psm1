@@ -1,15 +1,15 @@
 ﻿Using module .\Src\Offline-Resources.psm1
 #Requires -RunAsAdministrator
-#Requires -Version 5
+#Requires -Version 5.1
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.174
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.179
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.1
-	 Last updated:	06/12/2020
+	 Version:       4.0.1.2
+	 Last updated:	07/01/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -46,15 +46,15 @@ Function Optimize-Offline
 		[Switch]$DeveloperMode,
 		[Parameter(HelpMessage = 'Integrates the Microsoft Windows Store and its required dependencies into the image.')]
 		[Switch]$WindowsStore,
-		[Parameter(HelpMessage = 'Integrates the Microsoft Edge Browser into the image.')]
+		[Parameter(HelpMessage = 'Integrates the Microsoft Edge HTML or Chromium Browser into the image.')]
 		[Switch]$MicrosoftEdge,
 		[Parameter(HelpMessage = 'Integrates the traditional Win32 Calculator into the image.')]
 		[Switch]$Win32Calc,
 		[Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication Feature into the image.')]
 		[Switch]$Dedup,
 		[Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.')]
-		[ValidateSet('Setup', 'Recovery', 'All')]
-		[String]$DaRT,
+		[ValidateSet('Setup', 'Recovery')]
+		[String[]]$DaRT,
 		[Parameter(HelpMessage = 'Applies optimized settings to the image registry hives.')]
 		[Switch]$Registry,
 		[Parameter(HelpMessage = 'Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable.')]
@@ -123,7 +123,7 @@ Function Optimize-Offline
 					$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
 					Copy-Item -Path $Item.FullName -Destination $ISOExport
 				}
-				If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
+				If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
 				{
 					Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Include install.*, boot.wim -File -Recurse | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
 					$BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select-Object -ExpandProperty FullName
@@ -207,20 +207,29 @@ Function Optimize-Offline
 			{
 				$DynamicParams.LTSC = $true
 				If ($WindowsApps) { Remove-Variable -Name WindowsApps }
-				If ($Win32Calc.IsPresent) { $Win32Calc = $false }
+				If ($Win32Calc.IsPresent) { $Win32Calc = ![Switch]::Present }
 			}
 			Else
 			{
-				If ($WindowsStore.IsPresent) { $WindowsStore = $false }
-				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
+				If ($WindowsStore.IsPresent) { $WindowsStore = ![Switch]::Present }
+				If ($MicrosoftEdge.IsPresent -and $InstallInfo.Build -ge '18362')
+				{
+					If ($InstallInfo.Build -eq '18362') { $EdgeChromiumUBR = 833 }
+					Else { $EdgeChromiumUBR = 261 }
+				}
+				Else { $MicrosoftEdge = ![Switch]::Present }
 			}
-			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = $false }
-			If ($InstallInfo.Build -eq '19041' -and $Dedup.IsPresent) { $Dedup = $false }
+			If (!$DynamicParams.LTSC -and $MicrosoftEdge.IsPresent)
+			{
+
+			}
+			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = ![Switch]::Present }
+			If ($InstallInfo.Build -eq '19041' -and $Dedup.IsPresent) { $Dedup = ![Switch]::Present }
 			If ($InstallInfo.Language -ne $OptimizeOffline.Culture)
 			{
-				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = $false }
-				If ($Win32Calc.IsPresent) { $Win32Calc = $false }
-				If ($Dedup.IsPresent) { $Dedup = $false }
+				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = ![Switch]::Present }
+				If ($Win32Calc.IsPresent) { $Win32Calc = ![Switch]::Present }
+				If ($Dedup.IsPresent) { $Dedup = ![Switch]::Present }
 				If ($DaRT) { Remove-Variable -Name DaRT }
 			}
 		}
@@ -303,7 +312,7 @@ Function Optimize-Offline
 			Stop-Optimize
 		}
 
-		If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
+		If ($DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
 		{
 			$WinREPath = GetPath -Path $InstallMount -Child 'Windows\System32\Recovery\winre.wim'
 			If (Test-Path -Path $WinREPath)
@@ -566,11 +575,13 @@ Function Optimize-Offline
 		If ($DynamicParams.WindowsApps -or $DynamicParams.SystemApps)
 		{
 			Log $OptimizeData.RemovedPackageCleanup
+			<#
 			If ($InstallInfo.Build -lt '19041')
 			{
 				If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 				Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
 			}
+			#>
 			RegHives -Load
 			$Visibility = [Text.StringBuilder]::New('hide:')
 			If ($RemovedAppxPackages.'Microsoft.WindowsMaps')
@@ -602,7 +613,7 @@ Function Optimize-Offline
 				[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
 			}
-			If ($RemovedSystemApps.'Microsoft.MicrosoftEdge') { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
+			If ($RemovedSystemApps.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
 			If ($RemovedSystemApps.'Microsoft.BioEnrollment')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
@@ -652,6 +663,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray" -Name "HideSystray" -Value 1 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Defender\Features" -Name "TamperProtection" -Value 0 -Type DWord -Force
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AppAndBrowser_EdgeSmartScreenOff" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "SmartScreenEnabled" -Value "Off" -Type String
@@ -664,7 +676,7 @@ Function Optimize-Offline
 				@("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\EPP",
 					"HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger", "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger") | Purge
 				Remove-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth"
-				If (!$DynamicParams.LTSC)
+				If (!$DynamicParams.LTSC -or $MicrosoftEdge.IsPresent)
 				{
 					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
 					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
@@ -998,43 +1010,108 @@ Function Optimize-Offline
 		#endregion Windows Store Integration
 
 		#region Microsoft Edge Integration
-		If ($MicrosoftEdge.IsPresent -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Internet-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *Internet-Browser*))
+		If ($MicrosoftEdge.IsPresent)
 		{
-			Try
+			If ($DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Internet-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *Internet-Browser*))
 			{
-				Log $OptimizeData.IntegratingMicrosoftEdge
-				@((GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"),
-					(GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~$($InstallInfo.Language)~10.0.$($InstallInfo.Build).1.cab")) | ForEach-Object -Process { [Void](Add-WindowsPackage -Path $InstallMount -PackagePath $PSItem -IgnoreCheck -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop) }
-				$DynamicParams.MicrosoftEdge = $true
-			}
-			Catch
-			{
-				Log $OptimizeData.FailedIntegratingMicrosoftEdge -Type Error -ErrorRecord $Error[0]
-				Stop-Optimize
-			}
-			If ($DynamicParams.MicrosoftEdge)
-			{
-				RegHives -Load
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Addons" -Name "FlashPlayerEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Addons" -Name "FlashPlayerEnabled" -Value 0 -Type DWord
-				If ($DynamicParams.SecHealthUI)
+				Try
 				{
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
+					Log $OptimizeData.IntegratingMicrosoftEdge
+					@((GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).1.cab"),
+						(GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Internet-Browser-Package~$($InstallInfo.Architecture)~$($InstallInfo.Language)~10.0.$($InstallInfo.Build).1.cab")) | ForEach-Object -Process { [Void](Add-WindowsPackage -Path $InstallMount -PackagePath $PSItem -IgnoreCheck -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop) }
+					$DynamicParams.MicrosoftEdge = $true
 				}
-				RegHives -Unload
+				Catch
+				{
+					Log $OptimizeData.FailedIntegratingMicrosoftEdge -Type Error -ErrorRecord $Error[0]
+					Stop-Optimize
+				}
+			}
+			ElseIf (!$DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Chromium-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4559309*))
+			{
+				Log $OptimizeData.IntegratingMicrosoftEdgeChromium
+				If (!$RemovedSystemApps.'Microsoft.MicrosoftEdge')
+				{
+					RegHives -Load
+					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\EdgeUpdate" -Name "Allowsxs" -Value 1 -Type DWord
+					RegHives -Unload
+				}
+				Try
+				{
+					[Void](Add-WindowsPackage -Path $InstallMount -PackagePath (GetPath -Path $OptimizeOffline.MicrosoftEdge -Child "Microsoft-Windows-Chromium-Browser-Package~$($InstallInfo.Architecture)~~10.0.$($InstallInfo.Build).$($EdgeChromiumUBR).cab") -IgnoreCheck -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop)
+					$DynamicParams.MicrosoftEdgeChromium = $true
+				}
+				Catch
+				{
+					Log $OptimizeData.FailedIntegratingMicrosoftEdgeChromium -Type Error -ErrorRecord $Error[0]
+					Stop-Optimize
+				}
 			}
 		}
 		#endregion Microsoft Edge Integration
+
+		#region Microsoft Edge Policy Integration
+		If ($DynamicParams.MicrosoftEdge -or $DynamicParams.MicrosoftEdgeChromium)
+		{
+			If (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter MicrosoftEdgePolicies.wim)
+			{
+				Try
+				{
+					$ExpandEdgePoliciesParams = @{
+						ImagePath        = ('{0}\MicrosoftEdgePolicies.wim' -f $OptimizeOffline.MicrosoftEdge)
+						Index            = 1
+						ApplyPath        = $InstallMount
+						CheckIntegrity   = $true
+						Verify           = $true
+						ScratchDirectory = $ScratchFolder
+						LogPath          = $DISMLog
+						LogLevel         = 1
+						ErrorAction      = 'Stop'
+					}
+					Log $OptimizeData.IntegratingMicrosoftEdgePolicies
+					[Void](Expand-WindowsImage @ExpandEdgePoliciesParams)
+				}
+				Catch
+				{
+					Log $OptimizeData.FailedIntegratingMicrosoftEdgePolicies -Type Error -ErrorRecord $Error[0]
+					Start-Sleep 3
+				}
+			}
+			RegHives -Load
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Main" -Name "AllowPrelaunch" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\TabPreloader" -Name "PreventTabPreloading" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Addons" -Name "FlashPlayerEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Addons" -Name "FlashPlayerEnabled" -Value 0 -Type DWord
+			If ($DynamicParams.LTSC -and $DynamicParams.SecHealthUI)
+			{
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
+			}
+			If ($DynamicParams.MicrosoftEdgeChromium)
+			{
+				$EdgeAppPath = (GetPath -Path $InstallMount -Child 'Program Files (x86)\Microsoft\Edge\Application') | Create -PassThru
+				[IO.File]::WriteAllText((GetPath -Path $EdgeAppPath.FullName -Child master_preferences), (@'
+{"distribution":{"system_level":true,"do_not_create_desktop_shortcut":true,"do_not_create_quick_launch_shortcut":true,"do_not_create_taskbar_shortcut":true}}
+'@).Trim(), [Text.UTF8Encoding]::New($true))
+				$Base64String = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes( { Get-ChildItem -Path @("HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Active Setup\Installed Components") -Recurse | Get-ItemProperty | Select-Object -Property PSPath, StubPath | Where-Object -Property StubPath -Match configure-user-settings | ForEach-Object -Process { Remove-Item -Path $PSItem.PSPath -Force }; Get-ChildItem -Path "$Env:SystemDrive\Users\*\Desktop" -Filter *lnk -Recurse | Where-Object -Property Name -Like *Edge* | Remove-Item -Force }))
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "EdgeCleanup" -Value "%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoProfile -EncodedCommand $Base64String" -Type ExpandString
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Edge" -Name "HideFirstRunExperience" -Value 1 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "HideFirstRunExperience" -Value 1 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
+			}
+			RegHives -Unload
+		}
+		#endregion Microsoft Edge Policy Integration
 
 		#region Win32 Calculator Integration
 		If ($Win32Calc.IsPresent -and (Test-Path -Path $OptimizeOffline.Win32Calc -Filter Win32Calc.wim) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *win32calc*))
@@ -1158,7 +1235,7 @@ Function Optimize-Offline
 				18362 { '19H2'; Break }
 				19041 { '20H1'; Break }
 			}
-			If ($PSBoundParameters.DaRT -eq 'Setup' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.BootImage)
+			If ($DaRT.Contains('Setup') -and $DynamicParams.BootImage)
 			{
 				Try
 				{
@@ -1189,7 +1266,7 @@ Function Optimize-Offline
 %SYSTEMDRIVE%\setup.exe
 '@ | Out-File -FilePath (GetPath -Path $BootMount -Child 'Windows\System32\winpeshl.ini') -Force
 			}
-			If ($PSBoundParameters.DaRT -eq 'Recovery' -or $PSBoundParameters.DaRT -eq 'All' -and $DynamicParams.RecoveryImage)
+			If ($DaRT.Contains('Recovery') -and $DynamicParams.RecoveryImage)
 			{
 				Try
 				{
@@ -1474,6 +1551,13 @@ Function Optimize-Offline
             </defaultlayout:StartLayout>
         </StartLayoutCollection>
     </DefaultLayoutOverride>
+    <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+        <defaultlayout:TaskbarLayout>
+            <taskbar:TaskbarPinList>
+                <taskbar:DesktopApp DesktopApplicationLinkPath="#leaveempty"/>
+            </taskbar:TaskbarPinList>
+        </defaultlayout:TaskbarLayout>
+    </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
 "@
 			Try
@@ -1540,7 +1624,7 @@ Function Optimize-Offline
 			Log $OptimizeData.CreatingPackageSummaryLog
 			$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
 			If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.MicrosoftEdgeChromium -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*KB4559309*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.InstallImageDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
@@ -1801,7 +1885,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Finally
 		{
 			$OptimizeTimer.Stop()
-			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, $OptimizeTimer.Elapsed.Minutes.ToString(), ($Global:Error.Count + $OptimizeErrors.Count)) -Finalized
+			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, [Math]::Round($OptimizeTimer.Elapsed.TotalMinutes, 0).ToString(), ($Global:Error.Count + $OptimizeErrors.Count)) -Finalized
 			If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
 			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8

@@ -1,5 +1,16 @@
 # ChangeLog #
 
+## Build 4.0.1.2 (07-02-2020) ##
+
+- The Microsoft Edge Chromium browser can now be integrated into Windows 10 builds 18362+
+- Following the integration of the Microsoft Edge Chromium package, Optimize-Offline will also apply all administrative policy templates to the image and a custom 'master_preferences' file for Microsoft Edge Chromium updates.
+- Additional registry settings specific to Microsoft Edge Chromium have been added.
+- The -DaRT parameter value 'All' has been removed. The -DaRT parameter now accepts one or both of the 'Setup' and 'Recovery' values.
+- The Configuration.json file has been updated to incorporate the change to the -DaRT parameter.
+- The Start-Optimize call script and Resource Functions have been updated.
+- The MAML XML external help file and manifest data have been updated.
+- There have been additional offline process code changes to reflect the aforementioned updates.
+
 ## Build 4.0.1.1 (06-12-2020) ##
 
 - Updated multiple Resource Functions.
@@ -26,15 +37,3 @@
 - Originally multiple package summary logs would be created and overwritten. This has been fixed.
 - Removed a registry setting that applied a telemetry registry value to the WOW6432Node offline hive causing some UAC functionality issues.
 - Corrected a typo in the external help files.
-
-## Build 4.0.0.8 (04-14-2020) ##
-
-- Added support for Windows 10 build 19041 (20H1).
-- Multiple Resource Functions and optimization processes have been updated to support build 19041.
-- Added a new -Additional hashtable parameter named 'LayoutModification' and its corresponding folder to the 'Content\Additional' directory. Enabling the 'LayoutModification' hashtable value will apply a user-specific custom Start layout XML added to the 'Content\Additional\LayoutModification' folder to the image. Additionally, the optimization process that creates and applies a custom Start layout XML will be bypassed.
-- The custom Start layout XML that Optimize-Offline creates and applies to the image has been updated to support build 19041. Also, the regular Control Panel pinned application has been replaced by the Master Control Panel (God Mode) application.
-- The creation of the Package Summary Log now first checks for specific dynamic parameters before compiling the log file. This prevents an empty log file from being created and saved if no package integrations were processed.
-- Created a Microsoft DaRT 10 integration WIM file for Windows 10 build 19041.
-- Updated the Windows Store bundle packages.
-- This list is not exhaustive of all changes made to Optimize-Offline or its Resource Functions, but outlines the major ones.
-**NOTE: Because the Data Deduplication and Developer Mode packages are not yet available for Windows 10 19041, they cannot be integrated into build 19041. When these packages are available, they will be added to Optimize-Offline. Likewise, Windows 10 build 19041 is still an Insider Preview, so more optimizations will be added in future Optimize-Offline builds.**

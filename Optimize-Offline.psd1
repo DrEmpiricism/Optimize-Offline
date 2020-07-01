@@ -1,6 +1,6 @@
 ﻿<#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.174
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.179
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psd1
@@ -14,12 +14,12 @@
 @{
 	GUID                   = '86c4db30-1a45-43c7-a96b-46d2a1d84671'
 	RootModule             = 'Optimize-Offline.psm1'
-	ModuleVersion          = '4.0.1.1'
+	ModuleVersion          = '4.0.1.2'
 	Author                 = 'Ben White'
 	Copyright              = '(c) 2020. All rights reserved.'
 	Description            = 'The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM/ESD) files for optimal runtime environments.'
 	HelpInfoUri            = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/en-US/Optimize-Offline-help.xml'
-	PowerShellVersion      = '5.0'
+	PowerShellVersion      = '5.1'
 	DotNetFrameworkVersion = '4.0'
 	CLRVersion             = '4.0'
 	ProcessorArchitecture  = 'Amd64'

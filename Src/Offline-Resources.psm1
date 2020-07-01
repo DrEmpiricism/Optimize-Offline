@@ -1,13 +1,13 @@
 ﻿Using namespace System.Collections.Generic
 #Requires -RunAsAdministrator
-#Requires -Version 5
+#Requires -Version 5.1
 <#
 	===========================================================================
-	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.174
+	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.179
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	05/19/2020
+	Last updated:	07/01/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================

@@ -82,7 +82,7 @@ Function Set-RegistryProperties
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0 -Type DWord
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 -Type DWord
 
-        If (!$DynamicParams.LTSC -and !$DynamicParams.MicrosoftEdge)
+        If (!$DynamicParams.LTSC -and !$DynamicParams.MicrosoftEdge -and !$DynamicParams.MicrosoftEdgeChromium)
         {
             RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
             RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
@@ -180,7 +180,7 @@ Function Set-RegistryProperties
         $RegistryData.EnableCMDWinXMenu | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DontUsePowerShellOnWinX" -Value 1 -Type DWord
 
-        If (!$DynamicParams.LTSC -and !$DynamicParams.MicrosoftEdge)
+        If (!$DynamicParams.LTSC -and !$DynamicParams.MicrosoftEdge -and !$DynamicParams.MicrosoftEdgeChromium)
         {
             $RegistryData.DisableEdgeShortcutPrelaunch | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
             RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "DisableEdgeDesktopShortcutCreation" -Value 1 -Type DWord

@@ -14,7 +14,7 @@ Offline optimization framework for Windows 10 image versions 1803-to-2004 with 6
 
 ```
 Optimize-Offline [-SourcePath] <FileInfo> [[-WindowsApps] <String>] [-SystemApps] [-Capabilities] [-Packages]
- [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-Dedup] [[-DaRT] <String>]
+ [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-Dedup] [[-DaRT] <String[]>]
  [-Registry] [[-Additional] <Hashtable>] [[-ISO] <String>] [<CommonParameters>]
 ```
 
@@ -170,7 +170,10 @@ Accept wildcard characters: False
 ```
 
 ### -MicrosoftEdge
-Integrates the Microsoft Edge Browser into the image.
+Integrates the Microsoft Edge HTML or Chromium Browser into the image.
+
+For Windows 10 Enterprise LTSC 2019, the Microsoft Edge HTML Browser will be integrated into the image.
+For non-LTSC Windows 10 builds 18362-to-19041, the Microsoft Edge Chromium Browser will be integrated into the image.
 
 ```yaml
 Type: SwitchParameter
@@ -215,14 +218,14 @@ Accept wildcard characters: False
 ```
 
 ### -DaRT
-Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. The acceptable values for this parameter are: Setup, Recovery and All.
+Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. This parameter accepts one or two values allowing for integration into a single environment or both environments. The acceptable values for this parameter are: Setup and Recovery.
 
 - **Setup**: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only.
 - **Recovery**: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only.
-- **All**: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.
+- **Setup, Recovery**: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.
 
 ```yaml
-Type: String
+Type: String[]
 Parameter Sets: (All)
 Aliases:
 
@@ -303,7 +306,9 @@ This module supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### None
 ### This module does not generate any output.
 ## NOTES
-Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019.
+Integration of Microsoft Windows Store and the Microsoft Edge HTML Browser are only applicable to Windows 10 Enterprise LTSC 2019.
+Integration of the Microsoft Edge Chromium Browser is only applicable to Windows 10 non-LTSC builds 18362-to-19041.
+When the Microsoft Edge Browser (HTML or Chromium) is integrated into the image, its permanence is set to 'permanent' by default.
 NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image.
 Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.
 

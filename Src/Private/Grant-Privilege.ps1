@@ -18,19 +18,19 @@ using System.Runtime.InteropServices;
 
 public class AccessToken
 {
-    [DllImport ("advapi32.dll", SetLastError = true)] static extern bool LookupPrivilegeValue (String Host, String Name, ref long Luid);
-    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)] static extern bool AdjustTokenPrivileges (IntPtr TokenHandle, bool RevokeAllPrivileges, ref TOKEN_PRIVILEGES NewTokenState, Int32 BufferLength, IntPtr PreviousTokenState, IntPtr ReturnLength);
-    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)] static extern bool OpenProcessToken (IntPtr ProcessToken, Int32 DesiredAccess, ref IntPtr hObject);
-    [DllImport ("kernel32.dll", SetLastError = true)] static extern bool CloseHandle (IntPtr hObject);
+    [DllImport ("advapi32.dll", SetLastError = true)] static extern Boolean LookupPrivilegeValue (String Host, String Name, ref Int64 Luid);
+    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)] static extern Boolean AdjustTokenPrivileges (IntPtr TokenHandle, Boolean RevokeAllPrivileges, ref TOKEN_PRIVILEGES NewTokenState, Int32 BufferLength, IntPtr PreviousTokenState, IntPtr ReturnLength);
+    [DllImport ("advapi32.dll", ExactSpelling = true, SetLastError = true)] static extern Boolean OpenProcessToken (IntPtr ProcessToken, Int32 DesiredAccess, ref IntPtr hObject);
+    [DllImport ("kernel32.dll", SetLastError = true)] static extern Boolean CloseHandle (IntPtr hObject);
 
-    [StructLayout (LayoutKind.Sequential, Pack = 1)] struct TOKEN_PRIVILEGES { public Int32 PrivilegeCount; public long Luid; public Int32 Attributes; }
+    [StructLayout (LayoutKind.Sequential, Pack = 1)] struct TOKEN_PRIVILEGES { public Int32 PrivilegeCount; public Int64 Luid; public Int32 Attributes; }
 
     internal const Int32 SE_PRIVILEGE_DISABLED = 0x00000000;
     internal const Int32 SE_PRIVILEGE_ENABLED = 0x00000002;
     internal const Int32 TOKEN_QUERY = 0x00000008;
     internal const Int32 TOKEN_ADJUST_PRIVILEGES = 0x00000020;
 
-    public static void AdjustPrivilege (IntPtr ProcessToken, String Privilege, bool Enable)
+    public static void AdjustPrivilege (IntPtr ProcessToken, String Privilege, Boolean Enable)
     {
         var TokenHandle = IntPtr.Zero;
         if (!OpenProcessToken (ProcessToken, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref TokenHandle)) { throw new Win32Exception (); }

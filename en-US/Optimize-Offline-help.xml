@@ -43,12 +43,12 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>DaRT</maml:name>
           <maml:Description>
-            <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. The acceptable values for this parameter are: Setup, Recovery and All.</maml:para>
-            <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. All: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
+            <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. This parameter accepts one or two values allowing for integration into a single environment or both environments. The acceptable values for this parameter are: Setup and Recovery.</maml:para>
+            <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. Setup, Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
           </maml:Description>
-          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
           <dev:type>
-            <maml:name>String</maml:name>
+            <maml:name>String[]</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -64,7 +64,7 @@
             <maml:name>Hashtable</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
+          <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>ISO</maml:name>
@@ -126,7 +126,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>DeveloperMode</maml:name>
           <maml:Description>
-            <maml:para>Integrates the Developer Mode Feature into the image.</maml:para>
+            <maml:para>Integrates the Developer Mode Feature into he image.</maml:para>
           </maml:Description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -148,7 +148,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>MicrosoftEdge</maml:name>
           <maml:Description>
-            <maml:para>Integrates the Microsoft Edge Browser into the image.</maml:para>
+            <maml:para>Integrates the Microsoft Edge HTML or Chromium Browser into the image.</maml:para>
+            <maml:para>For Windows 10 Enterprise LTSC 2019, the Microsoft Edge HTML Browser will be integrated into the image. For non-LTSC Windows 10 builds 18362-to-19041, the Microsoft Edge Chromium Browser will be integrated into the image.</maml:para>
           </maml:Description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -268,7 +269,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>DeveloperMode</maml:name>
         <maml:Description>
-          <maml:para>Integrates the Developer Mode Feature into the image.</maml:para>
+          <maml:para>Integrates the Developer Mode Feature into he image.</maml:para>
         </maml:Description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
@@ -292,7 +293,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>MicrosoftEdge</maml:name>
         <maml:Description>
-          <maml:para>Integrates the Microsoft Edge Browser into the image.</maml:para>
+          <maml:para>Integrates the Microsoft Edge HTML or Chromium Browser into the image.</maml:para>
+          <maml:para>For Windows 10 Enterprise LTSC 2019, the Microsoft Edge HTML Browser will be integrated into the image. For non-LTSC Windows 10 builds 18362-to-19041, the Microsoft Edge Chromium Browser will be integrated into the image.</maml:para>
         </maml:Description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
@@ -328,12 +330,12 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
         <maml:name>DaRT</maml:name>
         <maml:Description>
-          <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. The acceptable values for this parameter are: Setup, Recovery and All.</maml:para>
-          <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. All: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
+          <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. This parameter accepts one or two values allowing for integration into a single environment or both environments. The acceptable values for this parameter are: Setup and Recovery.</maml:para>
+          <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. Setup, Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
         </maml:Description>
-        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
         <dev:type>
-          <maml:name>String</maml:name>
+          <maml:name>String[]</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
@@ -353,8 +355,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>Additional</maml:name>
         <maml:Description>
-          <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, LayoutModification, Unattend, Drivers and NetFx3.</maml:para>
-          <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. LayoutModification: Imports a custom LayoutModification.xml to provision the Start layout. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
+          <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
+          <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
         <dev:type>
@@ -388,7 +390,7 @@
       </command:inputType>
       <command:inputType>
         <dev:type>
-          <maml:name>You can pipe a System.IO.FileInfo object to this module.</maml:name>
+          <maml:name>You can pipe a System.IO.FileInfo object to this cmdlet.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -406,7 +408,7 @@
       </command:returnValue>
       <command:returnValue>
         <dev:type>
-          <maml:name>This module does not generate any output.</maml:name>
+          <maml:name>This cmdlet does not generate any output.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -415,7 +417,7 @@
     </command:returnValues>
     <maml:alertSet>
       <maml:alert>
-        <maml:para>Integration of Microsoft Windows Store and Microsoft Edge are only applicable to Windows 10 Enterprise LTSC 2019. NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image. Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.</maml:para>
+        <maml:para>Integration of Microsoft Windows Store and the Microsoft Edge HTML Browser are only applicable to Windows 10 Enterprise LTSC 2019. Integration of the Microsoft Edge Chromium Browser is only applicable to Windows 10 non-LTSC builds 18362-to-19041. When the Microsoft Edge Browser (HTML or Chromium) is integrated into the image, its permanence is set to 'permanent' by default. NetFx3 integration is only applicable if a Windows Installation Media ISO is used as the source image. Bootable ISO media creation is only applicable if a Windows Installation Media ISO is used as the source image.</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
@@ -423,28 +425,28 @@
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
         <dev:code>.\Start-Optimize.ps1</dev:code>
         <dev:remarks>
-          <maml:para>This command automatically starts optimizing an image by importing the configuration JSON file into the module.</maml:para>
+          <maml:para>This command automatically starts optimizing an image by importing the configuration JSON file into the cmdlet.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; LayoutModification = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
         <dev:remarks>
-          <maml:para>This command starts optimizing an image by manually passing parameters to the module.</maml:para>
+          <maml:para>This command starts optimizing an image by manually passing parameters to the cmdlet.</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>
     <command:relatedLinks>
       <maml:navigationLink>
-        <maml:linkText>ReadMe</maml:linkText>
+        <maml:linkText>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md</maml:linkText>
         <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/README.md</maml:uri>
       </maml:navigationLink>
       <maml:navigationLink>
-        <maml:linkText>Help Topics</maml:linkText>
+        <maml:linkText>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md</maml:linkText>
         <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/docs/Optimize-Offline-help.md</maml:uri>
       </maml:navigationLink>
       <maml:navigationLink>
-        <maml:linkText>ChangeLog</maml:linkText>
+        <maml:linkText>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md</maml:linkText>
         <maml:uri>https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md</maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
