@@ -61,11 +61,6 @@ The following System Applications are safe to remove:
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
-Microsoft Edge Chromium was publicly released on January 15, 2020 and runs on the same Chromium web engine as the Google Chrome browser. Microsoft Edge Chromium is designed to replace the Microsoft Edge (HTML-based) system application. Moreover, the Microsoft Edge system application can be removed while still allowing for the usage of Microsoft Edge Chromium.
-
-The Microsoft Edge Chromium online installer can be downloaded [here](https://www.microsoft.com/en-us/edge).
-The Microsoft Edge Chromium full offline MSI package can be downloaded [here](https://www.microsoft.com/en-us/edge/business/download).
-
 **Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its impact on a live system.**
 
 ### About Windows Capabilities and Packages ###
@@ -157,9 +152,15 @@ Developer Mode should ONLY be enabled on systems that require settings it provid
 
 For Windows 10 Enterprise LTSC 2019, the latest Windows Store package bundles and dependency packages can be integrated into the image, as this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Windows Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu.
 
-### Integrating Microsoft Edge ###
+### Integrating Microsoft Edge HTML ###
 
 For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge (HTML-based) - can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain Microsoft Edge in its OEM state.
+
+### Integrating Microsoft Edge Chromium ###
+
+Microsoft Edge Chromium was publicly released on January 15, 2020 and runs on the same Chromium web engine as the Google Chrome browser. Microsoft Edge Chromium is designed to replace the Microsoft Edge (HTML-based) system application. Moreover, the Microsoft Edge system application can be removed while still allowing for the usage of Microsoft Edge Chromium.
+
+For Windows 10 builds 18362 and above, the new Microsoft Edge Chromium browser can be integrated into the image. When the Microsoft Edge Chromium browser is integrated into an image, Optimize-Offline will also apply its administrative policy templates for GPO (Group Policy) control of its functions and features.
 
 ### Solid Image Compression ###
 
