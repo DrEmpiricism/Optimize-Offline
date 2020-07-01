@@ -1,5 +1,4 @@
-﻿Using module .\Optimize-Offline.psm1
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 	.SYNOPSIS
 		Start-Optimize is a configuration call script for the Optimize-Offline module.
@@ -18,7 +17,7 @@
 [CmdletBinding()]
 Param ()
 
-$Error.Clear()
+$Global:Error.Clear()
 
 # Ensure we are running with administrative permissions.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
@@ -52,7 +51,7 @@ Catch [ArgumentException]
 	$ContentJSON = (Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw).Replace('\', '\\') | Set-Content -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Encoding UTF8 -Force -PassThru
 	$ContentJSON = $ContentJSON | ConvertFrom-Json
 	Move-Item -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Destination $PSScriptRoot -Force
-	$Error.Remove($Error[-1])
+	$Global:Error.Remove($Error[-1])
 }
 Finally
 {
@@ -78,5 +77,16 @@ ForEach ($Name In $ContentJSON.PSObject.Properties.Name)
 	}
 }
 
-# Call Optimize-Offline by passing the JSON configuration.
+# Import the Optimize-Offline module and call it by passing the JSON configuration.
+Try
+{
+	Import-Module (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1) -Force -WarningAction Ignore -ErrorAction Stop
+}
+Catch
+{
+	Write-Warning ('Failed to import the Optimize-Offline module: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1))
+	Start-Sleep 3
+	Exit
+}
+
 Optimize-Offline @ConfigParams
