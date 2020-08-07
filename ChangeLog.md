@@ -1,5 +1,17 @@
 # ChangeLog #
 
+## Build 4.0.1.3 (08-07-2020) ##
+
+- Added the clean-up of any directories for Windows Apps that were deprovisioned.
+- Added additional disabling of Microsoft Edge telemetry and tracking.
+- Updated the custom App Associations .xml that gets imported.
+- Updated the 'Additional Tweaks.reg' file in the 'Content\Additional\RegistryTemplates' directory.
+- Updated the Windows Store bundle packages.
+- Added two scripts in the 'Content\Additional\Setup' directory named 'Remove-OneDrive.ps1' and 'Set-Additional.ps1' that can be run during system runtime (when the image is in an online state). These two scripts are copied to the image's 'Windows\Setup\Scripts' directory.
+- Remove-OneDrive.ps1 will completely and thoroughly remove Microsoft OneDrive.
+- Set-Additional.ps1 uses the included ScheduledTasks.json and Services.json files to disable any scheduled tasks or system services that have 'SetState' value to 'Disable.' Additionally runtime-specific privacy and system settings are also applied.
+**NOTE: Make sure you evalulate the contents of the Set-Additional.ps1 script, and its associated ScheduledTasks and Services .json files, before running the script. Though there are no ill effects of running it as-is, and before disabling any scheduled tasks or services it makes backup files of their default states, make sure no scheduled tasks or system services are set to be disabled that will be required by the system. Lastly, if you do not intend to use either of these scripts, you can remove them from the 'Content\Additional\Setup' directory.**
+
 ## Build 4.0.1.2 (07-02-2020) ##
 
 - The Microsoft Edge Chromium browser can now be integrated into Windows 10 builds 18362+
@@ -30,10 +42,3 @@
 - Updated registry values applied to the image registry hives.
 - Updated the Get-OfflineHives function.
 - Updated the Windows Store bundle packages.
-
-## Build 4.0.0.9 (04-15-2020) ##
-
-- Added the Developer Mode package for Windows 10 build 19041.
-- Originally multiple package summary logs would be created and overwritten. This has been fixed.
-- Removed a registry setting that applied a telemetry registry value to the WOW6432Node offline hive causing some UAC functionality issues.
-- Corrected a typo in the external help files.
