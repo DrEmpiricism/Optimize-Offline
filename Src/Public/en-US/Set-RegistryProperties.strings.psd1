@@ -3,6 +3,7 @@ DisableCortana                      = Disabling Cortana and Search Bar Web Conne
 DisableTelemetry                    = Disabling System Telemetry, Logging, Data Collecting and Advertisements.
 DisableTracking                     = Disabling Windows Tracking.
 DisableLocation                     = Disabling System Location Sensors.
+DisableDefaultBrowserPrompt         = Disabling the Prompt to make Microsoft Edge the default browser.
 DisablePassReveal                   = Disabling the Password Reveal Button.
 DisableSharedExperiences            = Disabling Cross-Device Sharing and Shared Experiences.
 DisableWiFiSense                    = Disabling WiFi Sense.
