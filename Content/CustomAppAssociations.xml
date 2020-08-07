@@ -9,6 +9,7 @@
   <Association Identifier=".adt" ProgId="WMP11.AssocFile.ADTS" ApplicationName="Windows Media Player" />
   <Association Identifier=".adts" ProgId="WMP11.AssocFile.ADTS" ApplicationName="Windows Media Player" />
   <Association Identifier=".bmp" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".cdxml" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
   <Association Identifier=".CFG" ProgId="Applications\notepad.exe" ApplicationName="Notepad" />
   <Association Identifier=".cr2" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
   <Association Identifier=".dib" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
