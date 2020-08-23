@@ -14,31 +14,37 @@ Function Set-Additional
     Process
     {
         # Set the PowerShell Execution Policy for the CurrentUser and LocalMachine to RemoteSigned. This is more lenient than the default setting (Restricted) but more secure than Bypass and Unrestricted.
-        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Confirm:$false
-        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Confirm:$false
+        If ((Get-ExecutionPolicy -Scope CurrentUser) -ne 'RemoteSigned') { Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Confirm:$false }
+        If ((Get-ExecutionPolicy -Scope LocalMachine) -ne 'RemoteSigned') { Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Confirm:$false }
 
         # Get the current build number for the Windows 10 version.
         $Build = Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber
 
-        # Before stopping and disabling any Scheduled Task or Service, export their default values as a JSON file. This way we can revert any change back to default if required.
-        Get-ScheduledTask | Select-Object -Property TaskName, Description, TaskPath, State | ForEach-Object -Process { [PSCustomObject] @{ TaskName = $PSItem.TaskName; Description = $PSItem.Description; TaskPath = $PSItem.TaskPath; State = $PSItem.State; SetState = 'Disabled' } } | ConvertTo-Json | Out-File -FilePath .\DefaultScheduledTasks.json
-        Get-Service | Select-Object -Property Name, DisplayName, ServiceName, Status, StartType | Foreach-Object -Process { [PSCustomObject]@{ Name = $PSItem.Name; Description = $PSItem.DisplayName; ServiceName = $PSItem.ServiceName; Status = $PSItem.Status; StartType = $PSItem.StartType; SetStatus = 'Disabled' } } | ConvertTo-Json | Out-File -FilePath .\DefaultServices.json
-
-        # If the ScheduledTasks.json exists, use it to disable any Scheduled Tasks with a SetState value of 'Disabled'.
         If (Test-Path -Path .\ScheduledTasks.json)
         {
             $ScheduledTasksJson = Get-Content -Path .\ScheduledTasks.json | ConvertFrom-Json
+
+            # Before stopping and disabling any Scheduled Task, export their default values as a JSON file. This way we can revert any change back to default if required.
+            Get-ScheduledTask | Select-Object -Property TaskName, Description, TaskPath, State | ForEach-Object -Process { [PSCustomObject] @{ TaskName = $PSItem.TaskName; Description = $PSItem.Description; TaskPath = $PSItem.TaskPath; State = $PSItem.State; SetState = 'Disabled' } } | ConvertTo-Json | Out-File -FilePath .\DefaultScheduledTasks.json
+
+            # Disable any Scheduled Tasks that have a SetState value of 'Disabled' in the ScheduledTasks.json file.
             Get-ScheduledTask | Where-Object { $PSItem.TaskName -in $ScheduledTasksJson.TaskName -and $ScheduledTasksJson.SetState -eq 'Disabled' -and $PSItem.State -ne 'Disabled' } | Disable-ScheduledTask | Out-Null
         }
 
         If (Test-Path -Path .\Services.json)
         {
             $ServicesJson = Get-Content -Path .\Services.json | ConvertFrom-Json
+
+            # Before stopping and disabling any Service, export their default values as a JSON file. This way we can revert any change back to default if required.
+            Get-Service | Select-Object -Property Name, DisplayName, ServiceName, Status, StartType | Foreach-Object -Process { [PSCustomObject]@{ Name = $PSItem.Name; Description = $PSItem.DisplayName; ServiceName = $PSItem.ServiceName; Status = $PSItem.Status; StartType = $PSItem.StartType; SetStatus = 'Disabled' } } | ConvertTo-Json | Out-File -FilePath .\DefaultServices.json
+
+            # Disable any Services that have a SetState value of 'Disabled' in the Services.json file.
             Get-Service | Where-Object { $PSItem.Name -in $ServicesJson.Name -and $ServicesJson.SetStatus -eq 'Disabled' -and $PSItem.StartType -ne 'Disabled' } | Stop-Service -Force -NoWait -PassThru | Set-Service -StartupType Disabled | Out-Null
+
+            # If the Delivery Optimization service has a SetState value of 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
+            # https://getadmx.com/?Category=Windows_10_2016&Policy=Microsoft.Policies.DeliveryOptimization::DownloadMode
             If (($ServicesJson | Where-Object { $PSItem.Name -eq 'DoSvc' -and $PSItem.SetStatus -eq 'Disabled' }) -and (Get-Service -Name DoSvc).Status -eq 'Stopped')
             {
-                # If the Delivery Optimization service has been set to 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
-                # https://getadmx.com/?Category=Windows_10_2016&Policy=Microsoft.Policies.DeliveryOptimization::DownloadMode
                 Set-DODownloadMode -DownloadMode 100
             }
         }
@@ -134,15 +140,15 @@ Function Set-Additional
 
         If ((Get-ItemPropertyValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" -Name DrvType) -eq 'SSD')
         {
-            # Enable TRIM support for NTFS and ReFS file systems.
+            # Enable TRIM support for NTFS and ReFS file systems for SSD drives.
             Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY NTFS 0') | Out-Null
             $QueryReFS = Invoke-Expression -Command ('FSUTIL BEHAVIOR QUERY DISABLEDELETENOTIFY') | Select-String -Pattern ReFS
             If ($QueryReFS) { Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY REFS 0') | Out-Null }
 
-            # Disable Swapfile.sys which can improve SSD performance
+            # Disable Swapfile.sys which can improve SSD performance.
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name SwapfileControl -Value 0 -Force
 
-            # Disable Prefetch and Superfetch (optimal for SSD drives)
+            # Disable Prefetch and Superfetch (optimal for SSD drives).
             If (!(Test-Path -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters")) { New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -ItemType Directory -Force | Out-Null }
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name EnablePrefetcher -Value 0 -Force
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name EnableSuperfetch -Value 0 -Force
