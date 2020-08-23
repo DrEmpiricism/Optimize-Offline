@@ -33,6 +33,7 @@ Function Get-ImageData
                     Description      = $ImageInfo.ImageDescription
                     Size             = '{0:N2} GB' -f ($ImageInfo.ImageSize / 1GB)
                     Edition          = $ImageInfo.EditionID
+                    VersionTable     = [Ordered]@{ Major = $ImageInfo.MajorVersion; Minor = $ImageInfo.MinorVersion; Build = $ImageInfo.Build; SPBuild = $ImageInfo.SPBuild }
                     Version          = $ImageInfo.Version
                     Build            = $ImageInfo.Build
                     Release          = $null
@@ -42,7 +43,7 @@ Function Get-ImageData
                     InstallationType = $ImageInfo.InstallationType
                     Created          = $ImageInfo.CreatedTime
                 }
-                If ($ImageFile.BaseName -ne 'install') { @('Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
+                If ($ImageFile.BaseName -ne 'install') { @('VersionTable', 'Release', 'CodeName', 'Created') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) } }
                 $ImageData | Export-DataFile -File $ImageDataFile -ErrorAction:$ErrorActionPreference
                 Break
             }
@@ -54,15 +55,21 @@ Function Get-ImageData
                 {
                     $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
                     $ImageData.Build = $CurrentVersion.CurrentBuildNumber
+                    If ($CurrentVersion.BuildBranch.ToUpper().Split('_')[0] -eq '19H1') { $ImageData.CodeName = '19H2' }
                 }
-                If ($CurrentVersion.CurrentBuildNumber -eq '18363' -and $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] -eq '19H1') { $ImageData.CodeName = '19H2' }
+                ElseIf ($ImageData.Build -eq '19041' -and $CurrentVersion.CurrentBuildNumber -eq '19042')
+                {
+                    $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
+                    $ImageData.Build = $CurrentVersion.CurrentBuildNumber
+                    If ($CurrentVersion.DisplayVersion -eq '20H2') { $ImageData.CodeName = '20H2' }
+                }
                 Else
                 {
-                    If ($ImageData.Build -eq '19041' -and $null -eq $ImageData.CodeName) { $ImageData.CodeName = '20H1' }
+                    If ($ImageData.Build -eq '19041') { $ImageData.CodeName = '20H1' }
                     Else { $ImageData.CodeName = $CurrentVersion.BuildBranch.ToUpper().Split('_')[0] }
                 }
                 $ImageData.Release = $CurrentVersion.ReleaseId
-                @('Path', 'Index') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
+                @('Path', 'Index', 'VersionTable') | ForEach-Object -Process { $ImageData.PSObject.Properties.Remove($PSItem) }
                 $ImageData.PSObject.TypeNames.Insert(0, 'System.IO.Optimized.Wim')
                 $ImageData | Add-Member -MemberType NoteProperty -Name Optimized -Value (Get-Date -Format 'G')
                 $ImageData | Export-DataFile -File InstallInfo -ErrorAction:$ErrorActionPreference

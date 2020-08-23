@@ -1,3 +1,5 @@
 If adding additional user content, place any setup files, scripts or content to be added to the image here.
 
 Any setup content, including answer files, scripts and executables, should ALWAYS be removed immediately after they are run by the installing Administrator unless they are designed for specific tasks when a new user account is created or logs in. Not doing so can allow other users with access to the system to run this content or extract potential sensitive data. This can be automated by adding their automatic removal to the SetupComplete.cmd that is supplied by default.
+
+The Set-Additional and Remove-OneDrive PowerShell scripts can be run by executing their associated Set-Additional.cmd and Remove-OneDrive.cmd scripts by right-clicking them and selecting 'Run as Administrator.' Prior to running the Set-Additional script, check both the Services and ScheduledTasks JSON files to make sure no system services or scheduled tasks are set to be disabled that will be required by the running system.

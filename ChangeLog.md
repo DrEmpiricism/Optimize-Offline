@@ -1,5 +1,14 @@
 # ChangeLog #
 
+## Build 4.0.1.4 (08-23-2020) ##
+
+- Added support for Windows 10 build 19042 (20H2).
+- Added the new 20H2 Start Menu Experience to the applied registry settings.
+- Corrected an issue for Windows 10 builds 19041+ where it occasionally would be returned as an unsupported image build.
+- Updated the Windows Store bundle packages.
+- Updated the optional Set-Additional runtime script.
+- Multiple code improvements across the framework.
+
 ## Build 4.0.1.3 (08-07-2020) ##
 
 - Added the clean-up of any directories for Windows Apps that were deprovisioned.
@@ -35,11 +44,3 @@
 
 - Corrected an issue where some users had an error when integrating Microsoft DaRT 10.
 - Corrected an issue for Windows 10 build 19041 where Windows Store Apps would be unresponsive in a runtime (online) environment if any Windows Store Apps were deprovisioned in the offline optimization process.
-
-## Build 4.0.0.10 (04-25-2020) ##
-
-- Added additional subscribed content that will be disabled when the ContentDeliveryManager system application is removed.
-- Added the disabling of the Get More out of Windows notification that displays during OOBE and during reboots for builds 18362+.
-- Updated registry values applied to the image registry hives.
-- Updated the Get-OfflineHives function.
-- Updated the Windows Store bundle packages.

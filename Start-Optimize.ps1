@@ -78,15 +78,32 @@ ForEach ($Name In $ContentJSON.PSObject.Properties.Name)
 }
 
 # Import the Optimize-Offline module and call it by passing the JSON configuration.
-Try
+If ($PSVersionTable.PSVersion.Major -gt 5)
 {
-	Import-Module (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1) -Force -WarningAction Ignore -ErrorAction Stop
+	Try
+	{
+		Import-Module Dism -SkipEditionCheck -Force -WarningAction Ignore -ErrorAction Stop
+		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1) -SkipEditionCheck -Force -WarningAction Ignore -ErrorAction Stop
+	}
+	Catch
+	{
+		Write-Warning ('Failed to import the Optimize-Offline module: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1))
+		Start-Sleep 3
+		Exit
+	}
 }
-Catch
+Else
 {
-	Write-Warning ('Failed to import the Optimize-Offline module: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1))
-	Start-Sleep 3
-	Exit
+	Try
+	{
+		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1) -Force -WarningAction Ignore -ErrorAction Stop
+	}
+	Catch
+	{
+		Write-Warning ('Failed to import the Optimize-Offline module: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1))
+		Start-Sleep 3
+		Exit
+	}
 }
 
 Optimize-Offline @ConfigParams
