@@ -31,6 +31,7 @@ EnableCombineSmallIcons             = Enabling TaskBar Icon Combining with Small
 DisableOpenFilePrompt               = Disabling the Open File Prompt.
 EnableClassicPersonalizationPanel   = Enabling the Classic Personalization Panel.
 EnableFloatingImmersiveControlPanel = Enabling the Floating Immersive Control Panel.
+EnableNewStartMenu                  = Enabling the 20H2 New Start Menu.
 EnableThisPCDesktop                 = Enabling This PC Desktop Icon.
 RemoveEditPaintPrintContextMenu     = Removing Edit with Paint 3D and 3D Print from the Context Menu.
 RestoreWindowsPhotoViewer           = Restoring Windows Photo Viewer.
