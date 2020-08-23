@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.179
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.180
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.3
-	 Last updated:	08/07/2020
+	 Version:       4.0.1.4
+	 Last updated:	08/23/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -180,7 +180,7 @@ Function Optimize-Offline
 			Break
 		}
 
-		If (!$InstallInfo.Version.StartsWith(10))
+		If ($InstallInfo.VersionTable.Major -ne 10)
 		{
 			$PSCmdlet.WriteWarning($OptimizeData.UnsupportedImageVersion -f $InstallInfo.Version)
 			$TempDirectory | Purge
@@ -1028,7 +1028,7 @@ Function Optimize-Offline
 					Stop-Optimize
 				}
 			}
-			ElseIf (!$DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Chromium-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4559309*))
+			ElseIf (!$DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Chromium-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4559309*) -and !(Get-ChildItem -Path (GetPath -Path $InstallMount -Child "Windows\WinSxS\*firsttimeinstaller*\MicrosoftEdgeStandaloneInstaller.exe") -File -Force -ErrorAction SilentlyContinue))
 			{
 				Log $OptimizeData.IntegratingMicrosoftEdgeChromium
 				If (!$RemovedSystemApps.'Microsoft.MicrosoftEdge')
@@ -1749,7 +1749,11 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		}
 
 		If (Get-ChildItem -Path $WorkFolder -Filter boot.wim) { Get-ChildItem -Path $WorkFolder -Filter boot.wim | Move-Item -Destination $BootWim -Force }
-		If (Get-ChildItem -Path $WorkFolder -Filter winre.wim) { Get-ChildItem -Path $WorkFolder -Filter winre.wim | Move-Item -Destination $WinREPath -Force }
+		If (Get-ChildItem -Path $WorkFolder -Filter winre.wim)
+		{
+			$WinREPath = Get-ChildItem -Path $WorkFolder -Filter winre.wim | Move-Item -Destination $WinREPath -Force -PassThru
+			(Get-Item -Path $WinREPath -Force).Attributes = 0x2006
+		}
 
 		Try
 		{
