@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.180
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.181
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.4
-	 Last updated:	08/23/2020
+	 Version:       4.0.1.5
+	 Last updated:	09/17/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -123,18 +123,14 @@ Function Optimize-Offline
 					$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
 					Copy-Item -Path $Item.FullName -Destination $ISOExport
 				}
-				If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
+				Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install.* -File | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
+				If ($DaRT -or $Additional)
 				{
-					Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Include install.*, boot.wim -File -Recurse | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-					$BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select-Object -ExpandProperty FullName
-					If ($BootWim) { $DynamicParams.BootImage = $true }
+					If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
+					{
+						Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
+					}
 				}
-				Else
-				{
-					Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install.* -File | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-				}
-				$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
-				If ([IO.Path]::GetExtension($InstallWim) -eq '.ESD') { $DynamicParams.ESD = $true }
 				Do
 				{
 					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
@@ -146,13 +142,30 @@ Function Optimize-Offline
 			{
 				$Host.UI.RawUI.WindowTitle = ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
 				Write-Host ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
-				If ($SourcePath.Extension -eq '.ESD') { $DynamicParams.ESD = $true }
 				Get-ChildItem -Path $SourcePath.FullName -Filter $SourcePath.Name | Copy-Item -Destination $ImageFolder -PassThru | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-				$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
 				If ($ISO) { Remove-Variable -Name ISO }
 				Break
 			}
 		}
+
+		If (Get-ChildItem -Path $ImageFolder -Filter install.* -File)
+		{
+			$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
+			If ([IO.Path]::GetExtension($InstallWim) -eq '.ESD') { $DynamicParams.ESD = $true }
+		}
+		Else
+		{
+			$PSCmdlet.WriteWarning($OptimizeData.FailedToReturnInstallImage -f $ImageFolder)
+			$TempDirectory | Purge
+			Break
+		}
+
+		If (Get-ChildItem -Path $ImageFolder -Filter boot.* -File)
+		{
+			$BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select-Object -ExpandProperty FullName
+			$DynamicParams.BootImage = $true
+		}
+
 		#endregion Media Export
 
 		#region Image and Metadata Validation
@@ -308,13 +321,16 @@ Function Optimize-Offline
 			Stop-Optimize
 		}
 
-		If ($DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
+		If ($DaRT -or $Additional)
 		{
-			$WinREPath = GetPath -Path $InstallMount -Child 'Windows\System32\Recovery\winre.wim'
-			If (Test-Path -Path $WinREPath)
+			If ($DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
 			{
-				$RecoveryWim = Move-Item -Path $WinREPath -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
-				If ($RecoveryWim) { $DynamicParams.RecoveryImage = $true }
+				$WinREPath = GetPath -Path $InstallMount -Child 'Windows\System32\Recovery\winre.wim'
+				If (Test-Path -Path $WinREPath)
+				{
+					$RecoveryWim = Move-Item -Path $WinREPath -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
+					$DynamicParams.RecoveryImage = $true
+				}
 			}
 		}
 

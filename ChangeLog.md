@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 4.0.1.5 (09-17-2020) ##
+
+- Fixed an error where the metadata for the image would not be returned if both the -DaRT and -Additional parameters were omitted.
+- Updated the Win32Calc integration image package to correct a bug where selecting 'Unit Conversion' from its drop-down list would cause the Win32Calc.exe to close immediately.
+- Updated the Resource Function that returns the metadata for any images being optimized.
+- Additional Optimize-Offline code improvements.
+
 ## Build 4.0.1.4 (08-23-2020) ##
 
 - Added support for Windows 10 build 19042 (20H2).
@@ -39,8 +46,3 @@
 - Added a requirement check for PowerShell version 5.
 - Updated the registry settings that restore the default Windows Photo Viewer.
 - Updated the Windows Store bundle packages.
-
-## Build 4.0.1.0 (05-19-2020) ##
-
-- Corrected an issue where some users had an error when integrating Microsoft DaRT 10.
-- Corrected an issue for Windows 10 build 19041 where Windows Store Apps would be unresponsive in a runtime (online) environment if any Windows Store Apps were deprovisioned in the offline optimization process.

@@ -4,6 +4,7 @@ FailedToCreateWorkingFileStructure      = Failed to create the working file stru
 InvalidWindowsInstallMedia              = "{0}" does not contain valid Windows Installation media.
 ExportingMedia                          = Exporting media from "{0}"
 CopyingImage                            = Copying {0} from "{1}"
+FailedToReturnInstallImage              = Failed to return the Install Image from "{0}"
 SelectWindowsEdition                    = Select the Windows 10 Edition to Optimize.
 FailedToRetrieveImageMetadata           = Failed to retrieve the necessary image metadata from the {0}
 UnsupportedImageVersion                 = Unsupported Image Version: [{0}]
