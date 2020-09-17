@@ -33,7 +33,7 @@ Function Get-ImageData
                     Description      = $ImageInfo.ImageDescription
                     Size             = '{0:N2} GB' -f ($ImageInfo.ImageSize / 1GB)
                     Edition          = $ImageInfo.EditionID
-                    VersionTable     = [Ordered]@{ Major = $ImageInfo.MajorVersion; Minor = $ImageInfo.MinorVersion; Build = $ImageInfo.Build; SPBuild = $ImageInfo.SPBuild }
+                    VersionTable     = [PSCustomObject][Ordered]@{ Major = $ImageInfo.MajorVersion; Minor = $ImageInfo.MinorVersion; Build = $ImageInfo.Build; SPBuild = $ImageInfo.SPBuild }
                     Version          = $ImageInfo.Version
                     Build            = $ImageInfo.Build
                     Release          = $null
@@ -61,7 +61,7 @@ Function Get-ImageData
                 {
                     $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
                     $ImageData.Build = $CurrentVersion.CurrentBuildNumber
-                    If ($CurrentVersion.DisplayVersion -eq '20H2') { $ImageData.CodeName = '20H2' }
+                    If ($CurrentVersion.DisplayVersion -eq '20H2') { $ImageData.CodeName = $CurrentVersion.DisplayVersion }
                 }
                 Else
                 {
