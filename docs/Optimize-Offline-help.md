@@ -19,7 +19,7 @@ Optimize-Offline [-SourcePath] <FileInfo> [[-WindowsApps] <String>] [-SystemApps
 ```
 
 ## DESCRIPTION
-The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments.
+The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/SWM/ESD) files to customize runtime environments.
 
 Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
 
@@ -46,7 +46,7 @@ This command starts optimizing an image by manually passing parameters to the mo
 ## PARAMETERS
 
 ### -SourcePath
-The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.
+The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.
 
 ```yaml
 Type: FileInfo

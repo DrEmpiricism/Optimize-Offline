@@ -6,11 +6,11 @@
       <command:verb>Optimize</command:verb>
       <command:noun>Offline</command:noun>
       <maml:description>
-        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM and ESD files.</maml:para>
+        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM, SWM and ESD files.</maml:para>
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
+      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/SWM/ESD) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -18,7 +18,7 @@
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
           <maml:name>SourcePath</maml:name>
           <maml:Description>
-            <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
+            <maml:para>The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">FileInfo</command:parameterValue>
           <dev:type>

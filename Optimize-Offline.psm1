@@ -8,8 +8,8 @@
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.5
-	 Last updated:	09/17/2020
+	 Version:       4.0.1.6
+	 Last updated:	10/06/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -25,9 +25,9 @@ Function Optimize-Offline
 	(
 		[Parameter(Mandatory = $true,
 			ValueFromPipeline = $true,
-			HelpMessage = 'The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.')]
+			HelpMessage = 'The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.')]
 		[ValidateScript( {
-				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.ESD') { $true }
+				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.SWM' -or $PSItem.Extension -eq '.ESD') { $true }
 				Else { Throw ('Invalid source path: "{0}"' -f $PSItem.FullName) }
 			})]
 		[IO.FileInfo]$SourcePath,
@@ -103,7 +103,7 @@ Function Optimize-Offline
 			{
 				$ISOMount = (Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
 				[Void](Get-PSDrive)
-				If (!(Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install.* -File))
+				If (!(Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install* -File))
 				{
 					$PSCmdlet.WriteWarning($OptimizeData.InvalidWindowsInstallMedia -f $SourcePath.Name)
 					Do
@@ -123,35 +123,65 @@ Function Optimize-Offline
 					$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
 					Copy-Item -Path $Item.FullName -Destination $ISOExport
 				}
-				Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install.* -File | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-				If ($DaRT -or $Additional)
-				{
-					If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
-					{
-						Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
-					}
-				}
 				Do
 				{
 					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
 				}
 				While ((Get-DiskImage -ImagePath $SourcePath.FullName).Attached -eq $true)
+				If ((Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install* -File | Measure-Object).Count -gt 1 -and (Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install* -File | Select-Object -First 1).Extension -eq '.SWM')
+				{
+					Try
+					{
+						$InstallWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install* -File | Select-Object -First 1 | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName
+						$SwmFiles = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName
+					}
+					Catch [Management.Automation.ItemNotFoundException] { Break }
+				}
+				Else
+				{
+					Try { $InstallWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter install.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
+					Catch [Management.Automation.ItemNotFoundException] { Break }
+				}
+				If ($DaRT -or $Additional.ContainsValue($true))
+				{
+					If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
+					{
+						Try { $BootWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
+						Catch [Management.Automation.ItemNotFoundException] { Break }
+					}
+				}
 				Break
 			}
 			Default
 			{
 				$Host.UI.RawUI.WindowTitle = ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName)
 				Write-Host ($OptimizeData.CopyingImage -f $SourcePath.Extension.TrimStart('.').ToUpper(), $SourcePath.DirectoryName) -ForegroundColor Cyan
-				Get-ChildItem -Path $SourcePath.FullName -Filter $SourcePath.Name | Copy-Item -Destination $ImageFolder -PassThru | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false
+				Try { $InstallWim = Get-ChildItem -Path $SourcePath.FullName -Filter $SourcePath.Name | Copy-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Rename-Item -NewName ('install' + $SourcePath.Extension) -PassThru | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
+				Catch [Management.Automation.ItemNotFoundException] { Break }
+				If ($SourcePath.Extension -eq '.SWM')
+				{
+					Try { $SwmFiles = Get-ChildItem -Path $SourcePath.DirectoryName -Filter "$($SourcePath.BaseName)*$($SourcePath.Extension)" -Exclude $SourcePath.Name -Recurse | Where-Object -Property Name -Like "$($SourcePath.BaseName)*.swm" | Copy-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru }
+					Catch [Management.Automation.ItemNotFoundException] { Break }
+					$I = 2
+					$SwmFiles = Get-ChildItem -Path $ImageFolder -Include $SwmFiles.PSChildName -File -Recurse | ForEach-Object -Process { Rename-Item -Path $PSItem -NewName ('install{0:D1}.swm' -f $I++) -PassThru }
+				}
 				If ($ISO) { Remove-Variable -Name ISO }
 				Break
 			}
 		}
 
-		If (Get-ChildItem -Path $ImageFolder -Filter install.* -File)
+		If ([IO.File]::Exists($InstallWim))
 		{
-			$InstallWim = Get-ChildItem -Path $ImageFolder -Filter install.* | Select-Object -ExpandProperty FullName
-			If ([IO.Path]::GetExtension($InstallWim) -eq '.ESD') { $DynamicParams.ESD = $true }
+			Switch ([IO.Path]::GetExtension($InstallWim))
+			{
+				'.ESD' { $DynamicParams.ESD = $true; Break }
+				'.SWM' { $DynamicParams.SWM = $true; Break }
+				Default { $DynamicParams.WIM = $true; Break }
+			}
+			If ($BootWim)
+			{
+				If ([IO.File]::Exists($BootWim)) { $DynamicParams.BootImage = $true }
+			}
 		}
 		Else
 		{
@@ -159,13 +189,6 @@ Function Optimize-Offline
 			$TempDirectory | Purge
 			Break
 		}
-
-		If (Get-ChildItem -Path $ImageFolder -Filter boot.* -File)
-		{
-			$BootWim = Get-ChildItem -Path $ImageFolder -Filter boot.wim | Select-Object -ExpandProperty FullName
-			$DynamicParams.BootImage = $true
-		}
-
 		#endregion Media Export
 
 		#region Image and Metadata Validation
@@ -228,7 +251,7 @@ Function Optimize-Offline
 				If ($MicrosoftEdge.IsPresent -and $InstallInfo.Build -ge '18362')
 				{
 					If ($InstallInfo.Build -eq '18362') { $EdgeChromiumUBR = 833 }
-					Else { $EdgeChromiumUBR = 261 }
+					Else { $EdgeChromiumUBR = 479 }
 				}
 				Else { $MicrosoftEdge = ![Switch]::Present }
 			}
@@ -251,25 +274,26 @@ Function Optimize-Offline
 		#endregion Image and Metadata Validation
 
 		#region Image Preparation
-		If ($DynamicParams.ESD)
+		If (!$DynamicParams.WIM)
 		{
+			$ExportToWimParams = @{
+				SourceImagePath      = $InstallWim
+				SourceIndex          = $ImageIndex
+				DestinationImagePath = '{0}\install.wim' -f $WorkFolder
+				CheckIntegrity       = $true
+				ScratchDirectory     = $ScratchFolder
+				LogPath              = $DISMLog
+				LogLevel             = 1
+				ErrorAction          = 'Stop'
+			}
+			If ($DynamicParams.ESD) { $ExportToWimParams.CompressionType = 'Maximum' }
+			Else { $ExportToWimParams.SplitImageFilePattern = ('{0}\install*.swm' -f $ImageFolder) }
 			Try
 			{
-				$ExportToWimParams = @{
-					SourceImagePath      = $InstallWim
-					SourceIndex          = $ImageIndex
-					DestinationImagePath = '{0}\install.wim' -f $WorkFolder
-					CompressionType      = 'Maximum'
-					CheckIntegrity       = $true
-					ScratchDirectory     = $ScratchFolder
-					LogPath              = $DISMLog
-					LogLevel             = 1
-					ErrorAction          = 'Stop'
-				}
 				$Host.UI.RawUI.WindowTitle = ($OptimizeData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf))
 				Write-Host ($OptimizeData.ExportingInstallToWim -f (GetPath -Path $InstallWim -Split Leaf), (GetPath -Path ([IO.Path]::ChangeExtension($InstallWim, '.wim')) -Split Leaf)) -ForegroundColor Cyan
 				[Void](Export-WindowsImage @ExportToWimParams)
-				If ($ImageIndex -ne 1) { $ImageIndex = 1 }
+				$ImageIndex = 1
 			}
 			Catch
 			{
@@ -280,8 +304,8 @@ Function Optimize-Offline
 			Finally
 			{
 				$InstallWim | Purge
+				If ($DynamicParams.SWM) { $SwmFiles | Purge }
 			}
-
 			Try
 			{
 				$InstallWim = Get-ChildItem -Path $WorkFolder -Filter install.wim | Move-Item -Destination $ImageFolder -Force -PassThru | Select-Object -ExpandProperty FullName
@@ -294,6 +318,8 @@ Function Optimize-Offline
 				Break
 			}
 		}
+
+		If ($Global:Error.Count -ne 0) { $Global:Error.Clear() }
 
 		Try
 		{
@@ -313,7 +339,9 @@ Function Optimize-Offline
 			}
 			Log ($OptimizeData.MountingImage -f $InstallInfo.Name)
 			[Void](Mount-WindowsImage @MountInstallParams)
-			$DynamicParams.InstallImage = $true
+			RegHives -Load
+			Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" | Export-DataFile -File CurrentVersion
+			RegHives -Unload
 		}
 		Catch
 		{
@@ -321,7 +349,7 @@ Function Optimize-Offline
 			Stop-Optimize
 		}
 
-		If ($DaRT -or $Additional)
+		If ($DaRT -or $Additional.ContainsValue($true))
 		{
 			If ($DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
 			{
@@ -332,13 +360,6 @@ Function Optimize-Offline
 					$DynamicParams.RecoveryImage = $true
 				}
 			}
-		}
-
-		If ($DynamicParams.InstallImage)
-		{
-			RegHives -Load
-			Get-ItemProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" | Export-DataFile -File CurrentVersion
-			RegHives -Unload
 		}
 
 		If ($DynamicParams.BootImage)
@@ -1108,12 +1129,12 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\Addons" -Name "FlashPlayerEnabled" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\BooksLibrary" -Name "EnableExtendedBooksTelemetry" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\BooksLibrary" -Name "EnableExtendedBooksTelemetry" -Value 0 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "ShowSearchSuggestionsGlobal" -Value 0 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "IE10TourShown" -Value 1 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "DisallowDefaultBrowserPrompt" -Value 1 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\FlipAhead" -Name "FPEnabled" -Value 0 -Type DWord
-			RegKey -Path "HKCU:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\FirstRun" -Name "LastFirstRunVersionDelivered" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "DoNotTrack" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "ShowSearchSuggestionsGlobal" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "IE10TourShown" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\Main" -Name "DisallowDefaultBrowserPrompt" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\FlipAhead" -Name "FPEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\FirstRun" -Name "LastFirstRunVersionDelivered" -Value 1 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Storage\microsoft.microsoftedge_8wekyb3d8bbwe\MicrosoftEdge\ServiceUI" -Name "EnableCortana" -Value 0 -Type DWord
 			If ($DynamicParams.LTSC -and $DynamicParams.SecHealthUI)
 			{

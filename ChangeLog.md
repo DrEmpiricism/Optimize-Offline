@@ -1,5 +1,15 @@
 # ChangeLog #
 
+## Build 4.0.1.6 (10-06-2020)
+
+- Added support for the SWM (split Windows image) file type.
+- If the source image is a SWM file, only the first SWM file needs passed to Optimize-Offline. It will recursively copy all additional SWM files. Likewise, the SWM files do not need to be named 'install.swm,' etc. Do note that in order to use a SWM file as the source image, all of the SWM files must be in their own directory. For example, if there are three SWM files named 'test.swm,' 'test2.swm,' 'test3.swm,' then all three of these SWM files must be in their own directory in order for Optimize-Offline to recognize them as split images from the same WIM file.
+- Corrected some registry vales that contained an invalid hive mount point.
+- Updated the Microsoft Edge Chromium package for Windows 10 builds 19041+.
+- Updated the Windows Store bundle packages.
+- The MAML XML external help file and manifest data have been updated.
+- Multiple code improvements across the framework.
+
 ## Build 4.0.1.5 (09-17-2020) ##
 
 - Fixed an error where the metadata for the image would not be returned if both the -DaRT and -Additional parameters were omitted.
@@ -39,10 +49,3 @@
 - The Start-Optimize call script and Resource Functions have been updated.
 - The MAML XML external help file and manifest data have been updated.
 - There have been additional offline process code changes to reflect the aforementioned updates.
-
-## Build 4.0.1.1 (06-12-2020) ##
-
-- Updated multiple Resource Functions.
-- Added a requirement check for PowerShell version 5.
-- Updated the registry settings that restore the default Windows Photo Viewer.
-- Updated the Windows Store bundle packages.
