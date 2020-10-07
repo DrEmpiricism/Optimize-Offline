@@ -10,11 +10,7 @@ Function New-ISOMedia
 
     Begin
     {
-        $CompilerParams = New-Object -TypeName CodeDom.Compiler.CompilerParameters -Property @{
-            CompilerOptions       = '/unsafe'
-            WarningLevel          = 4
-            TreatWarningsAsErrors = $true
-        } -ErrorAction:$ErrorActionPreference
+        $CompilerParams = New-Object -TypeName CodeDom.Compiler.CompilerParameters -Property @{CompilerOptions = '/unsafe'; WarningLevel = 4; TreatWarningsAsErrors = $true } -ErrorAction:$ErrorActionPreference
         If (!('ISOWriter' -as [Type]))
         {
             Add-Type @'
