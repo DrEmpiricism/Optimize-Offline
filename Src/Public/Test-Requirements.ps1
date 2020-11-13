@@ -1,7 +1,7 @@
 Function Test-Requirements
 {
     If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { Write-Warning ('Elevation is required to process optimizations. Please relaunch {0} as an administrator.' -f $OptimizeOffline.BaseName); Break }
-    If ($PSVersionTable.PSVersion.Major -ne 5) { Write-Warning ('{0} does not support PowerShell version {1}' -f $OptimizeOffline.BaseName, $PSVersionTable.PSVersion.ToString()); Break }
+    If ($PSVersionTable.PSVersion.Major -lt 5) { Write-Warning ('{0} does not support PowerShell version {1}' -f $OptimizeOffline.BaseName, $PSVersionTable.PSVersion.ToString()); Break }
     $OSCaption = (Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty Caption)
     $HostEnvironment = @('Microsoft Windows 10', 'Microsoft Windows Server 2016', 'Microsoft Windows Server 2019')
     If ($OSCaption -notlike "$($HostEnvironment[0])*" -and $OSCaption -notlike "$($HostEnvironment[1])*" -and $OSCaption -notlike "$($HostEnvironment[2])*") { Write-Warning ('{0} requires one of the following host environments: {1}.' -f $OptimizeOffline.BaseName, ($HostEnvironment -join ', ')); Break }
