@@ -83,6 +83,15 @@ If ($PSVersionTable.PSVersion.Major -gt 5)
 	Try
 	{
 		Import-Module Dism -SkipEditionCheck -Force -WarningAction Ignore -ErrorAction Stop
+	}
+	Catch
+	{
+		Write-Warning 'Failed to import the required Dism module.'
+		Start-Sleep 3
+		Exit
+	}
+	Try
+	{
 		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath Optimize-Offline.psm1) -SkipEditionCheck -Force -WarningAction Ignore -ErrorAction Stop
 	}
 	Catch

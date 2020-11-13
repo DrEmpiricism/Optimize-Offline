@@ -3,11 +3,11 @@
 #Requires -Version 5.1
 <#
 	===========================================================================
-	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.181
+	Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.182
 	Created on:   	11/20/2019 11:53 AM
 	Created by:   	BenTheGreat
 	Filename:     	Offline-Resources.psm1
-	Last updated:	09/17/2020
+	Last updated:	11/13/2020
 	-------------------------------------------------------------------------
 	Module Name: Offline-Resources
 	===========================================================================
@@ -96,7 +96,8 @@ $ModuleLog = (Resolve-FullPath -Path $LogFolder -Child Optimize-Offline.log)
 $ErrorLog = (Resolve-FullPath -Path $LogFolder -Child OptimizeErrors.log)
 $RegistryLog = (Resolve-FullPath -Path $LogFolder -Child RegistrySettings.log)
 $DISMLog = (Resolve-FullPath -Path $LogFolder -Child DISM.log)
-$DISM = If (Get-DISMPath) { Resolve-FullPath -Path (Get-DISMPath) -Child dism.exe } Else { Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\dism.exe' }
+$DISM = If (Get-DeploymentTool) { Resolve-FullPath -Path $(Get-DeploymentTool) -Child dism.exe } Else { Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\dism.exe' }
+$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe } Else { $null }
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')
@@ -114,7 +115,7 @@ New-Alias -Name GetPath -Value Resolve-FullPath
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams

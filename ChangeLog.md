@@ -1,6 +1,21 @@
 # ChangeLog #
 
-## Build 4.0.1.6 (10-06-2020)
+## Build 4.0.1.7 (11-13-2020) ##
+
+- Optimize-Offline now supports PowerShell Core 7.
+**Note: If creating bootable ISO media using PowerShell versions higher than 5, Optimize-Offline must be able to resolve the path to the oscdimg.exe premastering tool included in the Windows ADK, as its default API function wrapper contains code that is not yet fully supported by PowerShell versions higher than 5.**
+- Updated required Resource Functions for PowerShell Core 7 compatibility.
+- Updated the Start-Optimize call script for PowerShell Core 7 compatibility.
+- Corrected a non-terminating error that could occur for a null value when no DaRT parameters were passed when processing the boot.wim and/or winre.wim.
+- Updated the Edge Chromium integration package for Windows 10 builds 19041+.
+- Updated the Edge Chromium integration process.
+- Updated the Windows Store bundle packages.
+- If the removal of System Applications returns an error, it will now continue to the next System Application selected in the Gridview list instead of returning to the caller scope.
+- Added the 20H2 Enablement package to the exclusion list when outputting a Gridview list of Windows Cabinet Packages available for removal.
+- The Windows Cabinet Packages are now output to its Gridview list sorted in order by their package names instead of package type. This way all packages for a specific feature are in order to make selecting all of them easier without potentially skipping one.
+- Improved the exported package log formatting.
+
+## Build 4.0.1.6 (10-06-2020) ##
 
 - Added support for the SWM (split Windows image) file type.
 - If the source image is a SWM file, only the first SWM file needs passed to Optimize-Offline. It will recursively copy all additional SWM files. Likewise, the SWM files do not need to be named 'install.swm,' etc. Do note that in order to use a SWM file as the source image, all of the SWM files must be in their own directory. For example, if there are three SWM files named 'test.swm,' 'test2.swm,' 'test3.swm,' then all three of these SWM files must be in their own directory in order for Optimize-Offline to recognize them as split images from the same WIM file.
@@ -38,14 +53,3 @@
 - Set-Additional.ps1 uses the included ScheduledTasks.json and Services.json files to disable any scheduled tasks or system services that have 'SetState' value to 'Disable.' Additionally runtime-specific privacy and system settings are also applied.
 
 **NOTE: Make sure you evaluate the contents of the Set-Additional.ps1 script, and its associated ScheduledTasks and Services .json files, before running the script. Though there are no ill effects of running it as-is, and before disabling any scheduled tasks or services it makes backup files of their default states, make sure no scheduled tasks or system services are set to be disabled that will be required by the system. Lastly, if you do not intend to use either of these scripts, you can remove them from the 'Content\Additional\Setup' directory.**
-
-## Build 4.0.1.2 (07-02-2020) ##
-
-- The Microsoft Edge Chromium browser can now be integrated into Windows 10 builds 18362+
-- Following the integration of the Microsoft Edge Chromium package, Optimize-Offline will also apply all administrative policy templates to the image and a custom 'master_preferences' file for Microsoft Edge Chromium updates.
-- Additional registry settings specific to Microsoft Edge Chromium have been added.
-- The -DaRT parameter value 'All' has been removed. The -DaRT parameter now accepts one or both of the 'Setup' and 'Recovery' values.
-- The Configuration.json file has been updated to incorporate the change to the -DaRT parameter.
-- The Start-Optimize call script and Resource Functions have been updated.
-- The MAML XML external help file and manifest data have been updated.
-- There have been additional offline process code changes to reflect the aforementioned updates.

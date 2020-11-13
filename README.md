@@ -5,7 +5,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 ## About Optimize-Offline ##
 
 - Expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
-- Accepts either a full Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.
+- Accepts either a full Windows 10 Installation Media ISO, Windows 10 WIM, SWM or ESD file.
 - Does not perform any changes to a live system or running environment.
 - Checks the integrity and health of the image both before and after optimizations are processed to ensure the image retains a healthy status.
 - Allows for the deprovisioning and removal of Provisioned Application Packages, System Applications, Capability Packages, Windows Cabinet Package Files, Optional Features and more.

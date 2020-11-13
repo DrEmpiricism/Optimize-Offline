@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.181
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.182
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.6
-	 Last updated:	10/06/2020
+	 Version:       4.0.1.7
+	 Last updated:	11/13/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -144,7 +144,7 @@ Function Optimize-Offline
 				}
 				If ($DaRT -or $Additional.ContainsValue($true))
 				{
-					If ($DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
+					If ($DaRT -and $DaRT.Contains('Setup') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.BootDrivers -Include *.inf -Recurse -Force)))
 					{
 						Try { $BootWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
 						Catch [Management.Automation.ItemNotFoundException] { Break }
@@ -251,7 +251,7 @@ Function Optimize-Offline
 				If ($MicrosoftEdge.IsPresent -and $InstallInfo.Build -ge '18362')
 				{
 					If ($InstallInfo.Build -eq '18362') { $EdgeChromiumUBR = 833 }
-					Else { $EdgeChromiumUBR = 479 }
+					Else { $EdgeChromiumUBR = 601 }
 				}
 				Else { $MicrosoftEdge = ![Switch]::Present }
 			}
@@ -351,7 +351,7 @@ Function Optimize-Offline
 
 		If ($DaRT -or $Additional.ContainsValue($true))
 		{
-			If ($DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
+			If ($DaRT -and $DaRT.Contains('Recovery') -or ($Additional.Drivers -and (Get-ChildItem -Path $OptimizeOffline.RecoveryDrivers -Include *.inf -Recurse -Force)))
 			{
 				$WinREPath = GetPath -Path $InstallMount -Child 'Windows\System32\Recovery\winre.wim'
 				If (Test-Path -Path $WinREPath)
@@ -584,7 +584,7 @@ Function Optimize-Offline
 						$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
 						Log ($OptimizeData.RemovingSystemApp -f $PSItem.DisplayName)
 						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
-						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Return }
+						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
 						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
 						Start-Sleep 2
 					}
@@ -805,7 +805,7 @@ Function Optimize-Offline
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Packages."
-			$WindowsPackages = Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property ReleaseType -Descending | Out-GridView -Title "Remove Windows Packages." -PassThru
+			$WindowsPackages = Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageName -notlike "*20H2Enablement*" -and $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property PackageName | Out-GridView -Title "Remove Windows Packages." -PassThru
 			If ($WindowsPackages)
 			{
 				Try
@@ -1065,7 +1065,7 @@ Function Optimize-Offline
 					Stop-Optimize
 				}
 			}
-			ElseIf (!$DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Chromium-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4559309*) -and !(Get-ChildItem -Path (GetPath -Path $InstallMount -Child "Windows\WinSxS\*firsttimeinstaller*\MicrosoftEdgeStandaloneInstaller.exe") -File -Force -ErrorAction SilentlyContinue))
+			ElseIf (!$DynamicParams.LTSC -and (Test-Path -Path $OptimizeOffline.MicrosoftEdge -Filter Microsoft-Windows-Chromium-Browser-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4559309*) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *KB4584229*) -and !(Get-ChildItem -Path (GetPath -Path $InstallMount -Child "Windows\WinSxS\*firsttimeinstaller*\MicrosoftEdgeStandaloneInstaller.exe") -File -Force -ErrorAction SilentlyContinue))
 			{
 				Log $OptimizeData.IntegratingMicrosoftEdgeChromium
 				If (!$RemovedSystemApps.'Microsoft.MicrosoftEdge')
@@ -1666,16 +1666,16 @@ Function Optimize-Offline
 		#endregion Start Menu Clean-up
 
 		#region Create Package Summary
-		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process { If ($DynamicParams.ContainsKey($PSItem)) { $DynamicParams.PackageSummary = $true } }
+		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'MicrosoftEdgeChromium', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process { If ($DynamicParams.ContainsKey($PSItem)) { $DynamicParams.PackageSummary = $true } }
 		If ($DynamicParams.PackageSummary)
 		{
 			Log $OptimizeData.CreatingPackageSummaryLog
 			$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
-			If ($DynamicParams.WindowsStore) { "`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.MicrosoftEdgeChromium -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*KB4559309*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.InstallImageDrivers) { "`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.BootImageDrivers) { "`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
-			If ($DynamicParams.RecoveryImageDrivers) { "`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ClassName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.WindowsStore) { "`t`t`t`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.MicrosoftEdgeChromium -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`t`t`t`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*KB4559309*" -or $PSItem.PackageName -like "*KB4584229*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.InstallImageDrivers) { "`t`t`t`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ProviderName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.BootImageDrivers) { "`t`t`t`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ProviderName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.RecoveryImageDrivers) { "`t`t`t`tIntegrated Drivers (Recovery)", (Get-WindowsDriver -Path $RecoveryMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ProviderName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 		}
 		#endregion Create Package Summary
 
@@ -1905,20 +1905,15 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination (GetPath -Path $ISOMedia.FullName -Child sources) -Force
 			If ($ISO)
 			{
-				If ($ISO -eq 'Prompt' -and (!(Test-Path -Path (GetPath -Path $ISOMedia.FullName -Child 'efi\Microsoft\boot\efisys.bin')))) { Log "Missing the required efisys.bin bootfile for ISO creation." -Type Error }
-				ElseIf ($ISO -eq 'No-Prompt' -and (!(Test-Path -Path (GetPath -Path $ISOMedia.FullName -Child 'efi\Microsoft\boot\efisys_noprompt.bin')))) { Log "Missing the required efisys_noprompt.bin bootfile for ISO creation." -Type Error }
-				Else
+				Try
 				{
-					Try
-					{
-						Log ($OptimizeData.CreatingISO -f $ISO)
-						$ISOFile = New-ISOMedia -BootType $ISO -ErrorAction Stop
-					}
-					Catch
-					{
-						Log ($OptimizeData.FailedCreatingISO -f $ISO) -Type Error -ErrorRecord $Error[0]
-						Start-Sleep 3
-					}
+					Log ($OptimizeData.CreatingISO -f $ISO)
+					$ISOFile = New-ISOMedia -BootType $ISO -ErrorAction Stop
+				}
+				Catch
+				{
+					Log ($OptimizeData.FailedCreatingISO -f $ISO) -Type Error -ErrorRecord $Error[0]
+					Start-Sleep 3
 				}
 			}
 		}
