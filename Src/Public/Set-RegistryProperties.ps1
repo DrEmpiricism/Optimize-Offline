@@ -244,7 +244,7 @@ Function Set-RegistryProperties
             RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Search\Flighting\Override" -Name "ImmersiveSearchFull" -Value 1 -Type DWord
         }
 
-        If ($InstallInfo.Build -eq '19041' -and (Get-ItemPropertyValue -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name UBR) -ge 423)
+        If ($InstallInfo.Build -eq '19041' -and (Get-ItemPropertyValue -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name UBR -ErrorAction Ignore) -ge 423)
         {
             $RegistryData.EnableNewStartMenu | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
             RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\0\2093230218" -Name EnabledState -Value 2 -Type DWord -Force
