@@ -9,7 +9,7 @@
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
 	 Version:       4.0.1.7
-	 Last updated:	11/13/2020
+	 Last updated:	12/11/2020
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -256,7 +256,6 @@ Function Optimize-Offline
 				Else { $MicrosoftEdge = ![Switch]::Present }
 			}
 			If ($InstallInfo.Build -eq '17134' -and $DeveloperMode.IsPresent) { $DeveloperMode = ![Switch]::Present }
-			If ($InstallInfo.Build -eq '19041' -and $Dedup.IsPresent) { $Dedup = ![Switch]::Present }
 			If ($InstallInfo.Language -ne $OptimizeOffline.Culture)
 			{
 				If ($MicrosoftEdge.IsPresent) { $MicrosoftEdge = ![Switch]::Present }

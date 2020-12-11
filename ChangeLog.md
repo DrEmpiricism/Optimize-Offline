@@ -1,12 +1,12 @@
 # ChangeLog #
 
-## Build 4.0.1.7 (11-13-2020) ##
+## Build 4.0.1.7 (11-13-2020 and 12-11-2020) ##
 
 - Optimize-Offline now supports PowerShell Core 7.
-**Note: If creating bootable ISO media using PowerShell versions higher than 5, Optimize-Offline must be able to resolve the path to the oscdimg.exe premastering tool included in the Windows ADK, as its default API function wrapper contains code that is not yet fully supported by PowerShell versions higher than 5.**
 - Updated required Resource Functions for PowerShell Core 7 compatibility.
 - Updated the Start-Optimize call script for PowerShell Core 7 compatibility.
 - Corrected a non-terminating error that could occur for a null value when no DaRT parameters were passed when processing the boot.wim and/or winre.wim.
+- Added the Deduplication integration packages for Windows 10 builds 19041+. **added 12-11-2020**
 - Updated the Edge Chromium integration package for Windows 10 builds 19041+.
 - Updated the Edge Chromium integration process.
 - Updated the Windows Store bundle packages.
@@ -14,6 +14,8 @@
 - Added the 20H2 Enablement package to the exclusion list when outputting a Gridview list of Windows Cabinet Packages available for removal.
 - The Windows Cabinet Packages are now output to its Gridview list sorted in order by their package names instead of package type. This way all packages for a specific feature are in order to make selecting all of them easier without potentially skipping one.
 - Improved the exported package log formatting.
+
+**Note: If creating bootable ISO media using PowerShell Core 7, Optimize-Offline must be able to resolve the path to the oscdimg.exe premastering tool included in the Windows 10 ADK, as its default API function wrapper contains code that is not yet fully supported by PowerShell versions higher than 5.**
 
 ## Build 4.0.1.6 (10-06-2020) ##
 
