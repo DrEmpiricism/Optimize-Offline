@@ -6,7 +6,7 @@
 
 - Optimize-Offline now supports Windows 10 build 19043 (21H1)
 - When it is detected that the BioEnrollment System Application has been removed, Optimize-Offline will not automatically remove its associated Capability Packages.
-- A -ComponentCleanup switch has been added that will compress all supersceded components, thus reducing the size of the Component Store.
+- A -ComponentCleanup switch has been added that will compress all superseded components, thus reducing the size of the Component Store.
 - The DaRT 20H1/21H1 WIM file has been updated.
 - External help files have been updates.
 - Additional framework code changes to support Windows 10 21H1 and other core module updates.
