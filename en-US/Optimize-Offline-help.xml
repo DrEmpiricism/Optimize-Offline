@@ -6,20 +6,20 @@
       <command:verb>Optimize</command:verb>
       <command:noun>Offline</command:noun>
       <maml:description>
-        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM, SWM and ESD files.</maml:para>
+        <maml:para>Offline optimization framework for Windows 10 image versions 1803-to-2004 with 64-bit architectures contained within WIM and ESD files.</maml:para>
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/SWM/ESD) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
+      <maml:para>The Optimize-Offline module enables the offline optimization of Windows 10 image (WIM/ESD) files to customize runtime environments. Optimize-Offline expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance. Image optimization is configurable using the Configuration.json file in the module root directory. All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
         <maml:name>Optimize-Offline</maml:name>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
           <maml:name>SourcePath</maml:name>
-          <maml:Description>
-            <maml:para>The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.</maml:para>
-          </maml:Description>
+          <maml:description>
+            <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">FileInfo</command:parameterValue>
           <dev:type>
             <maml:name>FileInfo</maml:name>
@@ -29,10 +29,10 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
           <maml:name>WindowsApps</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle). The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
             <maml:para>Select: Populates and outputs a Gridview list of all Provisioned Windows App Packages for selective removal. Whitelist: Automatically removes all Provisioned Windows App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned Windows App Packages found in the image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
             <maml:name>String</maml:name>
@@ -42,10 +42,10 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>DaRT</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. This parameter accepts one or two values allowing for integration into a single environment or both environments. The acceptable values for this parameter are: Setup and Recovery.</maml:para>
             <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. Setup, Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
           <dev:type>
             <maml:name>String[]</maml:name>
@@ -55,10 +55,10 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
           <maml:name>Additional</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
             <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
           <dev:type>
             <maml:name>Hashtable</maml:name>
@@ -68,10 +68,10 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>ISO</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
             <maml:para>Prompt: The efisys.bin binary bootcode is written to the ISO which requires a key press when booted to begin Windows Setup. No-Prompt: The efisys_noprompt.bin binary bootcode is written to the ISO which does not require a key press when booted and will begin Windows Setup automatically.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
             <maml:name>String</maml:name>
@@ -81,9 +81,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>SystemApps</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Populates and outputs a Gridview list of System Apps for selective removal.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -92,9 +92,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Capabilities</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Populates and outputs a Gridview list of Capability Packages for selective removal.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -103,9 +103,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Packages</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Populates and outputs a Gridview list of Windows Cabinet File Packages for selective removal.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -114,9 +114,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Features</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -125,9 +125,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>DeveloperMode</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the Developer Mode Feature into he image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -136,9 +136,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>WindowsStore</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the Microsoft Windows Store and its required dependencies into the image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -147,10 +147,10 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>MicrosoftEdge</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the Microsoft Edge HTML or Chromium Browser into the image.</maml:para>
             <maml:para>For Windows 10 Enterprise LTSC 2019, the Microsoft Edge HTML Browser will be integrated into the image. For non-LTSC Windows 10 builds 18362-to-19041, the Microsoft Edge Chromium Browser will be integrated into the image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -159,9 +159,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Win32Calc</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the traditional Win32 Calculator into the image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -170,9 +170,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Dedup</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Integrates the Windows Server Data Deduplication Feature into the image.</maml:para>
-          </maml:Description>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -181,9 +181,20 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Registry</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>Applies optimized settings to the image registry hives.</maml:para>
-          </maml:Description>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ComponentCleanup</maml:name>
+          <maml:description>
+            <maml:para>Performs a clean-up of the Component Store by compressing all superseded components.</maml:para>
+          </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
             <maml:uri />
@@ -195,9 +206,9 @@
     <command:parameters>
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
         <maml:name>SourcePath</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>The path to a Windows 10 Installation Media ISO, Windows 10 WIM or Windows 10 ESD file.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">FileInfo</command:parameterValue>
         <dev:type>
           <maml:name>FileInfo</maml:name>
@@ -207,10 +218,10 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>WindowsApps</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle). The acceptable values for this parameter are: Select, Whitelist and All.</maml:para>
           <maml:para>Select: Populates and outputs a Gridview list of all Provisioned Windows App Packages for selective removal. Whitelist: Automatically removes all Provisioned Windows App Packages NOT found in the AppxWhiteList.json file. All: Automatically removes all Provisioned Windows App Packages found in the image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
         <dev:type>
           <maml:name>String</maml:name>
@@ -220,9 +231,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>SystemApps</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Populates and outputs a Gridview list of System Apps for selective removal.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -232,9 +243,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Capabilities</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Populates and outputs a Gridview list of Capability Packages for selective removal.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -244,9 +255,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Packages</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Populates and outputs a Gridview list of Windows Cabinet File Packages for selective removal.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -256,9 +267,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Features</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -268,9 +279,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>DeveloperMode</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the Developer Mode Feature into he image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -280,9 +291,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>WindowsStore</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the Microsoft Windows Store and its required dependencies into the image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -292,10 +303,10 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>MicrosoftEdge</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the Microsoft Edge HTML or Chromium Browser into the image.</maml:para>
           <maml:para>For Windows 10 Enterprise LTSC 2019, the Microsoft Edge HTML Browser will be integrated into the image. For non-LTSC Windows 10 builds 18362-to-19041, the Microsoft Edge Chromium Browser will be integrated into the image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -305,9 +316,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Win32Calc</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the traditional Win32 Calculator into the image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -317,9 +328,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Dedup</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the Windows Server Data Deduplication Feature into the image.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -329,10 +340,10 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
         <maml:name>DaRT</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery. This parameter accepts one or two values allowing for integration into a single environment or both environments. The acceptable values for this parameter are: Setup and Recovery.</maml:para>
           <maml:para>Setup: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Setup only. Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into Windows Recovery only. Setup, Recovery: Integrates DaRT 10 and Windows 10 Debugging Tools into both Windows Setup and Windows Recovery.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
         <dev:type>
           <maml:name>String[]</maml:name>
@@ -342,9 +353,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Registry</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Applies optimized settings to the image registry hives.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
           <maml:name>SwitchParameter</maml:name>
@@ -354,10 +365,10 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>Additional</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable. The acceptable parameters for this hashtable are: Setup, Wallpaper, SystemLogo, LockScreen, RegistryTemplates, Unattend, Drivers and NetFx3.</maml:para>
           <maml:para>Setup: Integrates Windows Setup files, scripts or content into the image. Wallpaper: Integrates custom wallpaper into the image. SystemLogo: Integrates a custom system logo into the image. LockScreen: Converts and integrates a custom lockscreen into the image. RegistryTemplates: Imports custom registry template (.reg) files into the registry hives of the image. Unattend: Applies an answer file directly to the image. Drivers: Injects driver packages into the image. NetFx3: Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">Hashtable</command:parameterValue>
         <dev:type>
           <maml:name>Hashtable</maml:name>
@@ -365,12 +376,24 @@
         </dev:type>
         <dev:defaultValue>@{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }</dev:defaultValue>
       </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ComponentCleanup</maml:name>
+        <maml:description>
+          <maml:para>Performs a clean-up of the Component Store by compressing all superseded components.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ISO</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>Creates a new bootable Windows Installation Media ISO. The acceptable values for this parameter are: Prompt and No-Prompt.</maml:para>
           <maml:para>Prompt: The efisys.bin binary bootcode is written to the ISO which requires a key press when booted to begin Windows Setup. No-Prompt: The efisys_noprompt.bin binary bootcode is written to the ISO which does not require a key press when booted and will begin Windows Setup automatically.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
         <dev:type>
           <maml:name>String</maml:name>

@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2019 v5.7.182
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.191
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.7
-	 Last updated:	12/11/2020
+	 Version:       4.0.1.8
+	 Last updated:	06/22/2021
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -59,6 +59,8 @@ Function Optimize-Offline
 		[Switch]$Registry,
 		[Parameter(HelpMessage = 'Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable.')]
 		[Hashtable]$Additional = @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false },
+		[Parameter(HelpMessage = 'Performs a clean-up of the Component Store by compressing all superseded components.')]
+		[Switch]$ComponentCleanup,
 		[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
 		[ValidateSet('Prompt', 'No-Prompt')]
 		[String]$ISO
@@ -75,6 +77,7 @@ Function Optimize-Offline
 		Test-Requirements
 		If (Get-WindowsImage -Mounted) { Dismount-Images; Clear-Host }
 		[Void](Clear-WindowsCorruptMountPoint)
+		((GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log'), (GetPath -Path $Env:SystemRoot -Child 'Logs\CBS\CBS.log')) | Purge -ErrorAction Ignore
 		$Global:Error.Clear()
 		#endregion Pre-Processing Block
 	}
@@ -656,6 +659,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
+				$DynamicParams.BioEnrollment = $true
 			}
 			If ($RemovedSystemApps.'Microsoft.Windows.SecureAssessmentBrowser')
 			{
@@ -732,6 +736,19 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 			}
 			RegHives -Unload
+			If ($DynamicParams.BioEnrollment -and (Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed))
+			{
+				Try
+				{
+					Log $OptimizeData.RemovingBiometricCapability
+					[Void](Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | Remove-WindowsCapability -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop)
+				}
+				Catch
+				{
+					Log $OptimizeData.FailedRemovingBiometricCapability -Type Error -ErrorRecord $Error[0]
+					Start-Sleep 3
+				}
+			}
 			If ($DynamicParams.SecHealthUI -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled))
 			{
 				Try
@@ -941,7 +958,7 @@ Function Optimize-Offline
 			Try
 			{
 				Log $OptimizeData.IntegratingDeveloperMode
-				$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Add-Package /PackagePath:"{1}" /ScratchDir:"{2}" /LogPath:"{3}" /LogLevel:1' -f $InstallMount, (GetPath -Path $DevModeExpand.FullName -Child update.mum), $ScratchFolder, $DISMLog)
+				$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Add-Package /PackagePath:"{1}" /ScratchDir:"{2}" /LogPath:"{3}" /LogLevel:1' -f $InstallMount, (GetPath -Path $DevModeExpand.FullName -Child update.mum), $ScratchFolder, $DISMLog) -ErrorAction Stop
 				If ($RET -eq 0) { $DynamicParams.DeveloperMode = $true }
 				Else { Throw }
 			}
@@ -1575,6 +1592,36 @@ Function Optimize-Offline
 		}
 		#endregion Additional Content Integration
 
+		#region Component Store Clean-up
+		If ($ComponentCleanup.IsPresent)
+		{
+			If (!(Test-Path -Path (GetPath -Path $InstallMount -Child 'Windows\WinSxS\pending.xml')))
+			{
+				Log ($OptimizeData.ComponentStoreCleanup -f $InstallInfo.Name)
+				If ($InstallInfo.Build -ge '18362') { $RegClean = 3 }
+				Else { $RegClean = 0 }
+				RegHives -Load
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "DisableResetbase" -Value 1 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "SupersededActions" -Value $RegClean -Type DWord
+				RegHives -Unload
+				Try
+				{
+					$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Cleanup-Image /StartComponentCleanup /ScratchDir:"{1}" /LogPath:"{2}" /LogLevel:1' -f $InstallMount, $ScratchFolder, $DISMLog) -ErrorAction Stop
+					If ($RET -eq 0) { $DynamicParams.ComponentCleanup = $true }
+					Else { Throw }
+				}
+				Catch
+				{
+					Log ($OptimizeData.FailedComponentStoreCleanup -f $InstallInfo.Name) -Type Error
+				}
+			}
+			Else
+			{
+				Log $OptimizeData.ComponentStorePendingInstallations
+			}
+		}
+		#endregion Component Store Clean-up
+
 		#region Start Menu Clean-up
 		If (!$DynamicParams.LayoutModification)
 		{
@@ -1935,7 +1982,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
 			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
-			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
+			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log'), (GetPath -Path $Env:SystemRoot -Child 'Logs\CBS\CBS.log')) | Purge -ErrorAction Ignore
 		}
 		#endregion Image Finalization
 	}

@@ -1,5 +1,16 @@
 # ChangeLog #
 
+## Build 4.0.1.8 (06-22-2021) ##
+
+**NOTE: Updates should resume with the same frequency as before.**
+
+- Optimize-Offline now supports Windows 10 build 19043 (21H1)
+- When it is detected that the BioEnrollment System Application has been removed, Optimize-Offline will not automatically remove its associated Capability Packages.
+- A -ComponentCleanup switch has been added that will compress all supersceded components, thus reducing the size of the Component Store.
+- The DaRT 20H1/21H1 WIM file has been updated.
+- External help files have been updates.
+- Additional framework code changes to support Windows 10 21H1 and other core module updates.
+
 ## Build 4.0.1.7 (11-13-2020 and 12-11-2020) ##
 
 - Optimize-Offline now supports PowerShell Core 7.
@@ -42,16 +53,3 @@
 - Updated the Windows Store bundle packages.
 - Updated the optional Set-Additional runtime script.
 - Multiple code improvements across the framework.
-
-## Build 4.0.1.3 (08-07-2020) ##
-
-- Added the clean-up of any directories for Windows Apps that were deprovisioned.
-- Added additional disabling of Microsoft Edge telemetry and tracking.
-- Updated the custom App Associations .xml that gets imported.
-- Updated the 'Additional Tweaks.reg' file in the 'Content\Additional\RegistryTemplates' directory.
-- Updated the Windows Store bundle packages.
-- Added two scripts in the 'Content\Additional\Setup' directory named 'Remove-OneDrive.ps1' and 'Set-Additional.ps1' that can be run during system runtime (when the image is in an online state). These two scripts are copied to the image's 'Windows\Setup\Scripts' directory.
-- Remove-OneDrive.ps1 will completely and thoroughly remove Microsoft OneDrive.
-- Set-Additional.ps1 uses the included ScheduledTasks.json and Services.json files to disable any scheduled tasks or system services that have 'SetState' value to 'Disable.' Additionally runtime-specific privacy and system settings are also applied.
-
-**NOTE: Make sure you evaluate the contents of the Set-Additional.ps1 script, and its associated ScheduledTasks and Services .json files, before running the script. Though there are no ill effects of running it as-is, and before disabling any scheduled tasks or services it makes backup files of their default states, make sure no scheduled tasks or system services are set to be disabled that will be required by the system. Lastly, if you do not intend to use either of these scripts, you can remove them from the 'Content\Additional\Setup' directory.**

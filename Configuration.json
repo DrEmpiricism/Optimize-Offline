@@ -31,5 +31,6 @@
     "Drivers": false,
     "NetFx3": false
   },
+  "ComponentCleanup": false,
   "ISO": "No-Prompt"
 }

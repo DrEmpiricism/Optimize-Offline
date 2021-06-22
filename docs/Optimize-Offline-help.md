@@ -15,7 +15,7 @@ Offline optimization framework for Windows 10 image versions 1803-to-2004 with 6
 ```
 Optimize-Offline [-SourcePath] <FileInfo> [[-WindowsApps] <String>] [-SystemApps] [-Capabilities] [-Packages]
  [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-Dedup] [[-DaRT] <String[]>]
- [-Registry] [[-Additional] <Hashtable>] [[-ISO] <String>] [<CommonParameters>]
+ [-Registry] [[-Additional] <Hashtable>] [-ComponentCleanup] [[-ISO] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -272,6 +272,21 @@ Aliases:
 Required: False
 Position: 4
 Default value: @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false }
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ComponentCleanup
+Performs a clean-up of the Component Store by compressing all superseded components.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
