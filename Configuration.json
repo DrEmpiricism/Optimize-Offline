@@ -6,8 +6,8 @@
   ],
   "SourcePath": "Path:\\To\\SourceImage",
   "WindowsApps": "Select",
-  "SystemApps": true,
-  "Capabilities": true,
+  "SystemApps": "Select",
+  "Capabilities": "Select",
   "Packages": false,
   "Features": true,
   "DeveloperMode": false,
@@ -33,4 +33,4 @@
   },
   "ComponentCleanup": false,
   "ISO": "No-Prompt"
-}
+}  "ComponentCleanup": true,

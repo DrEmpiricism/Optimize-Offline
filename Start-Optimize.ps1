@@ -15,7 +15,9 @@
 		Start-Optimize requires that the configuration JSON file is present in the root path of the Optimize-Offline module.
 #>
 [CmdletBinding()]
-Param ()
+Param (
+	[Parameter(Mandatory=$false)] $populateLists
+)
 
 $Global:Error.Clear()
 
@@ -59,7 +61,9 @@ Finally
 }
 
 # Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
-$ConfigParams = [Ordered]@{ }
+$ConfigParams = [Ordered]@{
+	populateLists = $populateLists
+}
 ForEach ($Name In $ContentJSON.PSObject.Properties.Name)
 {
 	$Value = $ContentJSON.PSObject.Properties.Item($Name).Value
