@@ -1,0 +1,26 @@
+{
+	"DisplayName": [
+		"Microsoft.AccountsControl",
+		"Microsoft.AsyncTextService",
+		"Microsoft.CredDialogHost",
+		"Microsoft.UI.Xaml.CBS",
+		"Microsoft.Windows.AppRep.ChxApp",
+		"Microsoft.Windows.AppResolverUX",
+		"Microsoft.Windows.AssignedAccessLockApp",
+		"Microsoft.Windows.CapturePicker",
+		"Microsoft.Windows.CloudExperienceHost",
+		"Microsoft.Windows.NarratorQuickStart",
+		"Microsoft.Windows.OOBENetworkCaptivePortal",
+		"Microsoft.Windows.OOBENetworkConnectionFlow",
+		"Microsoft.Windows.PinningConfirmationDialog",
+		"Microsoft.Windows.Search",
+		"Microsoft.Windows.ShellExperienceHost",
+		"Microsoft.Windows.StartMenuExperienceHost",
+		"MicrosoftWindows.Client.CBS",
+		"MicrosoftWindows.UndockedDevKit",
+		"NcsiUwpApp",
+		"Windows.CBSPreview",
+		"windows.immersivecontrolpanel",
+		"Windows.PrintDialog"
+	]
+}

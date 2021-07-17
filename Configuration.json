@@ -4,21 +4,18 @@
     "Ensure proper formatting is used when editing the JSON parameter values.",
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
   ],
-  "SourcePath": "Path:\\To\\SourceImage",
+  "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
-  "SystemApps": true,
-  "Capabilities": true,
+  "SystemApps": "Select",
+  "Capabilities": "Select",
   "Packages": false,
   "Features": true,
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
   "Win32Calc": true,
-  "Dedup": true,
-  "DaRT": [
-    "Setup",
-    "Recovery"
-  ],
+  "Dedup": false,
+  "DaRT": [],
   "Registry": true,
   "Additional": {
     "Setup": false,
@@ -31,6 +28,6 @@
     "Drivers": false,
     "NetFx3": false
   },
-  "ComponentCleanup": false,
+  "ComponentCleanup": true,
   "ISO": "No-Prompt"
 }
