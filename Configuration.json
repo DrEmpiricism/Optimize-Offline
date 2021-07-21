@@ -29,6 +29,6 @@
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "No-Prompt"
+  "ISO": "No-Prompt",
   "CompressionType": "Maximum"
 }
