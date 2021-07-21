@@ -14,6 +14,93 @@
 	 Module Name: Optimize-Offline
 	===========================================================================
 #>
+
+Function Get-AppxPackages {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $true,
+			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
+		[String]$Path,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
+		[String]$ScratchDirectory,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
+		[String]$LogPath,
+		[Parameter(
+			Mandatory = $true,
+			HelpMessage = 'Windows offline image build number'
+		)]
+		[Int]$Build
+	)
+
+	$AppxPackages = Get-AppxProvisionedPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
+
+	If ($Build -ge '19041')
+	{
+		$AppxPackages = $AppxPackages | ForEach-Object -Process {
+			$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
+			If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
+			[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
+		}
+	}
+
+	return $AppxPackages
+}
+
+
+Function Get-SystemPackages {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $false)]
+		[String]$RegKeyPath
+	)
+
+	if(-Not $RegKeyPath){
+		$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
+	}
+
+	RegHives -Load
+	$InboxAppsPackages = Get-ChildItem -Path $RegKeyPath -Name | ForEach-Object -Process {
+		$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
+		If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
+		If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
+		If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
+		If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
+		[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
+	} | Sort-Object -Property DisplayName
+
+	RegHives -Unload
+
+	return $InboxAppsPackages
+}
+
+Function Get-CapabilityPackages {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $true,
+			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
+		[String]$Path,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
+		[String]$ScratchDirectory,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
+		[String]$LogPath
+	)
+
+	$WindowsCapabilities = Get-WindowsCapability -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.Name -notlike "*Language.Basic*" -and $PSItem.Name -notlike "*TextToSpeech*" -and $PSItem.State -eq 'Installed' } | Select-Object -Property Name, State | Sort-Object -Property Name
+
+	return $WindowsCapabilities
+
+}
+
 Function Optimize-Offline
 {
 
@@ -449,72 +536,48 @@ Function Optimize-Offline
 		#endregion Image Preparation
 
 
+
 		if ($populateLists) {
 
 			try {
-				$AppxPackages = Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
 
-				If ($InstallInfo.Build -eq '19041')
-				{
-					$AppxPackages = $AppxPackages | ForEach-Object -Process {
-						$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
-						If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
-						[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-					}
-				}
-
+				## Populate .\TemplateLists\AppxPackages.json
 				$names = @( );
-
-				$AppxPackages | ForEach-Object -Process {
+				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
-
 				[ordered]@{
 					DisplayName = $names
 				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\AppxPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
-				$InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-				RegHives -Load
-				$InboxAppsPackages = Get-ChildItem -Path $InboxAppsKey -Name | ForEach-Object -Process {
-					$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
-					If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
-					If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
-					If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
-					If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
-					[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-				} | Sort-Object -Property DisplayName
 
-				RegHives -Unload
-
+				## Populate .\TemplateLists\SystemPackages.json
 				$names = @( );
-
-				$InboxAppsPackages | ForEach-Object -Process {
+				Get-SystemPackages | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
-
 				[ordered]@{
 					DisplayName = $names
 				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\SystemPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
-				$WindowsCapabilities = Get-WindowsCapability -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.Name -notlike "*Language.Basic*" -and $PSItem.Name -notlike "*TextToSpeech*" -and $PSItem.State -eq 'Installed' } | Select-Object -Property Name, State | Sort-Object -Property Name
 
-
+				## Populate .\TemplateLists\CapabilitiesPackages.json
 				$names = @( );
-
-				$WindowsCapabilities | ForEach-Object -Process {
+				Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.Name
 				}
-
 				[ordered]@{
 					Name = $names
 				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\CapabilitiesPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+
+
 			} catch {
-				:
+				Write-Host $Error[0]
 			} finally {
 				Dismount-Images
 			}
 
-			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
+			$Host.UI.RawUI.WindowTitle = "Powershell";
 
 			Exit(0)
 		}
@@ -524,15 +587,9 @@ Function Optimize-Offline
 		If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -gt 0)
 		{
 			$Host.UI.RawUI.WindowTitle = "Remove Provisioned App Packages."
-			$AppxPackages = Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
-			If ($InstallInfo.Build -eq '19041')
-			{
-				$AppxPackages = $AppxPackages | ForEach-Object -Process {
-					$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
-					If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
-					[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-				}
-			}
+
+			$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build
+
 			$RemovedAppxPackages = [Collections.Hashtable]::New()
 			Switch ($PSBoundParameters.WindowsApps)
 			{
@@ -644,15 +701,10 @@ Function Optimize-Offline
 			Start-Sleep 5
 
 			$InboxAppsKey = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
+			
+			$InboxAppsPackages = Get-SystemPackages
+
 			RegHives -Load
-			$InboxAppsPackages = Get-ChildItem -Path $InboxAppsKey -Name | ForEach-Object -Process {
-				$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
-				If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
-				If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
-				If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
-				If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
-				[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-			} | Sort-Object -Property DisplayName
 
 			If ($InboxAppsPackages)
 			{
@@ -790,7 +842,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.SecHealthUI')
+			If ($RemovedSystemApps.'Microsoft.Windows.SecHealthUI' -or $RemovedAppxPackages.'Microsoft.SecHealthUI')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
@@ -895,7 +947,7 @@ Function Optimize-Offline
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Capabilities."
-			$WindowsCapabilities = Get-WindowsCapability -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.Name -notlike "*Language.Basic*" -and $PSItem.Name -notlike "*TextToSpeech*" -and $PSItem.State -eq 'Installed' } | Select-Object -Property Name, State | Sort-Object -Property Name
+			$WindowsCapabilities = Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 
 			If ($WindowsCapabilities)
 			{
