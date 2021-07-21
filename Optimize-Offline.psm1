@@ -154,7 +154,10 @@ Function Optimize-Offline
 		[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
 		[ValidateSet('Prompt', 'No-Prompt')]
 		[String]$ISO,
-		[Parameter(Mandatory=$false)] $populateLists
+		[Parameter(Mandatory=$false)] $populateLists,
+		[Parameter(Mandatory=$false)]
+		[ValidateSet('Select', 'None', 'Fast', 'Maximum', 'Solid')]
+		[String]$CompressionType
 	)
 
 	Begin
@@ -2084,7 +2087,9 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 
 		Try
 		{
-			$CompressionType = Get-CompressionType -ErrorAction Stop
+			if(-not $CompressionType -or $CompressionType -eq 'Select'){
+				$CompressionType = Get-CompressionType -ErrorAction Stop
+			}
 		}
 		Catch
 		{

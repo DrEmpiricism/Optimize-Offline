@@ -30,4 +30,5 @@
   },
   "ComponentCleanup": true,
   "ISO": "No-Prompt"
+  "CompressionType": "Maximum"
 }

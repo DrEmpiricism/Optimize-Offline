@@ -178,6 +178,8 @@ The ISO parameter allows for two values to be passed to it: 'Prompt' and 'No-Pro
 
 Optimize-Offline calls the COM IMAPI2 interface for file system image building and also opens a binary stream that writes a bootfile sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party tools like oscdimg.
 
+Also it's possible to pre-define the Compression level with a json key located in Configuration.json file named: CompressionType, it's values can be one of the following: 'Select', 'None', 'Fast', 'Maximum', 'Solid'. Select will show the selection window of the compression type on runtime.
+
 ### About Defaultuser0 ###
 
 Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
@@ -195,3 +197,28 @@ Once you have edited the Configuration.json to your specific optimization requir
 ```PowerShell
 .\Start-Optimize.ps1
 ```
+
+## Using component removal lists
+
+The component removal lists can be found under subfolder ./Content
+The following lists are available:
+
+ - AppxWhitelist.json - list of appx to keep
+ - SystemAppxWhitelist.json - list of system appx to keep
+ - CapabilitiesWhitelist.json - list of capabilities to keep
+ - CapabilitiesBlacklist.json - list of capabilities to remove
+
+The usage of these lists is controlled by the json parameters in configuration.json
+
+ - WindowsApps - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist AppxWhitelist.json)
+ - SystemApps - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist SystemAppxWhitelist.json)
+ - Capabilities - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist CapabilitiesWhitelist.json), Blacklist (only apps in CapabilitiesBlacklist.json are removed)
+
+
+
+## Generating template component removal lists
+
+The component removal lists mentioned above contain package names that are found in the windows system. Each version of windows may change the names and entries of it's components. For updating the lists or even helping you in generating custom ones according to the windows build you have, use the command:
+
+    ./Start-Optimize populateLists
+This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./TemplateLists. Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content.
