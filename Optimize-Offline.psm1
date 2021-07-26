@@ -157,7 +157,11 @@ Function Optimize-Offline
 		[Parameter(Mandatory=$false)] $populateLists,
 		[Parameter(Mandatory=$false)]
 		[ValidateSet('Select', 'None', 'Fast', 'Maximum', 'Solid')]
-		[String]$CompressionType
+		[String]$CompressionType,
+		[Parameter(Mandatory=$false)]
+		[Hashtable]$SelectiveRegistry = @{
+			DisableWindowsUpdate = $false
+		}
 	)
 
 	Begin
@@ -1936,6 +1940,10 @@ Function Optimize-Offline
 			}
 		}
 		#endregion Start Menu Clean-up
+
+		#region selective registry
+		& './Content/Additional/SelectiveRegistry/SelectiveRegistry.ps1'
+		#endregion selective registry
 
 		#region Create Package Summary
 		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'MicrosoftEdgeChromium', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process { If ($DynamicParams.ContainsKey($PSItem)) { $DynamicParams.PackageSummary = $true } }

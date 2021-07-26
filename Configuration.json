@@ -31,4 +31,9 @@
   "ComponentCleanup": true,
   "ISO": "No-Prompt",
   "CompressionType": "Maximum"
+  "CompressionType": "Maximum",
+  "SelectiveRegistry": {
+    "DisableWindowsUpdate": false,
+    "DisableDriverUpdate": false
+  }
 }
