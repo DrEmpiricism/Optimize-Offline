@@ -632,16 +632,9 @@ Function Optimize-Offline
 					{
 						Try
 						{
-							If ($InstallInfo.Build -eq '19041')
-							{
-								$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop
-								If ($WhitelistJSON.Contains('Microsoft.549981C3F5F10')) { $WhitelistJSON = $WhitelistJSON.Replace('Microsoft.549981C3F5F10', 'CortanaApp.View.App') }
-								$WhitelistJSON = $WhitelistJSON | ConvertFrom-Json -ErrorAction Stop
-							}
-							Else
-							{
-								$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-							}
+							
+							$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 								{
