@@ -41,6 +41,7 @@
                  "Microsoft.Windows.Wifi.Client.Realtek.Rtwlane01~~~~0.0.1.0",
                  "Microsoft.Windows.Wifi.Client.Realtek.Rtwlane13~~~~0.0.1.0",
                  "Microsoft.Windows.WordPad~~~~0.0.1.0",
+                 "NetFX3~~~~",
                  "OneCoreUAP.OneSync~~~~0.0.1.0",
                  "OpenSSH.Client~~~~0.0.1.0",
                  "Print.Fax.Scan~~~~0.0.1.0",

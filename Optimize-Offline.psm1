@@ -101,6 +101,45 @@ Function Get-CapabilityPackages {
 
 }
 
+Function Get-OptionalEnabledFeatures {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $true,
+			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
+		[String]$Path,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
+		[String]$ScratchDirectory,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
+		[String]$LogPath
+	)
+
+	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object -Property State -EQ Enabled
+}
+
+
+Function Get-OptionalDisabledFeatures {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $true,
+			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
+		[String]$Path,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
+		[String]$ScratchDirectory,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
+		[String]$LogPath
+	)
+
+	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object { $PSItem.FeatureName -notlike "SMB1Protocol*" -and $PSItem.FeatureName -ne "Windows-Defender-Default-Definitions" -and $PSItem.FeatureName -notlike "MicrosoftWindowsPowerShellV2*" -and $PSItem.State -eq "Disabled" }
+}
+
 Function Optimize-Offline
 {
 
@@ -130,8 +169,12 @@ Function Optimize-Offline
 		[String]$Capabilities,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Cabinet File Packages for selective removal.')]
 		[Switch]$Packages,
+		[ValidateSet('None', 'Select', 'List')]
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.')]
-		[Switch]$Features,
+		[String]$FeaturesToEnable,
+		[ValidateSet('None', 'Select', 'List')]
+		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.')]
+		[String]$FeaturesToDisable,
 		[Parameter(HelpMessage = 'Integrates the Developer Mode Feature into the image.')]
 		[Switch]$DeveloperMode,
 		[Parameter(HelpMessage = 'Integrates the Microsoft Windows Store and its required dependencies into the image.')]
@@ -549,7 +592,7 @@ Function Optimize-Offline
 			try {
 
 				## Populate .\TemplateLists\AppxPackages.json
-				$names = @( );
+				$names = @( )
 				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
@@ -559,7 +602,7 @@ Function Optimize-Offline
 
 
 				## Populate .\TemplateLists\SystemPackages.json
-				$names = @( );
+				$names = @( )
 				Get-SystemPackages | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
@@ -569,7 +612,7 @@ Function Optimize-Offline
 
 
 				## Populate .\TemplateLists\CapabilitiesPackages.json
-				$names = @( );
+				$names = @( )
 				Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.Name
 				}
@@ -577,6 +620,28 @@ Function Optimize-Offline
 					Name = $names
 				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\CapabilitiesPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
+				
+
+				## Populate .\TemplateLists\FeaturesEnabled.json
+				$names = @( )
+				Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+					$names += [String]$PSItem.FeatureName
+				}
+				[ordered]@{
+					FeatureName = $names
+				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\FeaturesEnabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
+
+
+
+				## Populate .\TemplateLists\FeaturesDisabled.json
+				$names = @( )
+				Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+					$names += [String]$PSItem.FeatureName
+				}
+				[ordered]@{
+					FeatureName = $names
+				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\FeaturesDisabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				
 
 			} catch {
 				Write-Host $Error[0]
@@ -1106,16 +1171,38 @@ Function Optimize-Offline
 		#endregion Disable Unsafe Optional Features
 
 		#region Disable/Enable Optional Features
-		If ($Features.IsPresent)
+
+		If ($FeaturesToDisable -in @('Select', 'List'))
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Disable Optional Features."
-			$DisableFeatures = Get-WindowsOptionalFeature -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Out-GridView -Title "Disable Optional Features." -PassThru
-			If ($DisableFeatures)
+
+			$EnabledFeatures = Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+
+			If ($EnabledFeatures)
 			{
+				$FeaturesToDisableList = @()
+				Switch ($PSBoundParameters.FeaturesToDisable) {
+					'Select' { 
+						$FeaturesToDisableList = $EnabledFeatures | Out-GridView -Title "Disable Optional Features." -PassThru
+					}
+					"List" {
+						If (Test-Path -Path $OptimizeOffline.FeaturesToDisable)
+						{
+							$FeaturesToDisableJSON = Get-Content -Path $OptimizeOffline.FeaturesToDisable -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+							$EnabledFeatures | ForEach-Object -Process {
+								If ($PSItem.FeatureName -in $FeaturesToDisableJSON.FeatureName)
+								{
+									$FeaturesToDisableList += $PSItem
+								}
+							}
+						}
+					}
+				}
 				Try
 				{
-					$DisableFeatures | ForEach-Object -Process {
+					$FeaturesToDisableList | ForEach-Object -Process {
 						$DisableFeatureParams = @{
 							Path             = $InstallMount
 							FeatureName      = $PSItem.FeatureName
@@ -1138,14 +1225,40 @@ Function Optimize-Offline
 				}
 				$Host.UI.RawUI.WindowTitle = $null; Clear-Host
 			}
+		}
+		if ($FeaturesToEnable -in @('Select', 'List')){
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Enable Optional Features."
-			$EnableFeatures = Get-WindowsOptionalFeature -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.FeatureName -notlike "SMB1Protocol*" -and $PSItem.FeatureName -ne "Windows-Defender-Default-Definitions" -and $PSItem.FeatureName -notlike "MicrosoftWindowsPowerShellV2*" -and $PSItem.State -eq "Disabled" } | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Out-GridView -Title "Enable Optional Features." -PassThru
-			If ($EnableFeatures)
+
+			$DisabledFeatures = Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+
+			If ($DisabledFeatures)
 			{
+				
+				$FeaturesToEnableList = @()
+
+				Switch ($PSBoundParameters.FeaturesToEnable) {
+					'Select' { 
+						$FeaturesToEnableList = $DisabledFeatures | Out-GridView -Title "Enable Optional Features." -PassThru
+					}
+					"List" {
+						If (Test-Path -Path $OptimizeOffline.FeaturesToEnable)
+						{
+							$FeaturesToEnableJSON = Get-Content -Path $OptimizeOffline.FeaturesToEnable -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+							$DisabledFeatures | ForEach-Object -Process {
+								If ($PSItem.FeatureName -in $FeaturesToEnableJSON.FeatureName)
+								{
+									$FeaturesToEnableList += $PSItem
+								}
+							}
+						}
+					}
+				}
+
 				Try
 				{
-					$EnableFeatures | ForEach-Object -Process {
+					$FeaturesToEnableList | ForEach-Object -Process {
 						$EnableFeatureParams = @{
 							Path             = $InstallMount
 							FeatureName      = $PSItem.FeatureName
