@@ -226,6 +226,8 @@ Function Optimize-Offline
 		[Parameter(Mandatory=$false)]
 		[Hashtable]$SelectiveRegistry = @{
 			DisableWindowsUpdate = $false
+			DisableDriverUpdate = $false
+			DormantOneDrive = $false
 		}
 	)
 
@@ -620,7 +622,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					DisplayName = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\AppxPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\AppxPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
 
 				## Populate .\TemplateLists\SystemPackages.json
@@ -630,7 +632,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					DisplayName = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\SystemPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\SystemPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
 
 				## Populate .\TemplateLists\CapabilitiesPackages.json
@@ -640,7 +642,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					Name = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\CapabilitiesPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\CapabilitiesPackages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
 				
 
@@ -651,7 +653,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					FeatureName = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\FeaturesEnabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\FeaturesEnabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
 
 
@@ -662,7 +664,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					FeatureName = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\FeaturesDisabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\FeaturesDisabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
 				
 
 				# Populate .\TemplateLists\Packages.json
@@ -672,7 +674,7 @@ Function Optimize-Offline
 				}
 				[ordered]@{
 					PackageName = $names
-				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\Packages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.TemplateLists)\Packages.json" -Encoding UTF8 -Force -ErrorAction Ignore
 
 			} catch {
 				Write-Host $Error[0]
@@ -687,7 +689,7 @@ Function Optimize-Offline
 
 
 		#region Provisioned App Package Removal
-		If ($WindowsApps -notin @('None'))
+		If ($WindowsApps -in $AllowedRemovalOptions)
 		{
 			Try
 			{
@@ -695,7 +697,7 @@ Function Optimize-Offline
 
 				$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build
 
-				$appsToRemove = @()
+				$appsToRemove = [System.Collections.ArrayList]@()
 
 				$RemovedAppxPackages = [Collections.Hashtable]::New()
 				Switch ($PSBoundParameters.WindowsApps)
@@ -714,7 +716,7 @@ Function Optimize-Offline
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 								{
-									$appsToRemove += $PSItem
+									[void]$appsToRemove.Add($PSItem)
 								}
 							}
 							$DynamicParams.WindowsApps = $true
@@ -724,7 +726,7 @@ Function Optimize-Offline
 					'All'
 					{
 						$AppxPackages | ForEach-Object -Process {
-							$appsToRemove += $PSItem
+							[void]$appsToRemove.Add($PSItem)
 						}
 						$DynamicParams.WindowsApps = $true
 						Break
@@ -755,7 +757,7 @@ Function Optimize-Offline
 		#endregion Provisioned App Package Removal
 
 		#region System App Removal
-		If ($SystemApps -notin @('None'))
+		If ($SystemApps -in $AllowedRemovalOptions)
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove System Apps."
@@ -773,7 +775,7 @@ Function Optimize-Offline
 				$RemovedSystemApps = [Collections.Hashtable]::New()
 				$DynamicParams.SystemApps = $true
 
-				$packagesToRemove = @();
+				$packagesToRemove = [System.Collections.ArrayList]@();
 				
 				Try {
 					Switch ($PSBoundParameters.SystemApps)
@@ -795,9 +797,7 @@ Function Optimize-Offline
 								$InboxAppsPackages | ForEach-Object -Process {
 									If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 									{
-
-										$packagesToRemove += $PSItem
-
+										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -812,9 +812,7 @@ Function Optimize-Offline
 								$InboxAppsPackages | ForEach-Object -Process {
 									If ($PSItem.DisplayName -in $BlacklistJSON.DisplayName)
 									{
-
-										$packagesToRemove += $PSItem
-
+										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1019,7 +1017,7 @@ Function Optimize-Offline
 		#endregion Import Custom App Associations
 
 		#region Windows Capability and Cabinet File Package Removal
-		If ($Capabilities -notin @('None'))
+		If ($Capabilities -in $AllowedRemovalOptions)
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Capabilities."
@@ -1030,7 +1028,7 @@ Function Optimize-Offline
 				Try
 				{
 					
-					$capabilitiesToRemove = @()
+					$capabilitiesToRemove = [System.Collections.ArrayList]@()
 
 					Switch ($PSBoundParameters.Capabilities)
 					{
@@ -1049,9 +1047,7 @@ Function Optimize-Offline
 								$WindowsCapabilities | ForEach-Object -Process {
 									If ($PSItem.Name -notin $WhitelistJSON.Name)
 									{
-
-										$capabilitiesToRemove += $PSItem
-
+										[void]$capabilitiesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1066,9 +1062,7 @@ Function Optimize-Offline
 								$WindowsCapabilities | ForEach-Object -Process {
 									If ($PSItem.Name -in $BlacklistJSON.Name)
 									{
-
-										$capabilitiesToRemove += $PSItem
-
+										[void]$capabilitiesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1100,7 +1094,7 @@ Function Optimize-Offline
 			}
 		}
 
-		If ($Packages -notin @('None'))
+		If ($Packages -in $AllowedRemovalOptions)
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Packages."
@@ -1109,7 +1103,7 @@ Function Optimize-Offline
 
 			If ($WindowsPackages)
 			{
-				$packagesToRemove = @()
+				$packagesToRemove = [System.Collections.ArrayList]@()
 				Try
 				{
 
@@ -1129,9 +1123,7 @@ Function Optimize-Offline
 								$WindowsPackages | ForEach-Object -Process {
 									If ($PSItem.PackageName -notin $WhitelistJSON.PackageName)
 									{
-
-										$packagesToRemove += $PSItem
-
+										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1147,9 +1139,7 @@ Function Optimize-Offline
 								$WindowsPackages | ForEach-Object -Process {
 									If ($PSItem.PackageName -in $BlacklistJSON.PackageName)
 									{
-
-										$packagesToRemove += $PSItem
-
+										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1216,7 +1206,7 @@ Function Optimize-Offline
 
 		#region Disable/Enable Optional Features
 
-		If ($FeaturesToDisable -in @('Select', 'List'))
+		If ($FeaturesToDisable -in $AllowedRemovalOptions)
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Disable Optional Features."
@@ -1225,12 +1215,11 @@ Function Optimize-Offline
 
 			If ($EnabledFeatures)
 			{
-				$FeaturesToDisableList = @()
+				$FeaturesToDisableList = [System.Collections.ArrayList]@()
 				Switch ($PSBoundParameters.FeaturesToDisable) {
 					'Select' 
 					{ 
 						$FeaturesToDisableList = $EnabledFeatures | Out-GridView -Title "Disable Optional Features." -PassThru
-
 						Break
 					}
 					"List" 
@@ -1242,7 +1231,7 @@ Function Optimize-Offline
 							$EnabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $FeaturesToDisableJSON.FeatureName)
 								{
-									$FeaturesToDisableList += $PSItem
+									[void]$FeaturesToDisableList.Add($PSItem)
 								}
 							}
 
@@ -1276,7 +1265,7 @@ Function Optimize-Offline
 				$Host.UI.RawUI.WindowTitle = $null; Clear-Host
 			}
 		}
-		if ($FeaturesToEnable -in @('Select', 'List')){
+		if ($FeaturesToEnable -in $AllowedRemovalOptions){
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Enable Optional Features."
 
@@ -1285,7 +1274,7 @@ Function Optimize-Offline
 			If ($DisabledFeatures)
 			{
 				
-				$FeaturesToEnableList = @()
+				$FeaturesToEnableList = [System.Collections.ArrayList]@()
 
 				Switch ($PSBoundParameters.FeaturesToEnable) {
 					'Select' 
@@ -1301,7 +1290,7 @@ Function Optimize-Offline
 							$DisabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $FeaturesToEnableJSON.FeatureName)
 								{
-									$FeaturesToEnableList += $PSItem
+									[void]$FeaturesToEnableList.Add($PSItem)
 								}
 							}
 						}
@@ -2100,7 +2089,9 @@ Function Optimize-Offline
 		#endregion Start Menu Clean-up
 
 		#region selective registry
-		& './Content/Additional/SelectiveRegistry/SelectiveRegistry.ps1'
+		Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter *.ps1 -Recurse | ForEach-Object -Process {
+			& $_.FullName
+		}
 		#endregion selective registry
 
 		#region Create Package Summary

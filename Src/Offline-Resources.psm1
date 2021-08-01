@@ -76,6 +76,8 @@ $OptimizeOffline.Drivers = (Resolve-FullPath -Path $OptimizeOffline.Additional -
 $OptimizeOffline.InstallDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Install)
 $OptimizeOffline.BootDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Boot)
 $OptimizeOffline.RecoveryDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Recovery)
+$OptimizeOffline.SelectiveRegistry = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child SelectiveRegistry)
+$OptimizeOffline.TemplateLists = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child TemplateLists)
 #endregion Module Path Declarations
 
 #region Data Declarations
@@ -109,6 +111,7 @@ $OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { Resolve-FullPath -Path $(Get-Deplo
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')
+$AllowedRemovalOptions = @('All', 'Select', 'List', 'Whitelist', 'BlackList')
 #endregion Variable Declarations
 
 #region Resource Alias Creation
@@ -123,7 +126,7 @@ New-Alias -Name GetPath -Value Resolve-FullPath
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND', 'AllowedRemovalOptions'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams
