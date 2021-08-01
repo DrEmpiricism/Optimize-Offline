@@ -8,7 +8,7 @@
   "WindowsApps": "Whitelist",
   "SystemApps": "Whitelist",
   "Capabilities": "Blacklist",
-  "Packages": false,
+  "Packages": "Blacklist",
   "FeaturesToEnable": "None",
   "FeaturesToDisable": "None",
   "DeveloperMode": false,
@@ -34,6 +34,7 @@
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpdate": true,
-    "DisableDriverUpdate": true
+    "DisableDriverUpdate": true,
+    "DormantOneDrive": true
   }
 }

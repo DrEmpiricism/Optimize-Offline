@@ -140,6 +140,27 @@ Function Get-OptionalDisabledFeatures {
 	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object { $PSItem.FeatureName -notlike "SMB1Protocol*" -and $PSItem.FeatureName -ne "Windows-Defender-Default-Definitions" -and $PSItem.FeatureName -notlike "MicrosoftWindowsPowerShellV2*" -and $PSItem.State -eq "Disabled" }
 }
 
+
+Function Get-OtherPackages {
+
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(Mandatory = $true,
+			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
+		[String]$Path,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
+		[String]$ScratchDirectory,
+		[Parameter(Mandatory = $false,
+			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
+		[String]$LogPath
+	)
+
+
+	return Get-WindowsPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageName -notlike "*20H2Enablement*" -and $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property PackageName
+}
+
 Function Optimize-Offline
 {
 
@@ -159,16 +180,17 @@ Function Optimize-Offline
 			})]
 		[IO.FileInfo]$SourcePath,
 		[Parameter(HelpMessage = 'Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle).')]
-		[ValidateSet('Select', 'Whitelist', 'All')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'All')]
 		[String]$WindowsApps,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of System Apps for selective removal.')]
-		[ValidateSet('Select', 'Whitelist')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist')]
 		[String]$SystemApps,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Capability Packages for selective removal.')]
-		[ValidateSet('Select', 'Whitelist', 'Blacklist')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist')]
 		[String]$Capabilities,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Cabinet File Packages for selective removal.')]
-		[Switch]$Packages,
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist')]
+		[String]$Packages,
 		[ValidateSet('None', 'Select', 'List')]
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.')]
 		[String]$FeaturesToEnable,
@@ -386,7 +408,7 @@ Function Optimize-Offline
 			If ($InstallInfo.Name -like "*LTSC*")
 			{
 				$DynamicParams.LTSC = $true
-				If ($WindowsApps) { Remove-Variable -Name WindowsApps }
+				If ($WindowsApps -notin @('None')) { Remove-Variable -Name WindowsApps }
 				If ($Win32Calc.IsPresent) { $Win32Calc = ![Switch]::Present }
 			}
 			Else
@@ -643,6 +665,15 @@ Function Optimize-Offline
 				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\FeaturesDisabled.json" -Encoding UTF8 -Force -ErrorAction Ignore
 				
 
+				# Populate .\TemplateLists\Packages.json
+				$names = @( )
+				Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+					$names += [String]$PSItem.PackageName
+				}
+				[ordered]@{
+					PackageName = $names
+				} | ConvertTo-Json | Out-File -FilePath ".\TemplateLists\Packages.json" -Encoding UTF8 -Force -ErrorAction Ignore
+
 			} catch {
 				Write-Host $Error[0]
 			} finally {
@@ -656,109 +687,75 @@ Function Optimize-Offline
 
 
 		#region Provisioned App Package Removal
-		If ($WindowsApps -and (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -gt 0)
+		If ($WindowsApps -notin @('None'))
 		{
-			$Host.UI.RawUI.WindowTitle = "Remove Provisioned App Packages."
-
-			$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build
-
-			$RemovedAppxPackages = [Collections.Hashtable]::New()
-			Switch ($PSBoundParameters.WindowsApps)
+			Try
 			{
-				'Select'
+				$Host.UI.RawUI.WindowTitle = "Remove Provisioned App Packages."
+
+				$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build
+
+				$appsToRemove = @()
+
+				$RemovedAppxPackages = [Collections.Hashtable]::New()
+				Switch ($PSBoundParameters.WindowsApps)
 				{
-					Try
+					'Select'
 					{
-						$AppxPackages | Out-GridView -Title "Select the Provisioned App Packages to Remove." -PassThru | ForEach-Object -Process {
-							$RemoveAppxParams = @{
-								Path             = $InstallMount
-								PackageName      = $PSItem.PackageName
-								ScratchDirectory = $ScratchFolder
-								LogPath          = $DISMLog
-								LogLevel         = 1
-								ErrorAction      = 'Stop'
-							}
-							Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
-							[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
-							$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
-						}
-						$DynamicParams.WindowsApps = $true
+						$appsToRemove = $AppxPackages | Out-GridView -Title "Select the Provisioned App Packages to Remove." -PassThru
+						Break
 					}
-					Catch
+					'Whitelist'
 					{
-						Log $OptimizeData.FailedRemovingWindowsApps -Type Error -ErrorRecord $Error[0]
-						Stop-Optimize
-					}
-					Break
-				}
-				'Whitelist'
-				{
-					If (Test-Path -Path $OptimizeOffline.AppxWhitelist)
-					{
-						Try
+						If (Test-Path -Path $OptimizeOffline.AppxWhitelist)
 						{
-							
 							$WhitelistJSON = Get-Content -Path $OptimizeOffline.AppxWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 								{
-									$RemoveAppxParams = @{
-										Path             = $InstallMount
-										PackageName      = $PSItem.PackageName
-										ScratchDirectory = $ScratchFolder
-										LogPath          = $DISMLog
-										LogLevel         = 1
-										ErrorAction      = 'Stop'
-									}
-									Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
-									[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
-									$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
+									$appsToRemove += $PSItem
 								}
 							}
 							$DynamicParams.WindowsApps = $true
 						}
-						Catch
-						{
-							Log $OptimizeData.FailedRemovingWindowsApps -Type Error -ErrorRecord $Error[0]
-							Stop-Optimize
-						}
+						Break
 					}
-					Break
-				}
-				'All'
-				{
-					Try
+					'All'
 					{
 						$AppxPackages | ForEach-Object -Process {
-							$RemoveAppxParams = @{
-								Path             = $InstallMount
-								PackageName      = $PSItem.PackageName
-								ScratchDirectory = $ScratchFolder
-								LogPath          = $DISMLog
-								LogLevel         = 1
-								ErrorAction      = 'Stop'
-							}
-							Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
-							[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
-							$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
+							$appsToRemove += $PSItem
 						}
 						$DynamicParams.WindowsApps = $true
+						Break
 					}
-					Catch
-					{
-						Log $OptimizeData.FailedRemovingWindowsApps -Type Error -ErrorRecord $Error[0]
-						Stop-Optimize
-					}
-					Break
 				}
+				$appsToRemove | ForEach-Object -Process {
+					$RemoveAppxParams = @{
+						Path             = $InstallMount
+						PackageName      = $PSItem.PackageName
+						ScratchDirectory = $ScratchFolder
+						LogPath          = $DISMLog
+						LogLevel         = 1
+						ErrorAction      = 'Stop'
+					}
+					Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
+					[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
+					$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
+				}
+				$DynamicParams.WindowsApps = $true
+			}
+			Catch
+			{
+				Log $OptimizeData.FailedRemovingWindowsApps -Type Error -ErrorRecord $Error[0]
+				Stop-Optimize
 			}
 			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
 		}
 		#endregion Provisioned App Package Removal
 
 		#region System App Removal
-		If ($SystemApps)
+		If ($SystemApps -notin @('None'))
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove System Apps."
@@ -775,6 +772,8 @@ Function Optimize-Offline
 			{
 				$RemovedSystemApps = [Collections.Hashtable]::New()
 				$DynamicParams.SystemApps = $true
+
+				$packagesToRemove = @();
 				
 				Try {
 					Switch ($PSBoundParameters.SystemApps)
@@ -783,16 +782,7 @@ Function Optimize-Offline
 						{
 							Clear-Host
 
-							$InboxAppsPackages = $InboxAppsPackages | Out-GridView -Title "Remove System Apps." -PassThru
-
-							$InboxAppsPackages | ForEach-Object -Process {
-								$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
-								Log ($OptimizeData.RemovingSystemApp -f $PSItem.DisplayName)
-								$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
-								If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
-								$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
-								Start-Sleep 2
-							}
+							$packagesToRemove = $InboxAppsPackages | Out-GridView -Title "Remove System Apps." -PassThru
 
 							Break
 						}
@@ -806,18 +796,39 @@ Function Optimize-Offline
 									If ($PSItem.DisplayName -notin $WhitelistJSON.DisplayName)
 									{
 
-										$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
-										Log ($OptimizeData.RemovingSystemApp -f $PSItem.DisplayName)
-										$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
-										If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
-										$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
-										Start-Sleep 2
+										$packagesToRemove += $PSItem
 
 									}
 								}
 							}
 							Break
 						}
+						'Blacklist'
+						{
+							If (Test-Path -Path $OptimizeOffline.SystemAppxBlacklist)
+							{
+								$BlacklistJSON = Get-Content -Path $OptimizeOffline.SystemAppxBlacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+								$InboxAppsPackages | ForEach-Object -Process {
+									If ($PSItem.DisplayName -in $BlacklistJSON.DisplayName)
+									{
+
+										$packagesToRemove += $PSItem
+
+									}
+								}
+							}
+							Break
+						}
+					}
+
+					$packagesToRemove | ForEach-Object -Process {
+						$PackageKey = (GetPath -Path $InboxAppsKey -Child $PSItem.PackageName) -replace 'HKLM:', 'HKLM'
+						Log ($OptimizeData.RemovingSystemApp -f $PSItem.DisplayName)
+						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
+						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
+						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
+						Start-Sleep 2
 					}
 				} Catch {
 					Log $OptimizeData.FailedRemovingSystemApps -Type Error -ErrorRecord $Error[0]
@@ -1008,7 +1019,7 @@ Function Optimize-Offline
 		#endregion Import Custom App Associations
 
 		#region Windows Capability and Cabinet File Package Removal
-		If ($Capabilities)
+		If ($Capabilities -notin @('None'))
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Capabilities."
@@ -1018,25 +1029,14 @@ Function Optimize-Offline
 			{
 				Try
 				{
+					
+					$capabilitiesToRemove = @()
 
 					Switch ($PSBoundParameters.Capabilities)
 					{
 						'Select'
 						{
-							$WindowsCapabilities = $WindowsCapabilities | Out-GridView -Title "Remove Windows Capabilities." -PassThru
-
-							$WindowsCapabilities | ForEach-Object -Process {
-								$RemoveCapabilityParams = @{
-									Path             = $InstallMount
-									Name             = $PSItem.Name
-									ScratchDirectory = $ScratchFolder
-									LogPath          = $DISMLog
-									LogLevel         = 1
-									ErrorAction      = 'Stop'
-								}
-								Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
-								[Void](Remove-WindowsCapability @RemoveCapabilityParams)
-							}
+							$capabilitiesToRemove = $WindowsCapabilities | Out-GridView -Title "Remove Windows Capabilities." -PassThru
 
 							Break
 						}
@@ -1050,16 +1050,7 @@ Function Optimize-Offline
 									If ($PSItem.Name -notin $WhitelistJSON.Name)
 									{
 
-										$RemoveCapabilityParams = @{
-											Path             = $InstallMount
-											Name             = $PSItem.Name
-											ScratchDirectory = $ScratchFolder
-											LogPath          = $DISMLog
-											LogLevel         = 1
-											ErrorAction      = 'Stop'
-										}
-										Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
-										[Void](Remove-WindowsCapability @RemoveCapabilityParams)
+										$capabilitiesToRemove += $PSItem
 
 									}
 								}
@@ -1076,16 +1067,7 @@ Function Optimize-Offline
 									If ($PSItem.Name -in $BlacklistJSON.Name)
 									{
 
-										$RemoveCapabilityParams = @{
-											Path             = $InstallMount
-											Name             = $PSItem.Name
-											ScratchDirectory = $ScratchFolder
-											LogPath          = $DISMLog
-											LogLevel         = 1
-											ErrorAction      = 'Stop'
-										}
-										Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
-										[Void](Remove-WindowsCapability @RemoveCapabilityParams)
+										$capabilitiesToRemove += $PSItem
 
 									}
 								}
@@ -1093,6 +1075,20 @@ Function Optimize-Offline
 							Break
 						}
 					}
+
+					$capabilitiesToRemove | ForEach-Object -Process {
+						$RemoveCapabilityParams = @{
+							Path             = $InstallMount
+							Name             = $PSItem.Name
+							ScratchDirectory = $ScratchFolder
+							LogPath          = $DISMLog
+							LogLevel         = 1
+							ErrorAction      = 'Stop'
+						}
+						Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
+						[Void](Remove-WindowsCapability @RemoveCapabilityParams)
+					}
+
 					$DynamicParams.Capabilities = $true
 				}
 				Catch
@@ -1104,16 +1100,64 @@ Function Optimize-Offline
 			}
 		}
 
-		If ($Packages.IsPresent)
+		If ($Packages -notin @('None'))
 		{
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Packages."
-			$WindowsPackages = Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageName -notlike "*20H2Enablement*" -and $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property PackageName | Out-GridView -Title "Remove Windows Packages." -PassThru
+
+			$WindowsPackages = Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+
 			If ($WindowsPackages)
 			{
+				$packagesToRemove = @()
 				Try
 				{
-					$WindowsPackages | ForEach-Object -Process {
+
+					Switch ($Packages) {
+						'Select' 
+						{
+							$packagesToRemove = $WindowsPackages | Out-GridView -Title "Remove Windows Packages." -PassThru
+							Break
+						}
+						'Whitelist' 
+						{
+
+							If (Test-Path -Path $OptimizeOffline.PackagesWhitelist)
+							{
+								$WhitelistJSON = Get-Content -Path $OptimizeOffline.PackagesWhitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+								$WindowsPackages | ForEach-Object -Process {
+									If ($PSItem.PackageName -notin $WhitelistJSON.PackageName)
+									{
+
+										$packagesToRemove += $PSItem
+
+									}
+								}
+							}
+							Break
+						}
+						'Blacklist' 
+						{
+							
+							If (Test-Path -Path $OptimizeOffline.PackagesBlacklist)
+							{
+								$BlacklistJSON = Get-Content -Path $OptimizeOffline.PackagesBlacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+								$WindowsPackages | ForEach-Object -Process {
+									If ($PSItem.PackageName -in $BlacklistJSON.PackageName)
+									{
+
+										$packagesToRemove += $PSItem
+
+									}
+								}
+							}
+							Break
+						}
+					}
+
+					$packagesToRemove | ForEach-Object -Process {
 						$RemovePackageParams = @{
 							Path             = $InstallMount
 							PackageName      = $PSItem.PackageName
@@ -1183,13 +1227,17 @@ Function Optimize-Offline
 			{
 				$FeaturesToDisableList = @()
 				Switch ($PSBoundParameters.FeaturesToDisable) {
-					'Select' { 
+					'Select' 
+					{ 
 						$FeaturesToDisableList = $EnabledFeatures | Out-GridView -Title "Disable Optional Features." -PassThru
+
+						Break
 					}
-					"List" {
-						If (Test-Path -Path $OptimizeOffline.FeaturesToDisable)
+					"List" 
+					{
+						If (Test-Path -Path $OptimizeOffline.FeaturesToDisableJSON)
 						{
-							$FeaturesToDisableJSON = Get-Content -Path $OptimizeOffline.FeaturesToDisable -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$FeaturesToDisableJSON = Get-Content -Path $OptimizeOffline.FeaturesToDisableJSON -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$EnabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $FeaturesToDisableJSON.FeatureName)
@@ -1197,6 +1245,8 @@ Function Optimize-Offline
 									$FeaturesToDisableList += $PSItem
 								}
 							}
+
+							Break
 						}
 					}
 				}
@@ -1238,13 +1288,15 @@ Function Optimize-Offline
 				$FeaturesToEnableList = @()
 
 				Switch ($PSBoundParameters.FeaturesToEnable) {
-					'Select' { 
+					'Select' 
+					{ 
 						$FeaturesToEnableList = $DisabledFeatures | Out-GridView -Title "Enable Optional Features." -PassThru
 					}
-					"List" {
-						If (Test-Path -Path $OptimizeOffline.FeaturesToEnable)
+					"List" 
+					{
+						If (Test-Path -Path $OptimizeOffline.FeaturesToEnableJSON)
 						{
-							$FeaturesToEnableJSON = Get-Content -Path $OptimizeOffline.FeaturesToEnable -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$FeaturesToEnableJSON = Get-Content -Path $OptimizeOffline.FeaturesToEnableJSON -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$DisabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $FeaturesToEnableJSON.FeatureName)
