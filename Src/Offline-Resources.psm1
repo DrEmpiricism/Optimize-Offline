@@ -107,7 +107,13 @@ $ErrorLog = (Resolve-FullPath -Path $LogFolder -Child OptimizeErrors.log)
 $RegistryLog = (Resolve-FullPath -Path $LogFolder -Child RegistrySettings.log)
 $DISMLog = (Resolve-FullPath -Path $LogFolder -Child DISM.log)
 $DISM = If (Get-DeploymentTool) { Resolve-FullPath -Path $(Get-DeploymentTool) -Child dism.exe } Else { Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\dism.exe' }
-$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe } Else { $null }
+$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { 
+	Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe 
+} Elseif (Test-Path -Path $(Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe)) {
+	Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe
+} Else {
+	$null
+}
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')

@@ -4,7 +4,7 @@
     "Ensure proper formatting is used when editing the JSON parameter values.",
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
   ],
-  "SourcePath": "G:\\sources\\install.wim",
+  "SourcePath": "C:\\Users\\Genci\\Desktop\\W11\\22000.100.210719-2150.CO_RELEASE_SVC_PROD2_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
   "WindowsApps": "Whitelist",
   "SystemApps": "Whitelist",
   "Capabilities": "Blacklist",
@@ -30,7 +30,7 @@
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "Prompt",
+  "ISO": "No-Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpdate": true,
