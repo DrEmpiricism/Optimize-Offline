@@ -8,7 +8,7 @@
   "WindowsApps": "Select",
   "SystemApps": "Select",
   "Capabilities": "Select",
-  "Packages": false,
+  "Packages": "Select",
   "FeaturesToEnable": "Select",
   "FeaturesToDisable": "Select",
   "DeveloperMode": false,
@@ -34,7 +34,7 @@
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpdate": false,
-    "DisableDriverUpdate": false
+    "DisableDriverUpdate": false,
     "DormantOneDrive": false
   }
 }
