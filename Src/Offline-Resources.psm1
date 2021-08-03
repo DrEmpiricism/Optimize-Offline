@@ -51,10 +51,13 @@ $OptimizeOffline.ConfigurationJSON = (Resolve-FullPath -Path $OptimizeOffline.Di
 $OptimizeOffline.ManifestDataFile = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Optimize-Offline.psd1)
 $OptimizeOffline.AppxWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child AppxWhitelist.json)
 $OptimizeOffline.SystemAppxWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child SystemAppxWhitelist.json)
+$OptimizeOffline.SystemAppxBlacklist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child SystemAppxBlacklist.json)
+$OptimizeOffline.PackagesWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child PackagesWhitelist.json)
+$OptimizeOffline.PackagesBlacklist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child PackagesBlacklist.json)
 $OptimizeOffline.CapabilitiesWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CapabilitiesWhitelist.json)
 $OptimizeOffline.CapabilitiesBlacklist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CapabilitiesBlacklist.json)
-$OptimizeOffline.FeaturesToEnable = (Resolve-FullPath -Path $OptimizeOffline.Content -Child FeaturesToEnable.json)
-$OptimizeOffline.FeaturesToDisable = (Resolve-FullPath -Path $OptimizeOffline.Content -Child FeaturesToDisable.json)
+$OptimizeOffline.FeaturesToEnableJSON = (Resolve-FullPath -Path $OptimizeOffline.Content -Child FeaturesToEnable.json)
+$OptimizeOffline.FeaturesToDisableJSON = (Resolve-FullPath -Path $OptimizeOffline.Content -Child FeaturesToDisable.json)
 $OptimizeOffline.CustomAppAssociations = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CustomAppAssociations.xml)
 $OptimizeOffline.DevMode = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DeveloperMode)
 $OptimizeOffline.WindowsStore = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child WindowsStore)
@@ -73,6 +76,8 @@ $OptimizeOffline.Drivers = (Resolve-FullPath -Path $OptimizeOffline.Additional -
 $OptimizeOffline.InstallDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Install)
 $OptimizeOffline.BootDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Boot)
 $OptimizeOffline.RecoveryDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Recovery)
+$OptimizeOffline.SelectiveRegistry = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child SelectiveRegistry)
+$OptimizeOffline.TemplateLists = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child TemplateLists)
 #endregion Module Path Declarations
 
 #region Data Declarations
@@ -102,10 +107,17 @@ $ErrorLog = (Resolve-FullPath -Path $LogFolder -Child OptimizeErrors.log)
 $RegistryLog = (Resolve-FullPath -Path $LogFolder -Child RegistrySettings.log)
 $DISMLog = (Resolve-FullPath -Path $LogFolder -Child DISM.log)
 $DISM = If (Get-DeploymentTool) { Resolve-FullPath -Path $(Get-DeploymentTool) -Child dism.exe } Else { Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\dism.exe' }
-$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe } Else { $null }
+$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { 
+	Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe 
+} Elseif (Test-Path -Path $(Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe)) {
+	Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe
+} Else {
+	$null
+}
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')
+$AllowedRemovalOptions = @('All', 'Select', 'List', 'Whitelist', 'BlackList')
 #endregion Variable Declarations
 
 #region Resource Alias Creation
@@ -120,7 +132,7 @@ New-Alias -Name GetPath -Value Resolve-FullPath
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND', 'AllowedRemovalOptions'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams

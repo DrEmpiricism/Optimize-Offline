@@ -101,6 +101,7 @@ FailedCreatingISO                       = Failed to Create a {0} Bootable Window
 FinalizingOptimizations                 = Finalizing Optimizations.
 OptimizationsCompleted                  = {0} completed in [{1}] minutes with [{2}] errors.
 TerminatingOptimizations                = Discarding any Images and Terminating Optimizations.
-DisablingWindowsUpdate                  = Disabling Windows Update
-DisablingDriverUpdate                   = Disabling automatic driver update
+SelectiveRegistryWindowsUpdate          = Disabling Windows Update
+SelectiveRegistryDriverUpdate           = Disabling automatic driver update
+SelectiveRegistryDormantOneDrive        = Enabling dormant OneDrive fix
 '@

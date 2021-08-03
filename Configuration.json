@@ -35,5 +35,6 @@
   "SelectiveRegistry": {
     "DisableWindowsUpdate": false,
     "DisableDriverUpdate": false
+    "DormantOneDrive": true
   }
 }

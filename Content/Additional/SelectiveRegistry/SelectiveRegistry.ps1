@@ -1,6 +1,6 @@
 RegHives -Load
 if($SelectiveRegistry.DisableWindowsUpdate -eq $true) {
-	Log $OptimizeData.DisablingWindowsUpdate
+	Log $OptimizeData.SelectiveRegistryWindowsUpdate
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310093Enabled" -Type DWord -Value 0
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Type DWord -Value 0
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Speech_OneCore\Preferences" -Name "ModelDownloadAllowed" -Type DWord -Value 0
@@ -20,7 +20,7 @@ if($SelectiveRegistry.DisableWindowsUpdate -eq $true) {
 }
 
 if($SelectiveRegistry.DisableDriverUpdate -eq $true) {
-	Log $OptimizeData.DisablingDriverUpdate
+	Log $OptimizeData.SelectiveRegistryDriverUpdate
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Device Metadata" -Name "PreventDeviceMetadataFromNetwork" -Type DWord -Value 1
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontPromptForWindowsUpdate" -Type DWord -Value 1
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DriverSearching" -Name "DontSearchWindowsUpdate" -Type DWord -Value 1 
@@ -30,6 +30,12 @@ if($SelectiveRegistry.DisableDriverUpdate -eq $true) {
 	Start-Sleep 1
 }
 
-Clear-Host
+if($SelectiveRegistry.DormantOneDrive -eq $true) {
+	Log $OptimizeData.SelectiveRegistryDormantOneDrive
+	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Type DWord -Value 0
+	Start-Sleep 1
+}
 
 RegHives -Unload
+
+Clear-Host

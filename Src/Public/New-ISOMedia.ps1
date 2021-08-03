@@ -72,7 +72,16 @@ public class ISOWriter
     }
     End
     {
-        If ($PSVersionTable.PSVersion.Major -lt 6)
+
+        If ($OSCDIMG -and (Test-Path -Path $OSCDIMG))
+        {
+            If (!(Test-Path -Path (GetPath -Path $ISOMedia.FullName -Child 'boot\etfsboot.com'))) { Log "Missing the required etfsboot.com bootfile for ISO creation." -Type Error }
+            $ISOFile = GetPath -Path $WorkFolder -Child ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso")
+            $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f (Get-ChildItem -Path "$($ISOMedia.FullName)\boot" -Filter etfsboot.com | Select-Object -ExpandProperty FullName), (Get-ChildItem -Path "$($ISOMedia.FullName)\efi\Microsoft\boot" -Filter $BootFile | Select-Object -ExpandProperty FullName))
+            $OSCDIMGArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $InstallInfo.Name, $ISOMedia.FullName, $ISOFile)
+            $RET = StartExe $OSCDIMG -Arguments $OSCDIMGArgs
+            If ($RET -eq 0) { $ISOFile }
+        } elseif ($PSVersionTable.PSVersion.Major -lt 6)
         {
             $FSImage.BootImageOptions = $BootOptions
             $WriteISO = $FSImage.CreateResultImage()
@@ -89,18 +98,6 @@ public class ISOWriter
             While ([Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
             [GC]::Collect()
             [GC]::WaitForPendingFinalizers()
-        }
-        Else
-        {
-            If ($OSCDIMG -and (Test-Path -Path $OSCDIMG))
-            {
-                If (!(Test-Path -Path (GetPath -Path $ISOMedia.FullName -Child 'boot\etfsboot.com'))) { Log "Missing the required etfsboot.com bootfile for ISO creation." -Type Error }
-                $ISOFile = GetPath -Path $WorkFolder -Child ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso")
-                $BootData = ('2#p0,e,b"{0}"#pEF,e,b"{1}"' -f (Get-ChildItem -Path "$($ISOMedia.FullName)\boot" -Filter etfsboot.com | Select-Object -ExpandProperty FullName), (Get-ChildItem -Path "$($ISOMedia.FullName)\efi\Microsoft\boot" -Filter $BootFile | Select-Object -ExpandProperty FullName))
-                $OSCDIMGArgs = @('-bootdata:{0}', '-u2', '-udfver102', '-l"{1}"', '"{2}"', '"{3}"' -f $BootData, $InstallInfo.Name, $ISOMedia.FullName, $ISOFile)
-                $RET = StartExe $OSCDIMG -Arguments $OSCDIMGArgs
-                If ($RET -eq 0) { $ISOFile }
-            }
         }
     }
 }
