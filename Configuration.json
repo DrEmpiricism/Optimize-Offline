@@ -1,4 +1,4 @@
-﻿{
+{
   "_Info": [
     "This is a JSON based Configuration file for Optimize-Offline.",
     "Ensure proper formatting is used when editing the JSON parameter values.",
@@ -35,6 +35,6 @@
   "SelectiveRegistry": {
     "DisableWindowsUpdate": false,
     "DisableDriverUpdate": false
-    "DormantOneDrive": true
+    "DormantOneDrive": false
   }
 }
