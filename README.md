@@ -200,21 +200,28 @@ Once you have edited the Configuration.json to your specific optimization requir
 
 ## Using component removal lists
 
-The component removal lists can be found under subfolder ./Content
-The following lists are available:
+Removal lists can be found in ./Content/Lists. There are 6 basic categories spread out through each of the subfolders. In each subcategory you will find a Whitelist, Blacklist and a template. The template contains all the possible packages to be inserted either in the blacklist or in the whitelist. The features contain only a list json and a template.
 
- - AppxWhitelist.json - list of appx to keep
- - SystemAppxWhitelist.json - list of system appx to keep
- - CapabilitiesWhitelist.json - list of capabilities to keep
- - CapabilitiesBlacklist.json - list of capabilities to remove
+- Appx - AppxWhitelist.json, AppxBlacklist.json, AppxTemplate.json
+- SystemAppx - SystemAppxWhitelist.json, SystemAppxBlacklist.json, SystemAppxTemplate.json
+- Capabilities - CapabilitiesWhitelist.json, CapabilitiesBlacklist.json, CapabilitiesTemplate.json
+- Packages - PackagesWhitelist.json, PackagesBlacklist.json, PackagesTemplate.json
+- FeaturesToEnable - FeaturesToEnableList.json, FeaturesToEnableTemplate.json
+- FeaturesToDisable - FeaturesToDisableList.json, FeaturesToDisableTemplate.json
 
-The usage of these lists is controlled by the json parameters in configuration.json
+The template files can be filled by launching the script with the populateLists parameter
 
- - WindowsApps - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist AppxWhitelist.json)
- - SystemApps - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist SystemAppxWhitelist.json)
- - Capabilities - Select (Selection box appears on runtime), Whitelist (all apps are removed except those in the whitelist CapabilitiesWhitelist.json), Blacklist (only apps in CapabilitiesBlacklist.json are removed)
+```PowerShell
+.\Start-Optimize.ps1
+```
 
-
+In configuration.json the list parameters are the following:
+- WindowsApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Appx
+- SystemApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/SystemAppx
+- Capabilities - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Capabilities
+- Packages - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Packages
+- FeaturesToEnable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToEnable
+- FeaturesToDisable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToDisable
 
 ## Generating template component removal lists
 
