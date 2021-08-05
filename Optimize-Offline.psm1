@@ -248,9 +248,6 @@ Function Optimize-Offline
 	}
 	Process
 	{
-
-		
-
 		#region Create the Working File Structure
 		Set-Location -Path $OptimizeOffline.Directory
 		[Environment]::CurrentDirectory = (Get-Location -PSProvider FileSystem).ProviderPath
@@ -614,31 +611,34 @@ Function Optimize-Offline
 
 
 
-		if ($populateLists) {
+		If ($populateLists) {
 
-			try {
+			Try {
 
-				## Populate Appx template
+				## Populate WindowsApps template
+				Log "Populating $($OptimizeOffline.Lists.WindowsApps.Template)"
 				$names = @( )
 				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
 				[ordered]@{
 					DisplayName = $names
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Appx.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.WindowsApps.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				Start-Sleep 1
 
-
-				## Populate SystemAppx template
+				## Populate SystemApps template
+				Log "Populating $($OptimizeOffline.Lists.SystemApps.Template)"
 				$names = @( )
 				Get-SystemPackages | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
 				}
 				[ordered]@{
 					DisplayName = $names
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemAppx.Template -Encoding UTF8 -Force -ErrorAction Ignore
-
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemApps.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				Start-Sleep 1
 
 				## Populate capabilities template
+				Log "Populating $($OptimizeOffline.Lists.Capabilities.Template)"
 				$names = @( )
 				Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.Name
@@ -646,31 +646,10 @@ Function Optimize-Offline
 				[ordered]@{
 					Name = $names
 				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Capabilities.Template -Encoding UTF8 -Force -ErrorAction Ignore
-
-				
-
-				## Populate FeaturesToDisable template
-				$names = @( )
-				Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
-					$names += [String]$PSItem.FeatureName
-				}
-				[ordered]@{
-					FeatureName = $names
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisable.Template -Encoding UTF8 -Force -ErrorAction Ignore
-
-
-
-				## Populate FeaturesToEnable template
-				$names = @( )
-				Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
-					$names += [String]$PSItem.FeatureName
-				}
-				[ordered]@{
-					FeatureName = $names
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnable.Template -Encoding UTF8 -Force -ErrorAction Ignore
-				
+				Start-Sleep 1
 
 				# Populate Packages template
+				Log "Populating $($OptimizeOffline.Lists.Packages.Template)"
 				$names = @( )
 				Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.PackageName
@@ -678,16 +657,39 @@ Function Optimize-Offline
 				[ordered]@{
 					PackageName = $names
 				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Packages.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				Start-Sleep 1
 
-			} catch {
-				Write-Host $Error[0]
-			} finally {
+				## Populate FeaturesToDisable template
+				Log "Populating $($OptimizeOffline.Lists.FeaturesToDisable.Template)"
+				$names = @( )
+				Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+					$names += [String]$PSItem.FeatureName
+				}
+				[ordered]@{
+					FeatureName = $names
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisable.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				Start-Sleep 1
+
+				## Populate FeaturesToEnable template
+				Log "Populating $($OptimizeOffline.Lists.FeaturesToEnable.Template)"
+				$names = @( )
+				Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+					$names += [String]$PSItem.FeatureName
+				}
+				[ordered]@{
+					FeatureName = $names
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnable.Template -Encoding UTF8 -Force -ErrorAction Ignore
+
+			} Catch {
+				Log $Error[0]
+			} Finally {
+				Log $OptimizeData.TerminatingOptimizations
 				Dismount-Images
+				@($DISMLog, $(GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
+				$TempDirectory | Purge -ErrorAction Continue
+				refreshenv
+				Exit(0)
 			}
-
-			$Host.UI.RawUI.WindowTitle = "Powershell";
-
-			Exit(0)
 		}
 
 
@@ -712,9 +714,9 @@ Function Optimize-Offline
 					}
 					'Whitelist'
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.Appx.Whitelist)
+						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Whitelist)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.Appx.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$JSON = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -notin $JSON.DisplayName)
@@ -727,9 +729,9 @@ Function Optimize-Offline
 					}
 					'Blacklist'
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.Appx.Blacklist)
+						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Blacklist)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.Appx.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$JSON = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$AppxPackages | ForEach-Object -Process {
 								If ($PSItem.DisplayName -in $JSON.DisplayName)
@@ -805,9 +807,9 @@ Function Optimize-Offline
 						}
 						'Whitelist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.SystemAppx.Whitelist)
+							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Whitelist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemAppx.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 								$InboxAppsPackages | ForEach-Object -Process {
 									If ($PSItem.DisplayName -notin $JSON.DisplayName)
@@ -820,9 +822,9 @@ Function Optimize-Offline
 						}
 						'Blacklist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.SystemAppx.Blacklist)
+							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Blacklist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemAppx.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 								$InboxAppsPackages | ForEach-Object -Process {
 									If ($PSItem.DisplayName -in $JSON.DisplayName)

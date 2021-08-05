@@ -2,7 +2,9 @@
   "_Info": [
     "This is a JSON based Configuration file for Optimize-Offline.",
     "Ensure proper formatting is used when editing the JSON parameter values.",
-    "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
+    "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
+    "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
+    "FeaturesToEnable, FeaturesToDisable : All | None | Select | List"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",

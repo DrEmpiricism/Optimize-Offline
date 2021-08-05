@@ -75,17 +75,17 @@ $OptimizeOffline.SelectiveRegistry = (Resolve-FullPath -Path $OptimizeOffline.Ad
 $OptimizeOffline.Lists = @{}
 $OptimizeOffline.Lists.Path = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Lists)
 
-$OptimizeOffline.Lists.Appx = @{}
-$OptimizeOffline.Lists.Appx.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Appx)
-$OptimizeOffline.Lists.Appx.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxWhitelist.json)
-$OptimizeOffline.Lists.Appx.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxBlacklist.json)
-$OptimizeOffline.Lists.Appx.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxTemplate.json)
+$OptimizeOffline.Lists.WindowsApps = @{}
+$OptimizeOffline.Lists.WindowsApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child WindowsApps)
+$OptimizeOffline.Lists.WindowsApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsWhitelist.json)
+$OptimizeOffline.Lists.WindowsApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsBlacklist.json)
+$OptimizeOffline.Lists.WindowsApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsTemplate.json)
 
-$OptimizeOffline.Lists.SystemAppx = @{}
-$OptimizeOffline.Lists.SystemAppx.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemAppx)
-$OptimizeOffline.Lists.SystemAppx.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxWhitelist.json)
-$OptimizeOffline.Lists.SystemAppx.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxBlacklist.json)
-$OptimizeOffline.Lists.SystemAppx.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxTemplate.json)
+$OptimizeOffline.Lists.SystemApps = @{}
+$OptimizeOffline.Lists.SystemApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemApps)
+$OptimizeOffline.Lists.SystemApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsWhitelist.json)
+$OptimizeOffline.Lists.SystemApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsBlacklist.json)
+$OptimizeOffline.Lists.SystemApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsTemplate.json)
 
 $OptimizeOffline.Lists.Capabilities = @{}
 $OptimizeOffline.Lists.Capabilities.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Capabilities)

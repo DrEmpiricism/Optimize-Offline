@@ -202,8 +202,8 @@ Once you have edited the Configuration.json to your specific optimization requir
 
 Removal lists can be found in ./Content/Lists. There are 6 basic categories spread out through each of the subfolders. In each subcategory you will find a Whitelist, Blacklist and a template. The template contains all the possible packages to be inserted either in the blacklist or in the whitelist. The features contain only a list json and a template.
 
-- Appx - AppxWhitelist.json, AppxBlacklist.json, AppxTemplate.json
-- SystemAppx - SystemAppxWhitelist.json, SystemAppxBlacklist.json, SystemAppxTemplate.json
+- WindowsApps - WindowsAppsWhitelist.json, WindowsAppsBlacklist.json, WindowsAppsTemplate.json
+- SystemApps - SystemAppsWhitelist.json, SystemAppsBlacklist.json, SystemAppsTemplate.json
 - Capabilities - CapabilitiesWhitelist.json, CapabilitiesBlacklist.json, CapabilitiesTemplate.json
 - Packages - PackagesWhitelist.json, PackagesBlacklist.json, PackagesTemplate.json
 - FeaturesToEnable - FeaturesToEnableList.json, FeaturesToEnableTemplate.json
@@ -216,8 +216,8 @@ The template files can be filled by launching the script with the populateLists 
 ```
 
 In configuration.json the list parameters are the following:
-- WindowsApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Appx
-- SystemApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/SystemAppx
+- WindowsApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/WindowsApps
+- SystemApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/SystemApps
 - Capabilities - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Capabilities
 - Packages - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Packages
 - FeaturesToEnable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToEnable
