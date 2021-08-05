@@ -248,6 +248,46 @@ Function Optimize-Offline
 	}
 	Process
 	{
+
+		#region List paths
+		$OptimizeOffline.Lists = @{}
+		$OptimizeOffline.Lists.Path = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Lists)
+
+		$OptimizeOffline.Lists.Appx = @{}
+		$OptimizeOffline.Lists.Appx.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Appx)
+		$OptimizeOffline.Lists.Appx.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxWhitelist.json)
+		$OptimizeOffline.Lists.Appx.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxBlacklist.json)
+		$OptimizeOffline.Lists.Appx.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Appx.Path -Child AppxTemplate.json)
+
+		$OptimizeOffline.Lists.SystemAppx = @{}
+		$OptimizeOffline.Lists.SystemAppx.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemAppx)
+		$OptimizeOffline.Lists.SystemAppx.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxWhitelist.json)
+		$OptimizeOffline.Lists.SystemAppx.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxBlacklist.json)
+		$OptimizeOffline.Lists.SystemAppx.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppx.Path -Child SystemAppxTemplate.json)
+
+		$OptimizeOffline.Lists.Capabilities = @{}
+		$OptimizeOffline.Lists.Capabilities.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Capabilities)
+		$OptimizeOffline.Lists.Capabilities.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesWhitelist.json)
+		$OptimizeOffline.Lists.Capabilities.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesBlacklist.json)
+		$OptimizeOffline.Lists.Capabilities.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesTemplate.json)
+
+		$OptimizeOffline.Lists.Packages = @{}
+		$OptimizeOffline.Lists.Packages.Path = (Resolve-FullPath -Path $OptimizeOffline.ListsPath -Child Packages)
+		$OptimizeOffline.Lists.Packages.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesWhitelist.json)
+		$OptimizeOffline.Lists.Packages.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesBlacklist.json)
+		$OptimizeOffline.Lists.Packages.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesTemplate.json)
+
+		$OptimizeOffline.Lists.FeaturesToEnable = @{}
+		$OptimizeOffline.Lists.FeaturesToEnable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToEnable)
+		$OptimizeOffline.Lists.FeaturesToEnable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableList.json)
+		$OptimizeOffline.Lists.FeaturesToEnable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableTemplate.json)
+
+		$OptimizeOffline.Lists.FeaturesToDisable = @{}
+		$OptimizeOffline.Lists.FeaturesToDisable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToDisable)
+		$OptimizeOffline.Lists.FeaturesToDisable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableList.json)
+		$OptimizeOffline.Lists.FeaturesToDisable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableTemplate.json)
+		#endregion List paths
+
 		#region Create the Working File Structure
 		Set-Location -Path $OptimizeOffline.Directory
 		[Environment]::CurrentDirectory = (Get-Location -PSProvider FileSystem).ProviderPath
