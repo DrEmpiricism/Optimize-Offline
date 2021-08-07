@@ -683,13 +683,10 @@ Function Optimize-Offline
 			} Catch {
 				Log $Error[0]
 			} Finally {
-				Log $OptimizeData.TerminatingOptimizations
 				Dismount-Images
-				@($DISMLog, $(GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
-				$TempDirectory | Purge -ErrorAction Continue
-				refreshenv
-				Exit(0)
+				@($TempDirectory, $DISMLog, $(GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log')) | Purge -ErrorAction Ignore
 			}
+			Return
 		}
 
 
