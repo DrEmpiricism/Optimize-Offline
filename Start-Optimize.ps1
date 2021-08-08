@@ -21,6 +21,8 @@ Param (
 
 $Global:Error.Clear()
 
+Get-Variable | Remove-Variable; Get-Module | Remove-Module; $error.Clear(); Clear-Host
+
 # Ensure we are running with administrative permissions.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
