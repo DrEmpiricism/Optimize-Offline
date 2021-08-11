@@ -1,5 +1,15 @@
 # ChangeLog #
 
+## Build 4.0.1.9 Beta 2 (08-03-2021)
+- Restructured lists
+
+## Build 4.0.1.9 Beta 1 (08-03-2021)
+- Removed build number checks
+- Added removal lists for system apps, features, packages, capabilities
+- Added template lists, useful for filling removal lists
+- OSCDIMG method default for ISO creation (needs to be at the root directory oscdimg.exe)
+- Added several windows tweaks
+
 ## Build 4.0.1.8 (06-22-2021) ##
 
 **NOTE: Updates should resume with the same frequency as before.**

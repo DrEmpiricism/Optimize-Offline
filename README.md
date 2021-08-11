@@ -178,6 +178,8 @@ The ISO parameter allows for two values to be passed to it: 'Prompt' and 'No-Pro
 
 Optimize-Offline calls the COM IMAPI2 interface for file system image building and also opens a binary stream that writes a bootfile sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party tools like oscdimg.
 
+Also it's possible to pre-define the Compression level with a json key located in Configuration.json file named: CompressionType, it's values can be one of the following: 'Select', 'None', 'Fast', 'Maximum', 'Solid'. Select will show the selection window of the compression type on runtime.
+
 ### About Defaultuser0 ###
 
 Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
@@ -195,3 +197,35 @@ Once you have edited the Configuration.json to your specific optimization requir
 ```PowerShell
 .\Start-Optimize.ps1
 ```
+
+## Using component removal lists
+
+Removal lists can be found in ./Content/Lists. There are 6 basic categories spread out through each of the subfolders. In each subcategory you will find a Whitelist, Blacklist and a template. The template contains all the possible packages to be inserted either in the blacklist or in the whitelist. The features contain only a list json and a template.
+
+- WindowsApps - WindowsAppsWhitelist.json, WindowsAppsBlacklist.json, WindowsAppsTemplate.json
+- SystemApps - SystemAppsWhitelist.json, SystemAppsBlacklist.json, SystemAppsTemplate.json
+- Capabilities - CapabilitiesWhitelist.json, CapabilitiesBlacklist.json, CapabilitiesTemplate.json
+- Packages - PackagesWhitelist.json, PackagesBlacklist.json, PackagesTemplate.json
+- FeaturesToEnable - FeaturesToEnableList.json, FeaturesToEnableTemplate.json
+- FeaturesToDisable - FeaturesToDisableList.json, FeaturesToDisableTemplate.json
+
+The template files can be filled by launching the script with the populateLists parameter
+
+```PowerShell
+.\Start-Optimize.ps1
+```
+
+In configuration.json the list parameters are the following:
+- WindowsApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/WindowsApps
+- SystemApps - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/SystemApps
+- Capabilities - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Capabilities
+- Packages - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Packages
+- FeaturesToEnable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToEnable
+- FeaturesToDisable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToDisable
+
+## Generating template component removal lists
+
+The component removal lists mentioned above contain package names that are found in the windows system. Each version of windows may change the names and entries of it's components. For updating the lists or even helping you in generating custom ones according to the windows build you have, use the command:
+
+    ./Start-Optimize populateLists
+This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./TemplateLists. Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content.

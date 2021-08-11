@@ -28,3 +28,6 @@ $RECYCLE.BIN/
 CustomMenu.inf
 *.zip
 ChangeLog_Full.md
+Optimize-Offline_*/*
+OfflineTemp_*/*
+oscdimg.exe

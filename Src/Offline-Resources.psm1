@@ -49,7 +49,6 @@ $OptimizeOffline.Packages = (Resolve-FullPath -Path $OptimizeOffline.Directory -
 $OptimizeOffline.LocalizedDataStrings = (Resolve-FullPath -Path $OptimizeOffline.LocalizedData -Child Optimize-Offline.strings.psd1)
 $OptimizeOffline.ConfigurationJSON = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Configuration.json)
 $OptimizeOffline.ManifestDataFile = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Optimize-Offline.psd1)
-$OptimizeOffline.AppxWhitelist = (Resolve-FullPath -Path $OptimizeOffline.Content -Child AppxWhitelist.json)
 $OptimizeOffline.CustomAppAssociations = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CustomAppAssociations.xml)
 $OptimizeOffline.DevMode = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DeveloperMode)
 $OptimizeOffline.WindowsStore = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child WindowsStore)
@@ -68,7 +67,50 @@ $OptimizeOffline.Drivers = (Resolve-FullPath -Path $OptimizeOffline.Additional -
 $OptimizeOffline.InstallDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Install)
 $OptimizeOffline.BootDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Boot)
 $OptimizeOffline.RecoveryDrivers = (Resolve-FullPath -Path $OptimizeOffline.Drivers -Child Recovery)
+$OptimizeOffline.SelectiveRegistry = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child SelectiveRegistry)
 #endregion Module Path Declarations
+
+
+#region List paths
+$OptimizeOffline.Lists = @{}
+$OptimizeOffline.Lists.Path = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Lists)
+
+$OptimizeOffline.Lists.WindowsApps = @{}
+$OptimizeOffline.Lists.WindowsApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child WindowsApps)
+$OptimizeOffline.Lists.WindowsApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsWhitelist.json)
+$OptimizeOffline.Lists.WindowsApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsBlacklist.json)
+$OptimizeOffline.Lists.WindowsApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsTemplate.json)
+
+$OptimizeOffline.Lists.SystemApps = @{}
+$OptimizeOffline.Lists.SystemApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemApps)
+$OptimizeOffline.Lists.SystemApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsWhitelist.json)
+$OptimizeOffline.Lists.SystemApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsBlacklist.json)
+$OptimizeOffline.Lists.SystemApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsTemplate.json)
+
+$OptimizeOffline.Lists.Capabilities = @{}
+$OptimizeOffline.Lists.Capabilities.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Capabilities)
+$OptimizeOffline.Lists.Capabilities.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesWhitelist.json)
+$OptimizeOffline.Lists.Capabilities.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesBlacklist.json)
+$OptimizeOffline.Lists.Capabilities.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesTemplate.json)
+
+$OptimizeOffline.Lists.Packages = @{}
+$OptimizeOffline.Lists.Packages.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Packages)
+$OptimizeOffline.Lists.Packages.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesWhitelist.json)
+$OptimizeOffline.Lists.Packages.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesBlacklist.json)
+$OptimizeOffline.Lists.Packages.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesTemplate.json)
+
+$OptimizeOffline.Lists.FeaturesToEnable = @{}
+$OptimizeOffline.Lists.FeaturesToEnable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToEnable)
+$OptimizeOffline.Lists.FeaturesToEnable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableList.json)
+$OptimizeOffline.Lists.FeaturesToEnable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableTemplate.json)
+
+$OptimizeOffline.Lists.FeaturesToDisable = @{}
+$OptimizeOffline.Lists.FeaturesToDisable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToDisable)
+$OptimizeOffline.Lists.FeaturesToDisable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableList.json)
+$OptimizeOffline.Lists.FeaturesToDisable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableTemplate.json)
+
+#endregion List paths
+
 
 #region Data Declarations
 Try { $ManifestData = Import-PowerShellDataFile -Path $OptimizeOffline.ManifestDataFile -ErrorAction Stop }
@@ -97,10 +139,17 @@ $ErrorLog = (Resolve-FullPath -Path $LogFolder -Child OptimizeErrors.log)
 $RegistryLog = (Resolve-FullPath -Path $LogFolder -Child RegistrySettings.log)
 $DISMLog = (Resolve-FullPath -Path $LogFolder -Child DISM.log)
 $DISM = If (Get-DeploymentTool) { Resolve-FullPath -Path $(Get-DeploymentTool) -Child dism.exe } Else { Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\dism.exe' }
-$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe } Else { $null }
+$OSCDIMG = If (Get-DeploymentTool -OSCDIMG) { 
+	Resolve-FullPath -Path $(Get-DeploymentTool -OSCDIMG) -Child oscdimg.exe 
+} Elseif (Test-Path -Path $(Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe)) {
+	Resolve-FullPath -Path $OptimizeOffline.Directory -Child oscdimg.exe
+} Else {
+	$null
+}
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')
+$AllowedRemovalOptions = @('All', 'Select', 'List', 'Whitelist', 'BlackList')
 #endregion Variable Declarations
 
 #region Resource Alias Creation
@@ -115,7 +164,7 @@ New-Alias -Name GetPath -Value Resolve-FullPath
 
 $ExportResourceParams = @{
 	Function = $PublicFunctions.Basename
-	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND'
+	Variable = 'OptimizeOffline', 'ManifestData', 'OptimizeData', 'LocalScope', 'OptimizeParams', 'DynamicParams', 'ConfigParams', 'OptimizeErrors', 'TempDirectory', 'LogFolder', 'WorkFolder', 'ScratchFolder', 'ImageFolder', 'InstallMount', 'BootMount', 'RecoveryMount', 'ModuleLog', 'ErrorLog', 'RegistryLog', 'DISMLog', 'DISM', 'OSCDIMG', 'REG', 'REGEDIT', 'EXPAND', 'AllowedRemovalOptions'
 	Alias    = '*'
 }
 Export-ModuleMember @ExportResourceParams

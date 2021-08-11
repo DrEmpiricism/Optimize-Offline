@@ -2,23 +2,23 @@
   "_Info": [
     "This is a JSON based Configuration file for Optimize-Offline.",
     "Ensure proper formatting is used when editing the JSON parameter values.",
-    "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes."
+    "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
+    "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
+    "FeaturesToEnable, FeaturesToDisable : All | None | Select | List"
   ],
-  "SourcePath": "Path:\\To\\SourceImage",
+  "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
-  "SystemApps": true,
-  "Capabilities": true,
-  "Packages": false,
-  "Features": true,
+  "SystemApps": "Select",
+  "Capabilities": "Select",
+  "Packages": "None",
+  "FeaturesToEnable": "None",
+  "FeaturesToDisable": "None",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
   "Win32Calc": true,
-  "Dedup": true,
-  "DaRT": [
-    "Setup",
-    "Recovery"
-  ],
+  "Dedup": false,
+  "DaRT": [],
   "Registry": true,
   "Additional": {
     "Setup": false,
@@ -31,6 +31,12 @@
     "Drivers": false,
     "NetFx3": false
   },
-  "ComponentCleanup": false,
-  "ISO": "No-Prompt"
+  "ComponentCleanup": true,
+  "ISO": "No-Prompt",
+  "CompressionType": "Maximum",
+  "SelectiveRegistry": {
+    "DisableWindowsUpdate": false,
+    "DisableDriverUpdate": false,
+    "DormantOneDrive": false
+  }
 }
