@@ -2418,6 +2418,9 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference
 		$Global:ProgressPreference = $LocalScope.ProgressPreference
 		$Global:Error.Clear()
+		Log "Clearing temp directory..."
+		Start-Sleep 5
+		Remove-Item -Recurse -Force -ErrorAction Ignore $TempDirectory
 		#endregion Post-Processing Block
 	}
 }
