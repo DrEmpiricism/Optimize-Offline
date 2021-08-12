@@ -6,13 +6,13 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List"
   ],
-  "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "Select",
-  "SystemApps": "Select",
-  "Capabilities": "Select",
-  "Packages": "None",
-  "FeaturesToEnable": "None",
-  "FeaturesToDisable": "None",
+  "SourcePath": "C:\\Users\\Genci\\Desktop\\W11\\22000.120.210728-1636.CO_RELEASE_SVC_IM_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
+  "WindowsApps": "Whitelist",
+  "SystemApps": "Whitelist",
+  "Capabilities": "Blacklist",
+  "Packages": "Blacklist",
+  "FeaturesToEnable": "List",
+  "FeaturesToDisable": "List",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
@@ -25,18 +25,18 @@
     "Wallpaper": false,
     "SystemLogo": false,
     "LockScreen": false,
-    "RegistryTemplates": false,
+    "RegistryTemplates": true,
     "LayoutModification": false,
     "Unattend": false,
     "Drivers": false,
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "No-Prompt",
+  "ISO": "Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpdate": false,
-    "DisableDriverUpdate": false,
-    "DormantOneDrive": false
+    "DisableDriverUpdate": true,
+    "DormantOneDrive": true
   }
 }
