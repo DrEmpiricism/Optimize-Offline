@@ -1,5 +1,16 @@
 {
 	"PackageName": [
-		
+		"Microsoft-Windows-QuickAssist-Package~31bf3856ad364e35~amd64~~10.0.22000.41",
+		"Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~amd64~~10.0.22000.1",
+		"Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~amd64~en-US~10.0.22000.1",
+		"Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~wow64~~10.0.22000.1",
+		"Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~wow64~en-US~10.0.22000.1",
+		"Microsoft-Windows-TabletPCMath-Package~31bf3856ad364e35~amd64~~10.0.22000.65",
+		"Microsoft-Windows-LanguageFeatures-Handwriting-en-us-Package~31bf3856ad364e35~amd64~~10.0.22000.1",
+		"Microsoft-Windows-LanguageFeatures-OCR-en-us-Package~31bf3856ad364e35~amd64~~10.0.22000.1",
+		"Microsoft-Windows-LanguageFeatures-Speech-en-us-Package~31bf3856ad364e35~amd64~~10.0.22000.1",
+		"Microsoft-OneCore-ApplicationModel-Sync-Desktop-FOD-Package~31bf3856ad364e35~amd64~~10.0.22000.65",
+		"Microsoft-OneCore-DirectX-Database-FOD-Package~31bf3856ad364e35~amd64~~10.0.22000.1",
+		"Microsoft-Windows-Hello-Face-Package~31bf3856ad364e35~amd64~~10.0.22000.120"
 	]
 }

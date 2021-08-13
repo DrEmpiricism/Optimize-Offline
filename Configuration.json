@@ -6,7 +6,7 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List"
   ],
-  "SourcePath": "C:\\Users\\Genci\\Desktop\\W11\\22000.120.210728-1636.CO_RELEASE_SVC_IM_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
+  "SourcePath": "C:\\Users\\Genci\\Desktop\\W11\\22000.132.210806-1347.CO_RELEASE_SVC_PROD1_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
   "WindowsApps": "Whitelist",
   "SystemApps": "Whitelist",
   "Capabilities": "Blacklist",
