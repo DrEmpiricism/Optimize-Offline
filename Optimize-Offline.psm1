@@ -4,12 +4,12 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.191
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.194
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.8
-	 Last updated:	06/22/2021
+	 Version:       4.0.1.9
+	 Last updated:	09/12/2021
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
@@ -26,7 +26,7 @@ Function Optimize-Offline
 		[Parameter(Mandatory = $true,
 			ValueFromPipeline = $true,
 			HelpMessage = 'The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.')]
-		[ValidateScript( {
+		[ValidateScript({
 				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.SWM' -or $PSItem.Extension -eq '.ESD') { $true }
 				Else { Throw ('Invalid source path: "{0}"' -f $PSItem.FullName) }
 			})]
@@ -740,8 +740,18 @@ Function Optimize-Offline
 			{
 				Try
 				{
-					Log $OptimizeData.RemovingBiometricCapability
-					[Void](Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | Remove-WindowsCapability -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop)
+					Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | ForEach-Object -Process {
+						$RemoveBiometricCapability = @{
+							Path             = $InstallMount
+							Name             = $PSItem.Name
+							ScratchDirectory = $ScratchFolder
+							LogPath          = $DISMLog
+							LogLevel         = 1
+							ErrorAction      = 'Stop'
+						}
+						Log ($OptimizeData.RemovingBiometricCapability -f $PSItem.Name)
+						[Void](Remove-WindowsCapability @RemoveBiometricCapability)
+					}
 				}
 				Catch
 				{
@@ -852,9 +862,6 @@ Function Optimize-Offline
 		#endregion Windows Capability and Cabinet File Package Removal
 
 		#region Disable Unsafe Optional Features
-		<#
-		@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
-		#>
 		ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 		{
 			If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled)
@@ -1164,7 +1171,7 @@ Function Optimize-Offline
 				[IO.File]::WriteAllText((GetPath -Path $EdgeAppPath.FullName -Child master_preferences), (@'
 {"distribution":{"system_level":true,"do_not_create_desktop_shortcut":true,"do_not_create_quick_launch_shortcut":true,"do_not_create_taskbar_shortcut":true}}
 '@).Trim(), [Text.UTF8Encoding]::New($true))
-				$Base64String = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes( { Get-ChildItem -Path @("HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Active Setup\Installed Components") -Recurse | Get-ItemProperty | Select-Object -Property PSPath, StubPath | Where-Object -Property StubPath -Match configure-user-settings | ForEach-Object -Process { Remove-Item -Path $PSItem.PSPath -Force }; Get-ChildItem -Path "$Env:SystemDrive\Users\*\Desktop" -Filter *lnk -Recurse | Where-Object -Property Name -Like *Edge* | Remove-Item -Force }))
+				$Base64String = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes({ Get-ChildItem -Path @("HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Active Setup\Installed Components") -Recurse | Get-ItemProperty | Select-Object -Property PSPath, StubPath | Where-Object -Property StubPath -Match configure-user-settings | ForEach-Object -Process { Remove-Item -Path $PSItem.PSPath -Force }; Get-ChildItem -Path "$Env:SystemDrive\Users\*\Desktop" -Filter *lnk -Recurse | Where-Object -Property Name -Like *Edge* | Remove-Item -Force }))
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "EdgeCleanup" -Value "%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoProfile -EncodedCommand $Base64String" -Type ExpandString
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
@@ -1172,6 +1179,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "HideFirstRunExperience" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
+				If ($InstallInfo.Build -eq '19041' -and (Get-ItemPropertyValue -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name UBR -ErrorAction Ignore) -ge 1023) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Value 0 -Type DWord }
 			}
 			RegHives -Unload
 		}
@@ -1598,21 +1606,25 @@ Function Optimize-Offline
 			If (!(Test-Path -Path (GetPath -Path $InstallMount -Child 'Windows\WinSxS\pending.xml')))
 			{
 				Log ($OptimizeData.ComponentStoreCleanup -f $InstallInfo.Name)
-				If ($InstallInfo.Build -ge '18362') { $RegClean = 3 }
-				Else { $RegClean = 0 }
+				If ($InstallInfo.Build -ge '18362') { $RegClean = 3 } Else { $RegClean = 0 }
 				RegHives -Load
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "DisableResetbase" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "SupersededActions" -Value $RegClean -Type DWord
 				RegHives -Unload
+				$CleanupLog = (GetPath -Path $LogFolder -Child ComponentCleanup.log)
 				Try
 				{
-					$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Cleanup-Image /StartComponentCleanup /ScratchDir:"{1}" /LogPath:"{2}" /LogLevel:1' -f $InstallMount, $ScratchFolder, $DISMLog) -ErrorAction Stop
+					$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Cleanup-Image /StartComponentCleanup /ScratchDir:"{1}" /LogPath:"{2}" /LogLevel:1' -f $InstallMount, $ScratchFolder, $CleanupLog) -ErrorAction Stop
 					If ($RET -eq 0) { $DynamicParams.ComponentCleanup = $true }
 					Else { Throw }
 				}
 				Catch
 				{
 					Log ($OptimizeData.FailedComponentStoreCleanup -f $InstallInfo.Name) -Type Error
+				}
+				Finally
+				{
+					$CleanupLog | Purge -ErrorAction Ignore
 				}
 			}
 			Else
