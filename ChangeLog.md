@@ -1,5 +1,12 @@
 # ChangeLog #
 
+## Build 4.0.1.9 (09-12-2021) ##
+
+- Optimize-Offline's native ISO creation function has been re-written and now supports PowerShell 6+.
+- The names of the Biometric FOD packages that are automatically removed when the BioEnrollment System Application has been removed are now displayed and logged.
+- Added the disabling of Windows Taskbar Interests and News.
+- Additional framework code changes and other core module updates.
+
 ## Build 4.0.1.8 (06-22-2021) ##
 
 **NOTE: Updates should resume with the same frequency as before.**
@@ -44,12 +51,3 @@
 - Updated the Win32Calc integration image package to correct a bug where selecting 'Unit Conversion' from its drop-down list would cause the Win32Calc.exe to close immediately.
 - Updated the Resource Function that returns the metadata for any images being optimized.
 - Additional Optimize-Offline code improvements.
-
-## Build 4.0.1.4 (08-23-2020) ##
-
-- Added support for Windows 10 build 19042 (20H2).
-- Added the new 20H2 Start Menu Experience to the applied registry settings.
-- Corrected an issue for Windows 10 builds 19041+ where it occasionally would be returned as an unsupported image build.
-- Updated the Windows Store bundle packages.
-- Updated the optional Set-Additional runtime script.
-- Multiple code improvements across the framework.
