@@ -7,6 +7,8 @@
 - Added the disabling of Windows Taskbar Interests and News.
 - Additional framework code changes and other core module updates.
 
+**NOTE: A very small update was added on 09-16-2021 that adds 21H2 to the Get-ImageData function as well as the module manifest.**
+
 ## Build 4.0.1.8 (06-22-2021) ##
 
 **NOTE: Updates should resume with the same frequency as before.**
