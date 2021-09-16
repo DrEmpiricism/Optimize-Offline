@@ -30,7 +30,7 @@
 	CmdletsToExport        = @()
 	PrivateData            = @{
 		PSData = @{
-			Tags         = @('Image Optimization', 'WIM Optimization', 'Offline Windows Image', 'Offline Servicing', 'Offline Imaging', 'WIM', 'SWM', 'ESD', 'Windows 10', 'LTSC', 'Enterprise', '19H1', '19H2', '20H1', '20H2', 'Deployment', 'Debloat', 'DISM', 'PSModule')
+			Tags         = @('Image Optimization', 'WIM Optimization', 'Offline Windows Image', 'Offline Servicing', 'Offline Imaging', 'WIM', 'SWM', 'ESD', 'Windows 10', 'LTSC', 'Enterprise', '19H1', '19H2', '20H1', '20H2', '21H1', '21H2', 'Deployment', 'Debloat', 'DISM', 'PSModule')
 			LicenseUri   = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/LICENSE'
 			ProjectUri   = 'https://github.com/DrEmpiricism/Optimize-Offline'
 			ReleaseNotes = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md'
