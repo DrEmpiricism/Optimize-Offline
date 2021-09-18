@@ -1,5 +1,6 @@
 ﻿{
     "FeatureName":  [
+                        "Internet-Explorer-Optional-amd64",
                         "MediaPlayback",
                         "MicrosoftWindowsPowerShellV2",
                         "MicrosoftWindowsPowerShellV2Root",
