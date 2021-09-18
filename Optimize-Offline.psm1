@@ -228,7 +228,10 @@ Function Optimize-Offline
 			DisableWindowsUpdate = $false
 			DisableDriverUpdate = $false
 			DormantOneDrive = $false
-		}
+		},
+		[Parameter(HelpMessage = 'Removal of windows services.')]
+		[ValidateSet('None', 'List', 'Select')]
+		[String]$Services
 	)
 
 	Begin
@@ -616,7 +619,7 @@ Function Optimize-Offline
 			Try {
 
 				## Populate WindowsApps template
-				Log "Populating $($OptimizeOffline.Lists.WindowsApps.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.WindowsApps.Template)"
 				$names = @( )
 				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
@@ -627,7 +630,7 @@ Function Optimize-Offline
 				Start-Sleep 1
 
 				## Populate SystemApps template
-				Log "Populating $($OptimizeOffline.Lists.SystemApps.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.SystemApps.Template)"
 				$names = @( )
 				Get-SystemPackages | ForEach-Object -Process {
 					$names += [String]$PSItem.DisplayName
@@ -638,7 +641,7 @@ Function Optimize-Offline
 				Start-Sleep 1
 
 				## Populate capabilities template
-				Log "Populating $($OptimizeOffline.Lists.Capabilities.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Capabilities.Template)"
 				$names = @( )
 				Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.Name
@@ -649,7 +652,7 @@ Function Optimize-Offline
 				Start-Sleep 1
 
 				# Populate Packages template
-				Log "Populating $($OptimizeOffline.Lists.Packages.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Packages.Template)"
 				$names = @( )
 				Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.PackageName
@@ -660,7 +663,7 @@ Function Optimize-Offline
 				Start-Sleep 1
 
 				## Populate FeaturesToDisable template
-				Log "Populating $($OptimizeOffline.Lists.FeaturesToDisable.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToDisable.Template)"
 				$names = @( )
 				Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.FeatureName
@@ -671,7 +674,7 @@ Function Optimize-Offline
 				Start-Sleep 1
 
 				## Populate FeaturesToEnable template
-				Log "Populating $($OptimizeOffline.Lists.FeaturesToEnable.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToEnable.Template)"
 				$names = @( )
 				Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.FeatureName
@@ -679,6 +682,34 @@ Function Optimize-Offline
 				[ordered]@{
 					FeatureName = $names
 				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnable.Template -Encoding UTF8 -Force -ErrorAction Ignore
+
+				## Populate Services
+				RegHives -Load
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Services.Template)"
+				$names = @( )
+				Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
+					$serviceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
+					$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
+					If($null -ne $folderKeys.Start -and $null -eq $folderKeys.Owners -and $folderKeys.Start -gt 1){
+						$names += @{
+							name = [String]$PSItem.PSChildName
+							description = $(If ($null -ne $serviceDetails -and $null -ne $serviceDetails.DisplayName) {$serviceDetails.DisplayName} Else {""})
+							start = $folderKeys.Start
+						}
+					}
+				}
+				[ordered]@{
+					__Info = @(
+					"start key values",
+						"0 = Boot",
+						"1 = System",
+						"2 = Automatic",
+						"3 = Manual",
+						"4 = Disabled"
+					)
+					Details = $names
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Services.Template -Encoding UTF8 -Force -ErrorAction Ignore 
+				RegHives -Unload
 
 			} Catch {
 				Log $Error[0]
@@ -1365,6 +1396,82 @@ Function Optimize-Offline
 			}
 		}
 		#endregion Disable/Enable Optional Features
+
+		#region disable windows services
+		if ($PSBoundParameters.Services -in $AllowedRemovalOptions){
+			$servicesToRemove = [System.Collections.ArrayList]@()
+			$servicesToRemoveNames = @{}
+			$startValues = @(0,1,2,3,4)
+
+			Clear-Host
+			$Host.UI.RawUI.WindowTitle = $OptimizeData.ServicesModifying
+
+			Try{
+				RegHives -Load
+
+				Switch($PSBoundParameters.Services){
+					"List" 
+					{
+						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+						$JSON.Details | ForEach-Object -Process {
+							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)")
+							{
+								$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
+
+								if($null -ne $folderKeys.Start -and $PSItem.start -in $startValues){
+									[void]$servicesToRemove.Add($PSItem)
+								}
+								
+							}
+						}
+					}
+					"Select" 
+					{
+						$servicesSelection = [System.Collections.ArrayList]@();
+						Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
+
+							$serviceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
+
+							$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
+
+							If($null -ne $folderKeys.Start -and $null -eq $folderKeys.Owners -and $folderKeys.Start -ne 4 -and $folderKeys.Start -gt 1){
+								$o = New-Object PSObject -Property @{
+									name = [String]$PSItem.PSChildName
+									description = $(If ($null -ne $serviceDetails -and $null -ne $serviceDetails.DisplayName) {$serviceDetails.DisplayName} Else {""})
+									start = $folderKeys.Start
+								}
+								[void]$servicesSelection.Add($o)
+							}
+						}
+
+						$servicesToRemove = $servicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
+					}
+				}
+
+				$servicesToRemove | ForEach-Object -Process {
+					$start = If ($PSBoundParameters.Services -eq "Select") {4} Else {$PSItem.start}
+					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), start: $($OptimizeOffline.ServicesStartLabels[$start])"
+					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $start
+					$servicesToRemoveNames[$PSItem.name] = $start
+					Start-Sleep 1
+				}
+				$DynamicParams.DisabledWindowsServices = $($servicesToRemove.Count -gt 0)
+
+				# If the Delivery Optimization service has a SetState value of 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
+				If ($null -ne $servicesToRemoveNames['DoSvc'] -and $servicesToRemoveNames['DoSvc'] -eq 4){
+					Log $OptimizeData.DeliveryOptimizationBypass
+					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Type DWord -Value 100
+				}
+				RegHives -Unload
+			} Catch {
+				Log $OptimizeData.ServicesRemovalFailed -Type Error -ErrorRecord $Error[0]
+				Stop-Optimize
+			}
+
+			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
+		}
+		#endregion disable windows services
 
 		#region DeveloperMode Integration
 		If ($DeveloperMode.IsPresent -and (Test-Path -Path $OptimizeOffline.DevMode -Filter *DeveloperMode-Desktop-Package*.cab) -and !(Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property PackageName -Like *DeveloperMode*))

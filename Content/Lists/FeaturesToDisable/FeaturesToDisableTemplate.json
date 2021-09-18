@@ -1,10 +1,10 @@
 ﻿{
     "FeatureName":  [
+                        "Internet-Explorer-Optional-amd64",
                         "MediaPlayback",
                         "MicrosoftWindowsPowerShellV2",
                         "MicrosoftWindowsPowerShellV2Root",
                         "MSRDC-Infrastructure",
-                        "NetFx3",
                         "NetFx4-AdvSrvs",
                         "Printing-Foundation-Features",
                         "Printing-Foundation-InternetPrinting-Client",

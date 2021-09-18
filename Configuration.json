@@ -4,7 +4,8 @@
     "Ensure proper formatting is used when editing the JSON parameter values.",
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
-    "FeaturesToEnable, FeaturesToDisable : All | None | Select | List"
+    "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
+    "Services : None | Select | List"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
@@ -13,6 +14,7 @@
   "Packages": "None",
   "FeaturesToEnable": "None",
   "FeaturesToDisable": "None",
+  "Services": "None",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,

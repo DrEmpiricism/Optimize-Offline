@@ -11,8 +11,6 @@
                         "Client-UnifiedWriteFilter",
                         "Containers",
                         "Containers-DisposableClientVM",
-                        "Containers-HNS",
-                        "Containers-SDN",
                         "DataCenterBridging",
                         "DirectoryServices-ADAM-Client",
                         "DirectPlay",
