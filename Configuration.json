@@ -8,13 +8,13 @@
     "Services : None | Select | List"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "Select",
-  "SystemApps": "Select",
-  "Capabilities": "Select",
-  "Packages": "None",
-  "FeaturesToEnable": "None",
-  "FeaturesToDisable": "None",
-  "Services": "None",
+  "WindowsApps": "Whitelist",
+  "SystemApps": "Whitelist",
+  "Capabilities": "Blacklist",
+  "Packages": "Blacklist",
+  "FeaturesToEnable": "List",
+  "FeaturesToDisable": "List",
+  "Services": "List",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
@@ -37,7 +37,7 @@
   "ISO": "Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
-    "DisableWindowsUpdate": false,
+    "DisableWindowsUpdate": true,
     "DisableDriverUpdate": true,
     "DormantOneDrive": true
   }
