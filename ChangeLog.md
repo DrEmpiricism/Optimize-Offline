@@ -1,14 +1,13 @@
 # ChangeLog #
 
-## Build 4.0.1.9 Beta 2 (08-03-2021)
-- Restructured lists
+## Build 4.0.1.9 (09-12-2021) ##
 
-## Build 4.0.1.9 Beta 1 (08-03-2021)
-- Removed build number checks
-- Added removal lists for system apps, features, packages, capabilities
-- Added template lists, useful for filling removal lists
-- OSCDIMG method default for ISO creation (needs to be at the root directory oscdimg.exe)
-- Added several windows tweaks
+- Optimize-Offline's native ISO creation function has been re-written and now supports PowerShell 6+.
+- The names of the Biometric FOD packages that are automatically removed when the BioEnrollment System Application has been removed are now displayed and logged.
+- Added the disabling of Windows Taskbar Interests and News.
+- Additional framework code changes and other core module updates.
+
+**NOTE: A very small update was added on 09-16-2021 that adds 21H2 to the Get-ImageData function as well as the module manifest.**
 
 ## Build 4.0.1.8 (06-22-2021) ##
 
@@ -54,12 +53,3 @@
 - Updated the Win32Calc integration image package to correct a bug where selecting 'Unit Conversion' from its drop-down list would cause the Win32Calc.exe to close immediately.
 - Updated the Resource Function that returns the metadata for any images being optimized.
 - Additional Optimize-Offline code improvements.
-
-## Build 4.0.1.4 (08-23-2020) ##
-
-- Added support for Windows 10 build 19042 (20H2).
-- Added the new 20H2 Start Menu Experience to the applied registry settings.
-- Corrected an issue for Windows 10 builds 19041+ where it occasionally would be returned as an unsupported image build.
-- Updated the Windows Store bundle packages.
-- Updated the optional Set-Additional runtime script.
-- Multiple code improvements across the framework.
