@@ -1449,9 +1449,17 @@ Function Optimize-Offline
 					}
 				}
 
+				$StartLabels = @{
+					0 = $OptimizeData.ServiceStartBoot
+					1 = $OptimizeData.ServiceStartSystem
+					2 = $OptimizeData.ServiceStartAutomatic
+					3 = $OptimizeData.ServiceStartManual
+					4 = $OptimizeData.ServiceStartDisabled
+				}
+
 				$servicesToRemove | ForEach-Object -Process {
 					$start = If ($PSBoundParameters.Services -eq "Select") {4} Else {$PSItem.start}
-					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), start: $($OptimizeOffline.ServicesStartLabels[$start])"
+					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), start: $($StartLabels[$start])"
 					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $start
 					$servicesToRemoveNames[$PSItem.name] = $start
 					Start-Sleep 1

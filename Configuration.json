@@ -7,7 +7,7 @@
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List"
   ],
-  "SourcePath": "PathTo:\\sources\\install.wim",
+  "SourcePath": "C:\\Users\\Genci\\Desktop\\W10\\19044.1237.210912-2127.21H2_RELEASE_SVC_PROD1_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
   "WindowsApps": "Whitelist",
   "SystemApps": "Whitelist",
   "Capabilities": "Blacklist",

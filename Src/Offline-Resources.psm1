@@ -123,16 +123,6 @@ Try { Import-LocalizedData -BaseDirectory $OptimizeOffline.Directory -FileName O
 Catch { Write-Warning ('Failed to import the localized data file: "{0}"' -f (Resolve-FullPath -Path $OptimizeOffline.LocalizedDataStrings -Split Leaf)); Break }
 #endregion Data Declarations
 
-#region translations
-$OptimizeOffline.ServicesStartLabels = @{
-	0 = $OptimizeData.ServiceStartBoot
-	1 = $OptimizeData.ServiceStartSystem
-	2 = $OptimizeData.ServiceStartAutomatic
-	3 = $OptimizeData.ServiceStartManual
-	4 = $OptimizeData.ServiceStartDisabled
-}
-#endregion translations
-
 #region Variable Declarations
 $LocalScope = [PSCustomObject]::New()
 $OptimizeOfflineParams = [PSCustomObject]::New()

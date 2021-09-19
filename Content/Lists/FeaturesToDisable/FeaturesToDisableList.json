@@ -1,6 +1,6 @@
 {
 	"FeatureName" : [
-      "MSRDC-Infrastructure",
+    "MSRDC-Infrastructure",
 		"WorkFolders-Client",
 		"Printing-XPSServices-Features"
 	]
