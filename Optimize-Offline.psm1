@@ -15,152 +15,6 @@
 	===========================================================================
 #>
 
-Function Get-AppxPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath,
-		[Parameter(
-			Mandatory = $true,
-			HelpMessage = 'Windows offline image build number'
-		)]
-		[Int]$Build
-	)
-
-	$AppxPackages = Get-AppxProvisionedPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
-
-	If ($Build -ge '19041')
-	{
-		$AppxPackages = $AppxPackages | ForEach-Object -Process {
-			$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
-			If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
-			[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-		}
-	}
-
-	return $AppxPackages
-}
-
-
-Function Get-SystemPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $false)]
-		[String]$RegKeyPath
-	)
-
-	if(-Not $RegKeyPath){
-		$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-	}
-
-	RegHives -Load
-	$InboxAppsPackages = Get-ChildItem -Path $RegKeyPath -Name | ForEach-Object -Process {
-		$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
-		If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
-		If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
-		If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
-		If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
-		[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-	} | Sort-Object -Property DisplayName
-
-	RegHives -Unload
-
-	return $InboxAppsPackages
-}
-
-Function Get-CapabilityPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	$WindowsCapabilities = Get-WindowsCapability -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.Name -notlike "*Language.Basic*" -and $PSItem.Name -notlike "*TextToSpeech*" -and $PSItem.State -eq 'Installed' } | Select-Object -Property Name, State | Sort-Object -Property Name
-
-	return $WindowsCapabilities
-
-}
-
-Function Get-OptionalEnabledFeatures {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object -Property State -EQ Enabled
-}
-
-
-Function Get-OptionalDisabledFeatures {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object { $PSItem.FeatureName -notlike "SMB1Protocol*" -and $PSItem.FeatureName -ne "Windows-Defender-Default-Definitions" -and $PSItem.FeatureName -notlike "MicrosoftWindowsPowerShellV2*" -and $PSItem.State -eq "Disabled" }
-}
-
-
-Function Get-OtherPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-
-	return Get-WindowsPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageName -notlike "*20H2Enablement*" -and $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property PackageName
-}
-
 Function Optimize-Offline
 {
 
@@ -654,7 +508,7 @@ Function Optimize-Offline
 				# Populate Packages template
 				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Packages.Template)"
 				$names = @( )
-				Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+				Get-OtherWindowsPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.PackageName
 				}
 				[ordered]@{
@@ -1021,6 +875,9 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 			}
+			If($RemovedPackages."Microsoft.Windows.Search") {
+				$DynamicParams.RemovedWindowsSearchPackage = $true
+			}
 			RegHives -Unload
 			If ($DynamicParams.BioEnrollment -and (Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed))
 			{
@@ -1167,7 +1024,7 @@ Function Optimize-Offline
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Packages."
 
-			$WindowsPackages = Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+			$WindowsPackages = Get-OtherWindowsPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 
 			If ($WindowsPackages)
 			{
@@ -1274,7 +1131,6 @@ Function Optimize-Offline
 		#endregion Disable Unsafe Optional Features
 
 		#region Disable/Enable Optional Features
-
 		If ($FeaturesToDisable -in $AllowedRemovalOptions)
 		{
 			Clear-Host
@@ -1420,7 +1276,7 @@ Function Optimize-Offline
 				RegHives -Load
 
 				Switch($PSBoundParameters.Services){
-					"List" 
+					"List"
 					{
 						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
@@ -1429,14 +1285,18 @@ Function Optimize-Offline
 							{
 								$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
 
-								if($null -ne $FolderKeys.Start -and $PSItem.start -in $StartValues){
+								If($null -eq $PSItem.start) {
+									$PSItem.start = 4
+								}
+
+								If($null -ne $FolderKeys.Start -and $PSItem.start -in $StartValues){
 									[void]$ServicesToRemove.Add($PSItem)
 								}
 								
 							}
 						}
 					}
-					"Select" 
+					"Select"
 					{
 						$ServicesSelection = [System.Collections.ArrayList]@();
 						Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
