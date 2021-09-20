@@ -4,162 +4,16 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.191
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.194
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.8
-	 Last updated:	06/22/2021
+	 Version:       4.0.1.9
+	 Last updated:	09/12/2021
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
 #>
-
-Function Get-AppxPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath,
-		[Parameter(
-			Mandatory = $true,
-			HelpMessage = 'Windows offline image build number'
-		)]
-		[Int]$Build
-	)
-
-	$AppxPackages = Get-AppxProvisionedPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
-
-	If ($Build -ge '19041')
-	{
-		$AppxPackages = $AppxPackages | ForEach-Object -Process {
-			$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
-			If ($DisplayName -eq 'Microsoft.549981C3F5F10') { $DisplayName = 'CortanaApp.View.App' }
-			[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-		}
-	}
-
-	return $AppxPackages
-}
-
-
-Function Get-SystemPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $false)]
-		[String]$RegKeyPath
-	)
-
-	if(-Not $RegKeyPath){
-		$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-	}
-
-	RegHives -Load
-	$InboxAppsPackages = Get-ChildItem -Path $RegKeyPath -Name | ForEach-Object -Process {
-		$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
-		If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }
-		If ($DisplayName -like 'c5e2524a-ea46-4f67-841f-6a9465d9d515') { $DisplayName = 'Microsoft.Windows.FileExplorer' }
-		If ($DisplayName -like 'E2A4F912-2574-4A75-9BB0-0D023378592B') { $DisplayName = 'Microsoft.Windows.AppResolverUX' }
-		If ($DisplayName -like 'F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE') { $DisplayName = 'Microsoft.Windows.AddSuggestedFoldersToLibarayDialog' }
-		[PSCustomObject]@{ DisplayName = $DisplayName; PackageName = $PackageName }
-	} | Sort-Object -Property DisplayName
-
-	RegHives -Unload
-
-	return $InboxAppsPackages
-}
-
-Function Get-CapabilityPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	$WindowsCapabilities = Get-WindowsCapability -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.Name -notlike "*Language.Basic*" -and $PSItem.Name -notlike "*TextToSpeech*" -and $PSItem.State -eq 'Installed' } | Select-Object -Property Name, State | Sort-Object -Property Name
-
-	return $WindowsCapabilities
-
-}
-
-Function Get-OptionalEnabledFeatures {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object -Property State -EQ Enabled
-}
-
-
-Function Get-OptionalDisabledFeatures {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object { $PSItem.FeatureName -notlike "SMB1Protocol*" -and $PSItem.FeatureName -ne "Windows-Defender-Default-Definitions" -and $PSItem.FeatureName -notlike "MicrosoftWindowsPowerShellV2*" -and $PSItem.State -eq "Disabled" }
-}
-
-
-Function Get-OtherPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $true,
-			HelpMessage = 'full path to the root directory of the offline Windows image that you will service.')]
-		[String]$Path,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'Specifies a temporary directory that will be used when extracting files for use during servicing. The directory must exist locally. If not specified, the \Windows\%Temp% directory will be used')]
-		[String]$ScratchDirectory,
-		[Parameter(Mandatory = $false,
-			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath
-	)
-
-
-	return Get-WindowsPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Where-Object { $PSItem.ReleaseType -eq 'OnDemandPack' -or $PSItem.ReleaseType -eq 'LanguagePack' -or $PSItem.ReleaseType -eq 'FeaturePack' -and $PSItem.PackageName -notlike "*20H2Enablement*" -and $PSItem.PackageName -notlike "*LanguageFeatures-Basic*" -and $PSItem.PackageName -notlike "*LanguageFeatures-TextToSpeech*" -and $PSItem.PackageState -eq 'Installed' } | Select-Object -Property PackageName, ReleaseType | Sort-Object -Property PackageName
-}
 
 Function Optimize-Offline
 {
@@ -174,7 +28,7 @@ Function Optimize-Offline
 		[Parameter(Mandatory = $true,
 			ValueFromPipeline = $true,
 			HelpMessage = 'The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.')]
-		[ValidateScript( {
+		[ValidateScript({
 				If ($PSItem.Exists -and $PSItem.Extension -eq '.ISO' -or $PSItem.Extension -eq '.WIM' -or $PSItem.Extension -eq '.SWM' -or $PSItem.Extension -eq '.ESD') { $true }
 				Else { Throw ('Invalid source path: "{0}"' -f $PSItem.FullName) }
 			})]
@@ -654,7 +508,7 @@ Function Optimize-Offline
 				# Populate Packages template
 				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Packages.Template)"
 				$names = @( )
-				Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
+				Get-OtherWindowsPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					$names += [String]$PSItem.PackageName
 				}
 				[ordered]@{
@@ -722,6 +576,7 @@ Function Optimize-Offline
 
 
 		#region Provisioned App Package Removal
+		$RemovedPackages = [Collections.Hashtable]::New();
 		If ($WindowsApps -in $AllowedRemovalOptions)
 		{
 			Try
@@ -788,6 +643,7 @@ Function Optimize-Offline
 					Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
 					[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 					$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
+					$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 				}
 				$DynamicParams.WindowsApps = $($appsToRemove.Count -gt 0)
 			}
@@ -875,6 +731,7 @@ Function Optimize-Offline
 						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
 						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
 						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
+						$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 						Start-Sleep 2
 					}
 
@@ -907,14 +764,14 @@ Function Optimize-Offline
 			}
 			RegHives -Load
 			$Visibility = [Text.StringBuilder]::New('hide:')
-			If ($RemovedAppxPackages.'Microsoft.WindowsMaps')
+			If ($RemovedPackages.'Microsoft.WindowsMaps')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
 				[Void]$Visibility.Append('maps;maps-downloadmaps;')
 			}
-			If ($RemovedAppxPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
-			If ($RemovedAppxPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedAppxPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedSystemApps.'Microsoft.XboxGameCallableUI')
+			If ($RemovedPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
+			If ($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
@@ -931,26 +788,26 @@ Function Optimize-Offline
 				[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
 				If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
 			}
-			If ($RemovedAppxPackages.'Microsoft.YourPhone' -or $RemovedSystemApps.'Microsoft.Windows.CallingShellApp')
+			If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp')
 			{
 				[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
 			}
-			If ($RemovedSystemApps.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
-			If ($RemovedSystemApps.'Microsoft.BioEnrollment')
+			If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
+			If ($RemovedPackages.'Microsoft.BioEnrollment')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
 				$DynamicParams.BioEnrollment = $true
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.SecureAssessmentBrowser')
+			If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.ContentDeliveryManager')
+			If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
 			{
 				@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
 					"RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
@@ -967,7 +824,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.SecHealthUI' -or $RemovedAppxPackages.'Microsoft.SecHealthUI')
+			If ($RemovedPackages.'Microsoft.Windows.SecHealthUI')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
@@ -1018,13 +875,26 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 			}
+			If($RemovedPackages."Microsoft.Windows.Search") {
+				$DynamicParams.RemovedWindowsSearchPackage = $true
+			}
 			RegHives -Unload
 			If ($DynamicParams.BioEnrollment -and (Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed))
 			{
 				Try
 				{
-					Log $OptimizeData.RemovingBiometricCapability
-					[Void](Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | Remove-WindowsCapability -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 -ErrorAction Stop)
+					Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | ForEach-Object -Process {
+						$RemoveBiometricCapability = @{
+							Path             = $InstallMount
+							Name             = $PSItem.Name
+							ScratchDirectory = $ScratchFolder
+							LogPath          = $DISMLog
+							LogLevel         = 1
+							ErrorAction      = 'Stop'
+						}
+						Log ($OptimizeData.RemovingBiometricCapability -f $PSItem.Name)
+						[Void](Remove-WindowsCapability @RemoveBiometricCapability)
+					}
 				}
 				Catch
 				{
@@ -1154,7 +1024,7 @@ Function Optimize-Offline
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = "Remove Windows Packages."
 
-			$WindowsPackages = Get-OtherPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
+			$WindowsPackages = Get-OtherWindowsPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 
 			If ($WindowsPackages)
 			{
@@ -1232,9 +1102,6 @@ Function Optimize-Offline
 		#endregion Windows Capability and Cabinet File Package Removal
 
 		#region Disable Unsafe Optional Features
-		<#
-		@('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root') | ForEach-Object -Process { Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $PSItem -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Disabled | Disable-WindowsOptionalFeature -Path $InstallMount -Remove -NoRestart -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 }
-		#>
 		ForEach ($Feature In @('SMB1Protocol', 'MicrosoftWindowsPowerShellV2Root'))
 		{
 			If (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName $Feature -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled)
@@ -1264,7 +1131,6 @@ Function Optimize-Offline
 		#endregion Disable Unsafe Optional Features
 
 		#region Disable/Enable Optional Features
-
 		If ($FeaturesToDisable -in $AllowedRemovalOptions)
 		{
 			Clear-Host
@@ -1399,9 +1265,9 @@ Function Optimize-Offline
 
 		#region disable windows services
 		if ($PSBoundParameters.Services -in $AllowedRemovalOptions){
-			$servicesToRemove = [System.Collections.ArrayList]@()
-			$servicesToRemoveNames = @{}
-			$startValues = @(0,1,2,3,4)
+			$ServicesToRemove = [System.Collections.ArrayList]@()
+			$ServicesToRemoveNames = @{}
+			$StartValues = @(0,1,2,3,4)
 
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = $OptimizeData.ServicesModifying
@@ -1410,58 +1276,71 @@ Function Optimize-Offline
 				RegHives -Load
 
 				Switch($PSBoundParameters.Services){
-					"List" 
+					"List"
 					{
 						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 						$JSON.Details | ForEach-Object -Process {
 							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)")
 							{
-								$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
+								$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
 
-								if($null -ne $folderKeys.Start -and $PSItem.start -in $startValues){
-									[void]$servicesToRemove.Add($PSItem)
+								If($null -eq $PSItem.start) {
+									$PSItem.start = 4
+								}
+
+								If($null -ne $FolderKeys.Start -and $PSItem.start -in $StartValues){
+									[void]$ServicesToRemove.Add($PSItem)
 								}
 								
 							}
 						}
 					}
-					"Select" 
+					"Select"
 					{
-						$servicesSelection = [System.Collections.ArrayList]@();
+						$ServicesSelection = [System.Collections.ArrayList]@();
 						Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
 
-							$serviceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
+							$ServiceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
 
-							$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
+							$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
 
-							If($null -ne $folderKeys.Start -and $null -eq $folderKeys.Owners -and $folderKeys.Start -ne 4 -and $folderKeys.Start -gt 1){
-								$o = New-Object PSObject -Property @{
+							If($null -ne $FolderKeys.Start -and $null -eq $FolderKeys.Owners -and $FolderKeys.Start -ne 4 -and $FolderKeys.Start -gt 1){
+								$O = New-Object PSObject -Property @{
 									name = [String]$PSItem.PSChildName
-									description = $(If ($null -ne $serviceDetails -and $null -ne $serviceDetails.DisplayName) {$serviceDetails.DisplayName} Else {""})
-									start = $folderKeys.Start
+									description = $(If ($null -ne $ServiceDetails -and $null -ne $ServiceDetails.DisplayName) {$ServiceDetails.DisplayName} Else {""})
+									start = $FolderKeys.Start
 								}
-								[void]$servicesSelection.Add($o)
+								[void]$ServicesSelection.Add($O)
 							}
 						}
 
-						$servicesToRemove = $servicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
+						$ServicesToRemove = $ServicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
 					}
 				}
 
-				$servicesToRemove | ForEach-Object -Process {
-					$start = If ($PSBoundParameters.Services -eq "Select") {4} Else {$PSItem.start}
-					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), start: $($OptimizeOffline.ServicesStartLabels[$start])"
-					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $start
-					$servicesToRemoveNames[$PSItem.name] = $start
+				$StartLabels = @{
+					0 = $OptimizeData.ServiceStartBoot
+					1 = $OptimizeData.ServiceStartSystem
+					2 = $OptimizeData.ServiceStartAutomatic
+					3 = $OptimizeData.ServiceStartManual
+					4 = $OptimizeData.ServiceStartDisabled
+				}
+				
+				$ServicesToRemove | ForEach-Object -Process {
+					$Start = If ($PSBoundParameters.Services -eq "Select") {4} Else {[Int]$PSItem.start}
+					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), Start: $($StartLabels[$Start])"
+					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $Start
+					$ServicesToRemoveNames[$PSItem.name] = $Start
 					Start-Sleep 1
 				}
-				$DynamicParams.DisabledWindowsServices = $($servicesToRemove.Count -gt 0)
+				$DynamicParams.DisabledWindowsServices = $($ServicesToRemove.Count -gt 0)
 
 				# If the Delivery Optimization service has a SetState value of 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
-				If ($null -ne $servicesToRemoveNames['DoSvc'] -and $servicesToRemoveNames['DoSvc'] -eq 4){
+				If ($null -ne $ServicesToRemoveNames['DoSvc'] -and $ServicesToRemoveNames['DoSvc'] -eq 4){
 					Log $OptimizeData.DeliveryOptimizationBypass
 					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Type DWord -Value 100
+					Start-Sleep 1
 				}
 				RegHives -Unload
 			} Catch {
@@ -1687,7 +1566,7 @@ Function Optimize-Offline
 				[IO.File]::WriteAllText((GetPath -Path $EdgeAppPath.FullName -Child master_preferences), (@'
 {"distribution":{"system_level":true,"do_not_create_desktop_shortcut":true,"do_not_create_quick_launch_shortcut":true,"do_not_create_taskbar_shortcut":true}}
 '@).Trim(), [Text.UTF8Encoding]::New($true))
-				$Base64String = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes( { Get-ChildItem -Path @("HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Active Setup\Installed Components") -Recurse | Get-ItemProperty | Select-Object -Property PSPath, StubPath | Where-Object -Property StubPath -Match configure-user-settings | ForEach-Object -Process { Remove-Item -Path $PSItem.PSPath -Force }; Get-ChildItem -Path "$Env:SystemDrive\Users\*\Desktop" -Filter *lnk -Recurse | Where-Object -Property Name -Like *Edge* | Remove-Item -Force }))
+				$Base64String = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes({ Get-ChildItem -Path @("HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Active Setup\Installed Components") -Recurse | Get-ItemProperty | Select-Object -Property PSPath, StubPath | Where-Object -Property StubPath -Match configure-user-settings | ForEach-Object -Process { Remove-Item -Path $PSItem.PSPath -Force }; Get-ChildItem -Path "$Env:SystemDrive\Users\*\Desktop" -Filter *lnk -Recurse | Where-Object -Property Name -Like *Edge* | Remove-Item -Force }))
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "EdgeCleanup" -Value "%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoProfile -EncodedCommand $Base64String" -Type ExpandString
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\EdgeUpdate" -Name "CreateDesktopShortcutDefault" -Value 0 -Type DWord
@@ -1695,6 +1574,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "HideFirstRunExperience" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\Edge" -Name "BackgroundModeEnabled" -Value 0 -Type DWord
+				If ($InstallInfo.Build -ge '19041' -and (Get-ItemPropertyValue -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name UBR -ErrorAction Ignore) -ge 1023) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Value 0 -Type DWord }
 			}
 			RegHives -Unload
 		}
@@ -2122,21 +2002,25 @@ Function Optimize-Offline
 			If (!(Test-Path -Path (GetPath -Path $InstallMount -Child 'Windows\WinSxS\pending.xml')))
 			{
 				Log ($OptimizeData.ComponentStoreCleanup -f $InstallInfo.Name)
-				If ($InstallInfo.Build -ge '18362') { $RegClean = 3 }
-				Else { $RegClean = 0 }
+				If ($InstallInfo.Build -ge '18362') { $RegClean = 3 } Else { $RegClean = 0 }
 				RegHives -Load
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "DisableResetbase" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide\Configuration" -Name "SupersededActions" -Value $RegClean -Type DWord
 				RegHives -Unload
+				$CleanupLog = (GetPath -Path $LogFolder -Child ComponentCleanup.log)
 				Try
 				{
-					$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Cleanup-Image /StartComponentCleanup /ScratchDir:"{1}" /LogPath:"{2}" /LogLevel:1' -f $InstallMount, $ScratchFolder, $DISMLog) -ErrorAction Stop
+					$RET = StartExe $DISM -Arguments ('/Image:"{0}" /Cleanup-Image /StartComponentCleanup /ScratchDir:"{1}" /LogPath:"{2}" /LogLevel:1' -f $InstallMount, $ScratchFolder, $CleanupLog) -ErrorAction Stop
 					If ($RET -eq 0) { $DynamicParams.ComponentCleanup = $true }
 					Else { Throw }
 				}
 				Catch
 				{
 					Log ($OptimizeData.FailedComponentStoreCleanup -f $InstallInfo.Name) -Type Error
+				}
+				Finally
+				{
+					$CleanupLog | Purge -ErrorAction Ignore
 				}
 			}
 			Else

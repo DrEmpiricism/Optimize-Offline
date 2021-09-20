@@ -1,15 +1,12 @@
 {
 	"DisplayName": [
 		"Microsoft.AccountsControl",
-		"Microsoft.AsyncTextService",
 		"Microsoft.CredDialogHost",
 		"Microsoft.UI.Xaml.CBS",
-		"Microsoft.Windows.AssignedAccessLockApp",
 		"Microsoft.Windows.CloudExperienceHost",
 		"Microsoft.Windows.NarratorQuickStart",
 		"Microsoft.Windows.OOBENetworkCaptivePortal",
 		"Microsoft.Windows.OOBENetworkConnectionFlow",
-		"Microsoft.Windows.Search",
 		"Microsoft.Windows.ShellExperienceHost",
 		"Microsoft.Windows.StartMenuExperienceHost",
 		"MicrosoftWindows.Client.CBS",
