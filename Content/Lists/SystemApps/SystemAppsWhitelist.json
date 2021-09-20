@@ -9,6 +9,7 @@
 		"Microsoft.Windows.OOBENetworkConnectionFlow",
 		"Microsoft.Windows.ShellExperienceHost",
 		"Microsoft.Windows.StartMenuExperienceHost",
+		"Microsoft.Windows.Search",
 		"MicrosoftWindows.Client.CBS",
 		"MicrosoftWindows.UndockedDevKit",
 		"NcsiUwpApp",
