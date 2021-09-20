@@ -722,6 +722,7 @@ Function Optimize-Offline
 
 
 		#region Provisioned App Package Removal
+		$RemovedPackages = [Collections.Hashtable]::New();
 		If ($WindowsApps -in $AllowedRemovalOptions)
 		{
 			Try
@@ -788,6 +789,7 @@ Function Optimize-Offline
 					Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
 					[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
 					$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
+					$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 				}
 				$DynamicParams.WindowsApps = $($appsToRemove.Count -gt 0)
 			}
@@ -875,6 +877,7 @@ Function Optimize-Offline
 						$RET = StartExe $REG -Arguments ('DELETE "{0}" /F' -f $PackageKey) -ErrorAction Stop
 						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
 						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
+						$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 						Start-Sleep 2
 					}
 
@@ -907,14 +910,14 @@ Function Optimize-Offline
 			}
 			RegHives -Load
 			$Visibility = [Text.StringBuilder]::New('hide:')
-			If ($RemovedAppxPackages.'Microsoft.WindowsMaps')
+			If ($RemovedPackages.'Microsoft.WindowsMaps')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
 				[Void]$Visibility.Append('maps;maps-downloadmaps;')
 			}
-			If ($RemovedAppxPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
-			If ($RemovedAppxPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedAppxPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedSystemApps.'Microsoft.XboxGameCallableUI')
+			If ($RemovedPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
+			If ($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
@@ -931,26 +934,26 @@ Function Optimize-Offline
 				[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
 				If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
 			}
-			If ($RemovedAppxPackages.'Microsoft.YourPhone' -or $RemovedSystemApps.'Microsoft.Windows.CallingShellApp')
+			If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp')
 			{
 				[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
 			}
-			If ($RemovedSystemApps.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
-			If ($RemovedSystemApps.'Microsoft.BioEnrollment')
+			If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
+			If ($RemovedPackages.'Microsoft.BioEnrollment')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
 				$DynamicParams.BioEnrollment = $true
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.SecureAssessmentBrowser')
+			If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.ContentDeliveryManager')
+			If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
 			{
 				@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
 					"RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
@@ -967,7 +970,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 			}
-			If ($RemovedSystemApps.'Microsoft.Windows.SecHealthUI' -or $RemovedAppxPackages.'Microsoft.SecHealthUI')
+			If ($RemovedPackages.'Microsoft.Windows.SecHealthUI')
 			{
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
@@ -1406,9 +1409,9 @@ Function Optimize-Offline
 
 		#region disable windows services
 		if ($PSBoundParameters.Services -in $AllowedRemovalOptions){
-			$servicesToRemove = [System.Collections.ArrayList]@()
-			$servicesToRemoveNames = @{}
-			$startValues = @(0,1,2,3,4)
+			$ServicesToRemove = [System.Collections.ArrayList]@()
+			$ServicesToRemoveNames = @{}
+			$StartValues = @(0,1,2,3,4)
 
 			Clear-Host
 			$Host.UI.RawUI.WindowTitle = $OptimizeData.ServicesModifying
@@ -1424,10 +1427,10 @@ Function Optimize-Offline
 						$JSON.Details | ForEach-Object -Process {
 							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)")
 							{
-								$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
+								$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
 
-								if($null -ne $folderKeys.Start -and $PSItem.start -in $startValues){
-									[void]$servicesToRemove.Add($PSItem)
+								if($null -ne $FolderKeys.Start -and $PSItem.start -in $StartValues){
+									[void]$ServicesToRemove.Add($PSItem)
 								}
 								
 							}
@@ -1435,24 +1438,24 @@ Function Optimize-Offline
 					}
 					"Select" 
 					{
-						$servicesSelection = [System.Collections.ArrayList]@();
+						$ServicesSelection = [System.Collections.ArrayList]@();
 						Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
 
-							$serviceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
+							$ServiceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
 
-							$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
+							$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
 
-							If($null -ne $folderKeys.Start -and $null -eq $folderKeys.Owners -and $folderKeys.Start -ne 4 -and $folderKeys.Start -gt 1){
-								$o = New-Object PSObject -Property @{
+							If($null -ne $FolderKeys.Start -and $null -eq $FolderKeys.Owners -and $FolderKeys.Start -ne 4 -and $FolderKeys.Start -gt 1){
+								$O = New-Object PSObject -Property @{
 									name = [String]$PSItem.PSChildName
-									description = $(If ($null -ne $serviceDetails -and $null -ne $serviceDetails.DisplayName) {$serviceDetails.DisplayName} Else {""})
-									start = $folderKeys.Start
+									description = $(If ($null -ne $ServiceDetails -and $null -ne $ServiceDetails.DisplayName) {$ServiceDetails.DisplayName} Else {""})
+									start = $FolderKeys.Start
 								}
-								[void]$servicesSelection.Add($o)
+								[void]$ServicesSelection.Add($O)
 							}
 						}
 
-						$servicesToRemove = $servicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
+						$ServicesToRemove = $ServicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
 					}
 				}
 
@@ -1463,18 +1466,18 @@ Function Optimize-Offline
 					3 = $OptimizeData.ServiceStartManual
 					4 = $OptimizeData.ServiceStartDisabled
 				}
-
-				$servicesToRemove | ForEach-Object -Process {
-					$start = If ($PSBoundParameters.Services -eq "Select") {4} Else {$PSItem.start}
-					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), start: $($StartLabels[$start])"
-					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $start
-					$servicesToRemoveNames[$PSItem.name] = $start
+				
+				$ServicesToRemove | ForEach-Object -Process {
+					$Start = If ($PSBoundParameters.Services -eq "Select") {4} Else {[Int]$PSItem.start}
+					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), Start: $($StartLabels[$Start])"
+					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $Start
+					$ServicesToRemoveNames[$PSItem.name] = $Start
 					Start-Sleep 1
 				}
-				$DynamicParams.DisabledWindowsServices = $($servicesToRemove.Count -gt 0)
+				$DynamicParams.DisabledWindowsServices = $($ServicesToRemove.Count -gt 0)
 
 				# If the Delivery Optimization service has a SetState value of 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
-				If ($null -ne $servicesToRemoveNames['DoSvc'] -and $servicesToRemoveNames['DoSvc'] -eq 4){
+				If ($null -ne $ServicesToRemoveNames['DoSvc'] -and $ServicesToRemoveNames['DoSvc'] -eq 4){
 					Log $OptimizeData.DeliveryOptimizationBypass
 					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Type DWord -Value 100
 					Start-Sleep 1
