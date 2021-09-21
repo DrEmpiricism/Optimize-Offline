@@ -5,16 +5,16 @@
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
-    "Services : None | Select | List"
+    "Services : None | Select | List | Advanced"
   ],
-  "SourcePath": "C:\\Users\\Genci\\Desktop\\W10\\19044.1237.210912-2127.21H2_RELEASE_SVC_PROD1_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO",
-  "WindowsApps": "Whitelist",
-  "SystemApps": "Whitelist",
-  "Capabilities": "Blacklist",
-  "Packages": "Blacklist",
-  "FeaturesToEnable": "List",
-  "FeaturesToDisable": "List",
-  "Services": "List",
+  "SourcePath": "PathTo:\\sources\\install.wim",
+  "WindowsApps": "Select",
+  "SystemApps": "Select",
+  "Capabilities": "Select",
+  "Packages": "None",
+  "FeaturesToEnable": "None",
+  "FeaturesToDisable": "None",
+  "Services": "None",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
@@ -27,18 +27,18 @@
     "Wallpaper": false,
     "SystemLogo": false,
     "LockScreen": false,
-    "RegistryTemplates": true,
+    "RegistryTemplates": false,
     "LayoutModification": false,
     "Unattend": false,
     "Drivers": false,
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "Prompt",
+  "ISO": "No-Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
-    "DisableWindowsUpdate": true,
-    "DisableDriverUpdate": true,
-    "DormantOneDrive": true
+    "DisableWindowsUpdate": false,
+    "DisableDriverUpdate": false,
+    "DormantOneDrive": false
   }
 }

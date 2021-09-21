@@ -7,7 +7,7 @@
     "3 = Manual",
     "4 = Disabled"
   ],
-  "Details": [
+  "Services": [
     {
       "name": "AarSvc",
       "description": "Agent Activation Runtime",

@@ -112,6 +112,7 @@ $OptimizeOffline.Lists.FeaturesToDisable.Template = (Resolve-FullPath -Path $Opt
 $OptimizeOffline.Lists.Services = @{}
 $OptimizeOffline.Lists.Services.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Services)
 $OptimizeOffline.Lists.Services.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesList.json)
+$OptimizeOffline.Lists.Services.Advanced = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesAdvanced.json)
 $OptimizeOffline.Lists.Services.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesTemplate.json)
 #endregion List paths
 
@@ -122,6 +123,16 @@ Catch { Write-Warning ('Failed to import the manifest data file: "{0}"' -f (Reso
 Try { Import-LocalizedData -BaseDirectory $OptimizeOffline.Directory -FileName Optimize-Offline.strings.psd1 -BindingVariable OptimizeData -ErrorAction Stop }
 Catch { Write-Warning ('Failed to import the localized data file: "{0}"' -f (Resolve-FullPath -Path $OptimizeOffline.LocalizedDataStrings -Split Leaf)); Break }
 #endregion Data Declarations
+
+#region translations
+$OptimizeOffline.ServicesStartLabels = @{
+	0 = $OptimizeData.ServiceStartBoot
+	1 = $OptimizeData.ServiceStartSystem
+	2 = $OptimizeData.ServiceStartAutomatic
+	3 = $OptimizeData.ServiceStartManual
+	4 = $OptimizeData.ServiceStartDisabled
+}
+#endregion translations
 
 #region Variable Declarations
 $LocalScope = [PSCustomObject]::New()

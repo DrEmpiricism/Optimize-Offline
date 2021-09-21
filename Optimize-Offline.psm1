@@ -84,7 +84,7 @@ Function Optimize-Offline
 			DormantOneDrive = $false
 		},
 		[Parameter(HelpMessage = 'Removal of windows services.')]
-		[ValidateSet('None', 'List', 'Select')]
+		[ValidateSet('None', 'List', 'Advanced', 'Select')]
 		[String]$Services
 	)
 
@@ -126,8 +126,17 @@ Function Optimize-Offline
 		{
 			'.ISO'
 			{
-				$ISOMount = (Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO -PassThru | Get-Volume).DriveLetter + ':'
-				[Void](Get-PSDrive)
+				Try{
+					$DrivesBefore = [System.Collections.ArrayList]@()
+					Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Free -eq 0} | ForEach-Object -Process {
+						[Void]$DrivesBefore.Add($PSItem.Name)
+					}
+					[Void](Mount-DiskImage -ImagePath $SourcePath.FullName -StorageType ISO)
+					$ISOMount = "$((Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Free -eq 0 -and $_.Name -notin $DrivesBefore}).Name):"
+				} Catch {
+					$ISOMount = ""
+				}
+				
 				If (!(Get-ChildItem -Path (GetPath -Path $ISOMount -Child sources) -Filter install* -File))
 				{
 					$PSCmdlet.WriteWarning($OptimizeData.InvalidWindowsInstallMedia -f $SourcePath.Name)
@@ -561,7 +570,7 @@ Function Optimize-Offline
 						"3 = Manual",
 						"4 = Disabled"
 					)
-					Details = $names
+					Services = $names
 				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Services.Template -Encoding UTF8 -Force -ErrorAction Ignore 
 				RegHives -Unload
 
@@ -1280,7 +1289,26 @@ Function Optimize-Offline
 					{
 						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
-						$JSON.Details | ForEach-Object -Process {
+						$JSON.Services | ForEach-Object -Process {
+							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)")
+							{
+								$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)"
+
+								If($null -ne $FolderKeys.Start){
+									[void]$ServicesToRemove.Add(@{
+										name = $PSItem
+										start = 4
+									})
+								}
+								
+							}
+						}
+					}
+					"Advanced"
+					{
+						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.Advanced -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+
+						$JSON.Services | ForEach-Object -Process {
 							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)")
 							{
 								$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)"
