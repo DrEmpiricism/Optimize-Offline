@@ -5,7 +5,7 @@
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
-    "Services : None | Select | List"
+    "Services : None | Select | List | Advanced"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
@@ -27,18 +27,18 @@
     "Wallpaper": false,
     "SystemLogo": false,
     "LockScreen": false,
-    "RegistryTemplates": true,
+    "RegistryTemplates": false,
     "LayoutModification": false,
     "Unattend": false,
     "Drivers": false,
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "Prompt",
+  "ISO": "No-Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
-    "DisableWindowsUpdate": true,
-    "DisableDriverUpdate": true,
-    "DormantOneDrive": true
+    "DisableWindowsUpdate": false,
+    "DisableDriverUpdate": false,
+    "DormantOneDrive": false
   }
 }

@@ -112,6 +112,7 @@ $OptimizeOffline.Lists.FeaturesToDisable.Template = (Resolve-FullPath -Path $Opt
 $OptimizeOffline.Lists.Services = @{}
 $OptimizeOffline.Lists.Services.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Services)
 $OptimizeOffline.Lists.Services.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesList.json)
+$OptimizeOffline.Lists.Services.Advanced = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesAdvanced.json)
 $OptimizeOffline.Lists.Services.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesTemplate.json)
 #endregion List paths
 
