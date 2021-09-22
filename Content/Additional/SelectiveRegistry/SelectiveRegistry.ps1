@@ -15,7 +15,6 @@ if($SelectiveRegistry.DisableWindowsUpdate -eq $true) {
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Type DWord -Value 0
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Type DWord -Value 2
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Type DWord -Value 1
-	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\wuauserv" -Name "Start" -Type DWord -Value 4
 	Start-Sleep 1
 }
 
@@ -35,6 +34,10 @@ if($SelectiveRegistry.DormantOneDrive -eq $true) {
 	Log $OptimizeData.SelectiveRegistryDormantOneDrive
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "OneDriveSetup" -Type DWord -Value 0
 	Start-Sleep 1
+}
+
+if($SelectiveRegistry.DisableWindowsUpdate -and $SelectiveRegistry.DisableDriverUpdate) {
+	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\wuauserv" -Name "Start" -Type DWord -Value 4
 }
 
 RegHives -Unload

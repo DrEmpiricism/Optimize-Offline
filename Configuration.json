@@ -7,14 +7,14 @@
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List | Advanced"
   ],
-  "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "Select",
-  "SystemApps": "Select",
-  "Capabilities": "Select",
-  "Packages": "None",
-  "FeaturesToEnable": "None",
-  "FeaturesToDisable": "None",
-  "Services": "None",
+  "SourcePath": "C:\\Users\\Genci\\Desktop\\W10\\W10.ISO",
+  "WindowsApps": "Whitelist",
+  "SystemApps": "Whitelist",
+  "Capabilities": "Blacklist",
+  "Packages": "Blacklist",
+  "FeaturesToEnable": "List",
+  "FeaturesToDisable": "List",
+  "Services": "List",
   "DeveloperMode": false,
   "WindowsStore": false,
   "MicrosoftEdge": false,
@@ -24,21 +24,21 @@
   "Registry": true,
   "Additional": {
     "Setup": false,
-    "Wallpaper": false,
+    "Wallpaper": true,
     "SystemLogo": false,
-    "LockScreen": false,
-    "RegistryTemplates": false,
+    "LockScreen": true,
+    "RegistryTemplates": true,
     "LayoutModification": false,
     "Unattend": false,
     "Drivers": false,
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "No-Prompt",
+  "ISO": "Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
-    "DisableWindowsUpdate": false,
+    "DisableWindowsUpdate": true,
     "DisableDriverUpdate": false,
-    "DormantOneDrive": false
+    "DormantOneDrive": true
   }
 }
