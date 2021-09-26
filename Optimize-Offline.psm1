@@ -250,6 +250,13 @@ Function Optimize-Offline
 			Break
 		}
 
+		If ($Registry.IsPresent -and $InstallInfo.Build -ge 22000 -and -not $DynamicParams.BootImage)
+		{
+			Try { $BootWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
+			Catch [Management.Automation.ItemNotFoundException] { Break }
+			$DynamicParams.BootImage = $true
+		}
+
 		If ($InstallInfo.VersionTable.Major -ne 10)
 		{
 			$PSCmdlet.WriteWarning($OptimizeData.UnsupportedImageVersion -f $InstallInfo.Version)
