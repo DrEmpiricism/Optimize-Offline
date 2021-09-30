@@ -51,10 +51,26 @@ public class ISOWriter
 }
 '@
         }
-        $FileSystem = @{ UDF = 4 }; $PlatformId = @{ EFI = 0xEF }
-		($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 } -ErrorAction:$ErrorActionPreference).Open()
-        $BootStream.LoadFromFile((Get-ChildItem -Path "$($ISOMedia.FullName)\efi\Microsoft\boot" -Filter $BootFile | Select-Object -ExpandProperty FullName))
-		($BootOptions = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $PlatformId.EFI; Manufacturer = 'Microsoft'; Emulation = 0 } -ErrorAction:$ErrorActionPreference).AssignBootImage($BootStream)
+        $BootOptionsDetail = @(
+            @{
+                File = (Get-ChildItem -Path "$($ISOMedia.FullName)\boot\etfsboot.com" | Select-Object -ExpandProperty FullName)
+                PlatformId = 0
+            },
+            @{
+                File = (Get-ChildItem -Path "$($ISOMedia.FullName)\efi\Microsoft\boot" -Filter $BootFile | Select-Object -ExpandProperty FullName)
+                PlatformId = 0xEF
+            }
+        )
+        $BootOptions = @()
+        Foreach($BootOptionDetail in $BootOptionsDetail)
+        {
+            ($BootStream = New-Object -ComObject ADODB.Stream -Property @{ Type = 1 } -ErrorAction:$ErrorActionPreference).Open()
+            $BootStream.LoadFromFile($BootOptionDetail.File)
+            $BootOption = New-Object -ComObject IMAPI2FS.BootOptions -Property @{ PlatformId = $BootOptionDetail.PlatformId; Manufacturer = 'Microsoft'; Emulation = 0 } -ErrorAction:$ErrorActionPreference
+            $BootOption.AssignBootImage($BootStream.psobject.BaseObject)
+            $BootOptions += $BootOption.psobject.BaseObject
+        }
+        $FileSystem = @{ UDF = 4 };
         $FSImage = New-Object -ComObject IMAPI2FS.MsftFileSystemImage -Property @{ FileSystemsToCreate = $FileSystem.UDF; UDFRevision = 0x102; FreeMediaBlocks = 0; VolumeName = $InstallInfo.Name; WorkingDirectory = $WorkFolder } -ErrorAction:$ErrorActionPreference
     }
     Process
@@ -63,7 +79,7 @@ public class ISOWriter
     }
     End
     {
-        $FSImage.BootImageOptions = $BootOptions
+        $FSImage.BootImageOptionsArray = $BootOptions
         $WriteISO = $FSImage.CreateResultImage()
         $ISOFile = New-Item -Path $WorkFolder -Name ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build).iso") -ItemType File -Force -ErrorAction:$ErrorActionPreference
         If ($ISOFile.Exists)
@@ -73,7 +89,9 @@ public class ISOWriter
             If (($WriteISO.BlockSize * $WriteISO.TotalBlocks) -eq $ISOFile.Length) { $ISOFile.FullName }
         }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootStream) -gt 0) { }
-        While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootOptions) -gt 0) { }
+        Foreach($BootOption in $BootOptions){
+            While ([Runtime.Interopservices.Marshal]::ReleaseComObject($BootOption) -gt 0) { }
+        }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($FSImage) -gt 0) { }
         While ([Runtime.Interopservices.Marshal]::ReleaseComObject($WriteISO) -gt 0) { }
         [GC]::Collect()

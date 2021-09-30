@@ -229,3 +229,29 @@ The component removal lists mentioned above contain package names that are found
 
     ./Start-Optimize populateLists
 This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./TemplateLists. Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content.
+
+
+## Windows services removal
+
+== Services Template ==
+Use populateLists feature to assign your images available services to ServicesTemplate.json
+    Some filtering out of non-service related entries is complete in the provided ServicesTemplate.json, but each OS requires more filtering.   
+   
+== List ==
+Set the Services parameter in configuration.json: List
+Assigns the start behavior of the services listed in ServicesList.json to "Disabled"
+    For Services you want to disable, copy the service object "name" . . .
+    . . . from     /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesList.json
+    Alternatively, if you already have a list of services you know you want to disable, add their names following the pattern seen in the provided example ServicesList.json
+
+== Advanced==
+Set the Services parameter in configuration.json: Advanced
+Useful for specifying any type of start behavior (including "4" "Disabled") to the services listed in ServicesAdvanced.json
+    Specify the start behavior of each service by copying the object . . .
+        Code:
+        {
+            name: [SERVICE_DISPLAYNAME],
+            start: [0,1,2,3,4],
+            description?: [optional, not used in the code, but just for you to know more about the services you're including]
+        }
+    . . . from /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesAdvanced.json
