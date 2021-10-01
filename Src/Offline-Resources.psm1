@@ -163,7 +163,7 @@ $OSCDIMG = If (Get-DeploymentTool -OSCDIMG) {
 $REG = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\reg.exe')
 $REGEDIT = (Resolve-FullPath -Path $Env:SystemRoot -Child regedit.exe)
 $EXPAND = (Resolve-FullPath -Path $Env:SystemRoot -Child 'System32\expand.exe')
-$AllowedRemovalOptions = @('All', 'Select', 'List', 'Whitelist', 'BlackList')
+$AllowedRemovalOptions = @('All', 'Select', 'List', 'Whitelist', 'BlackList', 'Advanced')
 #endregion Variable Declarations
 
 #region Resource Alias Creation

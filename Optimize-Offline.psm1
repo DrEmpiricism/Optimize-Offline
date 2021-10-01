@@ -1324,7 +1324,7 @@ Function Optimize-Offline
 									$PSItem.start = 4
 								}
 
-								If($null -ne $FolderKeys.Start -and $PSItem.start -in $StartValues){
+								If($null -ne $FolderKeys.Start -and [int]$PSItem.start -in $StartValues){
 									[void]$ServicesToRemove.Add($PSItem)
 								}
 								
