@@ -1,0 +1,1 @@
+powershell .\Start-Optimize -populateTemplates
