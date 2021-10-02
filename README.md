@@ -209,7 +209,7 @@ Removal lists can be found in ./Content/Lists. There are 6 basic categories spre
 - FeaturesToEnable - FeaturesToEnableList.json, FeaturesToEnableTemplate.json
 - FeaturesToDisable - FeaturesToDisableList.json, FeaturesToDisableTemplate.json
 
-The template files can be filled by launching the script with the populateLists parameter
+The template files can be filled by launching the script with the populateTemplates parameter
 
 ```PowerShell
 .\Start-Optimize.ps1
@@ -222,19 +222,28 @@ In configuration.json the list parameters are the following:
 - Packages - (All, None, Select, Whitelist, Blacklist), lists are in ./Content/Lists/Packages
 - FeaturesToEnable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToEnable
 - FeaturesToDisable - (All, None, Select, List), lists are in ./Content/Lists/FeaturesToDisable
+- Services - (None, Select, List, Advanced), lists are in ./Content/Lists/ServicesList.json, and in ./Content/Lists/ServicesAdvanced.json when advanced parameter is set in configuration.json
 
 ## Generating template component removal lists
 
 The component removal lists mentioned above contain package names that are found in the windows system. Each version of windows may change the names and entries of it's components. For updating the lists or even helping you in generating custom ones according to the windows build you have, use the command:
 
-    ./Start-Optimize populateLists
-This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./TemplateLists. Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content.
+`./Start-Optimize populateTemplates`
+
+This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./Content/Lists . Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content/Lists.
+
+To populate the lists interactively by clicking item in grid guis and as well populating the templates (for later making manual changes to the lists by copying and pasting), use this command:
+Code:
+
+`.\Start-Optimize.ps1 -populateLists`
+
+Please note that the interactive filling of lists, will fill the list chosen in configuration.json. So first set up configuration.json with the proper list method!! If no list methods are specified in configuration.json the populateLists will just populate the templates, as it doesn't have info about which lists to fill, so it will be basically the same behaviour like populateTemplates.
 
 
 ## Windows services removal
 
 == Services Template ==
-Use populateLists feature to assign your images available services to ServicesTemplate.json
+Use populateTemplates feature to assign your images available services to ServicesTemplate.json
     Some filtering out of non-service related entries is complete in the provided ServicesTemplate.json, but each OS requires more filtering.   
    
 == List ==
