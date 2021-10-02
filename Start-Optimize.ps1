@@ -1,5 +1,4 @@
-﻿#Requires -RunAsAdministrator
-<#
+﻿<#
 	.SYNOPSIS
 		Start-Optimize is a configuration call script for the Optimize-Offline module.
 
@@ -22,12 +21,11 @@ Param (
 
 $Global:Error.Clear()
 
-# Ensure we are running with administrative permissions.
-If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
-{
-	Write-Warning "Elevation is required to process optimizations. Please relaunch Start-Optimize as an administrator."
-	Start-Sleep 3
-	Exit
+if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))  
+{  
+  $arguments = "& '" +$myinvocation.mycommand.definition + "'"
+  Start-Process powershell -Verb runAs -ArgumentList $arguments
+  Break
 }
 
 # Ensure the configuration JSON file exists.
