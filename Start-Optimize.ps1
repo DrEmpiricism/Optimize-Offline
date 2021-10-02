@@ -16,7 +16,8 @@
 #>
 [CmdletBinding()]
 Param (
-	[Parameter(Mandatory=$false)] $populateLists
+	[Parameter(Mandatory=$false)] [switch]$populateLists,
+	[Parameter(Mandatory=$false)] [switch]$populateTemplates
 )
 
 $Global:Error.Clear()
@@ -63,6 +64,7 @@ Finally
 # Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
 $ConfigParams = [Ordered]@{
 	populateLists = $populateLists
+	populateTemplates = $populateTemplates
 }
 ForEach ($Name In $ContentJSON.PSObject.Properties.Name)
 {
