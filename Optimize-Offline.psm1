@@ -1002,7 +1002,7 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
 			}
-			If($RemovedPackages."Microsoft.Windows.Search" -or $RemovedPackages."MicrosoftWindows.Client.CBS") {
+			If($RemovedPackages."Microsoft.Windows.Search") {
 				$DynamicParams.RemovedWindowsSearchPackage = $true
 			}
 			RegHives -Unload
