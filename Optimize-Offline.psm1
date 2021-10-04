@@ -269,7 +269,7 @@ Function Optimize-Offline
 			Break
 		}
 
-		If ($Registry.IsPresent -and $InstallInfo.Build -ge 22000 -and -not $BootWim)
+		If ($Registry.IsPresent -and $InstallInfo.Build -ge 22000 -and -not $BootWim -and $ISOMedia.Exists)
 		{
 			Try { $BootWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
 			Catch [Management.Automation.ItemNotFoundException] { Break }
