@@ -212,7 +212,7 @@ Removal lists can be found in ./Content/Lists. There are 6 basic categories spre
 The template files can be filled by launching the script with the populateTemplates parameter
 
 ```PowerShell
-.\Start-Optimize.ps1
+.\Start-Optimize.ps1 -populateTemplates
 ```
 
 In configuration.json the list parameters are the following:
@@ -228,7 +228,7 @@ In configuration.json the list parameters are the following:
 
 The component removal lists mentioned above contain package names that are found in the windows system. Each version of windows may change the names and entries of it's components. For updating the lists or even helping you in generating custom ones according to the windows build you have, use the command:
 
-`./Start-Optimize populateTemplates`
+`.\Start-Optimize -populateTemplates`
 
 This command will find all the available windows apps, system apps and capabilities and will fill the corresponding json located in ./Content/Lists . Afterwards feel free to cherry pick the package names and insert them according to your needs in the removal lists in subfolder ./Content/Lists.
 
