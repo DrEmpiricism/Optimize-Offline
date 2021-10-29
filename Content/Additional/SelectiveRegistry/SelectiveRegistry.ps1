@@ -1,5 +1,5 @@
 RegHives -Load
-if($SelectiveRegistry.DisableWindowsUpdate -eq $true) {
+if($SelectiveRegistry.DisableWindowsUpdateCommunity -eq $true) {
 	Log $OptimizeData.SelectiveRegistryWindowsUpdate
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310093Enabled" -Type DWord -Value 0
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" -Name "SystemSettingsDownloadMode" -Type DWord -Value 0
@@ -15,35 +15,15 @@ if($SelectiveRegistry.DisableWindowsUpdate -eq $true) {
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" -Name "DODownloadMode" -Type DWord -Value 0
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Type DWord -Value 2
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Type DWord -Value 1
-	# https://docs.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#29-windows-update	
-# Add a REG_DWORD value named DoNotConnectToWindowsUpdateInternetLocations to 
-# HKEY_LOCAL_MACHINE        \Software\Policies\Microsoft\Windows\WindowsUpdate        and set the value to 1.        
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "DoNotConnectToWindowsUpdateInternetLocations" -Type DWord -Value 1
-#-and-
-
-#Add a REG_DWORD value named DisableWindowsUpdateAccess to 
-#HKEY_LOCAL_MACHINE          \Software\Policies\Microsoft\Windows\WindowsUpdate        and set the value to 1.
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "DisableWindowsUpdateAccess" -Type DWord -Value 1
-#-and-
-
-#Add a REG_SZ value named WUServer to 
-# HKEY_LOCAL_MACHINE        \Software\Policies\Microsoft\Windows\WindowsUpdate         and ensure it is blank with a space character " ".
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "WUServer" -Type String -Value " "
-#-and-
-
-#Add a REG_SZ value named WUStatusServer to 
-# HKEY_LOCAL_MACHINE        \Software\Policies\Microsoft\Windows\WindowsUpdate and ensure it is blank with a space character " ".
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "WUStatusServer" -Type String -Value " "
-#-and-
-
-#Add a REG_SZ value named UpdateServiceUrlAlternate to 
-#HKEY_LOCAL_MACHINE         \Software\Policies\Microsoft\Windows\WindowsUpdate and ensure it is blank with a space character " ".
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "UpdateServiceUrlAlternate" -Type String -Value " "
-#-and-
-
-#Add a REG_DWORD value named UseWUServer to 
-#HKEY_LOCAL_MACHINE         \Software\Policies\Microsoft\Windows\WindowsUpdate\AU and set the value to 1 (one).
-RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "UseWUServer" -Type DWord -Value 1
+	Start-Sleep 1
+	}
+if($SelectiveRegistry.DisableWindowsUpdateOEM -eq $true) {
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "DoNotConnectToWindowsUpdateInternetLocations" -Type DWord -Value 1
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "DisableWindowsUpdateAccess" -Type DWord -Value 1
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "WUServer" -Type String -Value " "
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "WUStatusServer" -Type String -Value " "
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "UpdateServiceUrlAlternate" -Type String -Value " "
+	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "UseWUServer" -Type DWord -Value 1
 Start-Sleep 1
 }
 
