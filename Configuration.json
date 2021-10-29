@@ -38,6 +38,7 @@
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpdate": false,
+    "DisableWindowsUpdateMicrosoft": false,
     "DisableDriverUpdate": false,
     "DormantOneDrive": false
   }
