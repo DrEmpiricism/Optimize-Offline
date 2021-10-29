@@ -103,6 +103,7 @@ OptimizationsCompleted                  = {0} completed in [{1}] minutes with [{
 TerminatingOptimizations                = Discarding any Images and Terminating Optimizations.
 Populating                              = populating
 SelectiveRegistryWindowsUpdate          = Disabling Windows Update
+SelectiveRegistryWindowsUpdateMS        = Disabling Windows Update using Microsoft's Method
 SelectiveRegistryDriverUpdate           = Disabling automatic driver update
 SelectiveRegistryDormantOneDrive        = Enabling dormant OneDrive fix
 ServiceStartBoot 								 = Boot
