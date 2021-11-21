@@ -1526,21 +1526,25 @@ Function Optimize-Offline
 		#endregion DeveloperMode Integration
 
 		#region Windows Store Integration
-		If ($WindowsStore.IsPresent -and (Test-Path -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.appxbundle) -and !(Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore))
+		If ($WindowsStore.IsPresent -and (Test-Path -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.*xbundle) -and !(Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore))
 		{
 			Log $OptimizeData.IntegratingWindowsStore
-			$StoreBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.appxbundle -File | Select-Object -ExpandProperty FullName
-			$PurchaseBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.StorePurchaseApp*.appxbundle -File | Select-Object -ExpandProperty FullName
-			$XboxBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.XboxIdentityProvider*.appxbundle -File | Select-Object -ExpandProperty FullName
-			$InstallerBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.DesktopAppInstaller*.appxbundle -File | Select-Object -ExpandProperty FullName
+			$StoreBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.*xbundle -File | Select-Object -ExpandProperty FullName
+			$PurchaseBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.StorePurchaseApp*.*xbundle -File | Select-Object -ExpandProperty FullName
+			$XboxBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.XboxIdentityProvider*.*xbundle -File | Select-Object -ExpandProperty FullName
+			$InstallerBundle = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.DesktopAppInstaller*.*xbundle -File | Select-Object -ExpandProperty FullName
 			$StoreLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.xml -File | Select-Object -ExpandProperty FullName
 			$PurchaseLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.StorePurchaseApp*.xml -File | Select-Object -ExpandProperty FullName
 			$XboxLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.XboxIdentityProvider*.xml -File | Select-Object -ExpandProperty FullName
 			$InstallerLicense = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.DesktopAppInstaller*.xml -File | Select-Object -ExpandProperty FullName
-			$DependencyPackages = [Collections.Generic.List[String]]::New()
-			$DependencyPackages = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.VCLibs*.appx -File | Select-Object -ExpandProperty FullName
-			$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
-			$DependencyPackages += Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
+
+			$DependencyVCLibs = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.VCLibs.140.00_*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyVCLibsUWPDesktop = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.VCLibs.140.00.UWPDesktop_*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyXAML26 = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.UI.Xaml.2.6_*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyXAML27 = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.UI.Xaml.2.7_*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyNativeFramework = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.NET.Native.Framework*.appx -File | Select-Object -ExpandProperty FullName
+			$DependencyNativeRuntime = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter Microsoft.NET.Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
+
 			If (!$DynamicParams.DeveloperMode)
 			{
 				RegHives -Load
@@ -1549,6 +1553,11 @@ Function Optimize-Offline
 			}
 			Try
 			{
+				$DependencyPackages = [Collections.Generic.List[String]]::New()
+				$DependencyPackages += $DependencyNativeFramework
+				$DependencyPackages += $DependencyNativeRuntime
+				$DependencyPackages += $DependencyVCLibs
+				$DependencyPackages += $DependencyXAML27
 				$StorePackage = @{
 					Path                  = $InstallMount
 					PackagePath           = $StoreBundle
@@ -1560,41 +1569,60 @@ Function Optimize-Offline
 					ErrorAction           = 'Stop'
 				}
 				[Void](Add-AppxProvisionedPackage @StorePackage)
-				$PurchasePackage = @{
-					Path                  = $InstallMount
-					PackagePath           = $PurchaseBundle
-					DependencyPackagePath = $DependencyPackages
-					LicensePath           = $PurchaseLicense
-					ScratchDirectory      = $ScratchFolder
-					LogPath               = $DISMLog
-					LogLevel              = 1
-					ErrorAction           = 'Stop'
+
+				If ($PurchaseBundle -and $PurchaseLicense) {
+					$DependencyPackages = [Collections.Generic.List[String]]::New()
+					$DependencyPackages += $DependencyNativeFramework
+					$DependencyPackages += $DependencyNativeRuntime
+					$DependencyPackages += $DependencyVCLibs
+					$PurchasePackage = @{
+						Path                  = $InstallMount
+						PackagePath           = $PurchaseBundle
+						DependencyPackagePath = $DependencyPackages
+						LicensePath           = $PurchaseLicense
+						ScratchDirectory      = $ScratchFolder
+						LogPath               = $DISMLog
+						LogLevel              = 1
+						ErrorAction           = 'Stop'
+					}
+					[Void](Add-AppxProvisionedPackage @PurchasePackage)
 				}
-				[Void](Add-AppxProvisionedPackage @PurchasePackage)
-				$XboxPackage = @{
-					Path                  = $InstallMount
-					PackagePath           = $XboxBundle
-					DependencyPackagePath = $DependencyPackages
-					LicensePath           = $XboxLicense
-					ScratchDirectory      = $ScratchFolder
-					LogPath               = $DISMLog
-					LogLevel              = 1
-					ErrorAction           = 'Stop'
+
+				If ($XboxBundle -and $XboxLicense) {
+					$DependencyPackages = [Collections.Generic.List[String]]::New()
+					$DependencyPackages += $DependencyNativeFramework
+					$DependencyPackages += $DependencyNativeRuntime
+					$DependencyPackages += $DependencyVCLibs
+					$XboxPackage = @{
+						Path                  = $InstallMount
+						PackagePath           = $XboxBundle
+						DependencyPackagePath = $DependencyPackages
+						LicensePath           = $XboxLicense
+						ScratchDirectory      = $ScratchFolder
+						LogPath               = $DISMLog
+						LogLevel              = 1
+						ErrorAction           = 'Stop'
+					}
+					[Void](Add-AppxProvisionedPackage @XboxPackage)
 				}
-				[Void](Add-AppxProvisionedPackage @XboxPackage)
-				$DependencyPackages.Clear()
-				$DependencyPackages = Get-ChildItem -Path $OptimizeOffline.WindowsStore -Filter *Native.Runtime*.appx -File | Select-Object -ExpandProperty FullName
-				$InstallerPackage = @{
-					Path                  = $InstallMount
-					PackagePath           = $InstallerBundle
-					DependencyPackagePath = $DependencyPackages
-					LicensePath           = $InstallerLicense
-					ScratchDirectory      = $ScratchFolder
-					LogPath               = $DISMLog
-					LogLevel              = 1
-					ErrorAction           = 'Stop'
+				
+
+				If ($InstallerBundle -and $InstallerLicense -and $DependencyVCLibsUWPDesktop -and $DependencyXAML26) {
+					$DependencyPackages = [Collections.Generic.List[String]]::New()
+					$DependencyPackages += $DependencyVCLibsUWPDesktop
+					$DependencyPackages += $DependencyXAML26
+					$InstallerPackage = @{
+						Path                  = $InstallMount
+						PackagePath           = $InstallerBundle
+						DependencyPackagePath = $DependencyPackages
+						LicensePath           = $InstallerLicense
+						ScratchDirectory      = $ScratchFolder
+						LogPath               = $DISMLog
+						LogLevel              = 1
+						ErrorAction           = 'Stop'
+					}
+					[Void](Add-AppxProvisionedPackage @InstallerPackage)
 				}
-				[Void](Add-AppxProvisionedPackage @InstallerPackage)
 				$DynamicParams.WindowsStore = $true
 			}
 			Catch
