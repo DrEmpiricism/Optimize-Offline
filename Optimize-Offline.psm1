@@ -1090,12 +1090,13 @@ Function Optimize-Offline
 						{
 							If (Test-Path -Path $OptimizeOffline.Lists.Capabilities.Whitelist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$Names = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
 
 								$WindowsCapabilities | ForEach-Object -Process {
-									If ($PSItem.Name -notin $JSON.Name)
-									{
-										[void]$capabilitiesToRemove.Add($PSItem)
+									Foreach($Name in $Names){
+										If ($PSItem.Name -ne $Name -or ($Name -match "\*" -and $PSItem.Name -notlike $Name)){
+											[void]$capabilitiesToRemove.Add($PSItem)
+										}
 									}
 								}
 							}
@@ -1105,12 +1106,13 @@ Function Optimize-Offline
 						{
 							If (Test-Path -Path $OptimizeOffline.Lists.Capabilities.Blacklist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$Names = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
 
 								$WindowsCapabilities | ForEach-Object -Process {
-									If ($PSItem.Name -in $JSON.Name)
-									{
-										[void]$capabilitiesToRemove.Add($PSItem)
+									Foreach($Name in $Names){
+										If ($PSItem.Name -eq $Name -or ($Name -match "\*" -and $PSItem.Name -like $Name)){
+											[void]$capabilitiesToRemove.Add($PSItem)
+										}
 									}
 								}
 							}
@@ -1170,12 +1172,14 @@ Function Optimize-Offline
 
 							If (Test-Path -Path $OptimizeOffline.Lists.Packages.Whitelist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.Packages.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.Packages.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
 
 								$WindowsPackages | ForEach-Object -Process {
-									If ($PSItem.PackageName -notin $JSON.PackageName)
-									{
-										[void]$packagesToRemove.Add($PSItem)
+									Foreach($PackageName in $PackageNames){
+										If ($PSItem.PackageName -ne $PackageName -or ($PackageName -Match "\*" -and $PSItem.PackageName -notlike $PackageName))
+										{
+											[void]$packagesToRemove.Add($PSItem)
+										}
 									}
 								}
 							}
@@ -1186,12 +1190,14 @@ Function Optimize-Offline
 							
 							If (Test-Path -Path $OptimizeOffline.Lists.Packages.Blacklist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.Packages.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.Packages.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
 
 								$WindowsPackages | ForEach-Object -Process {
-									If ($PSItem.PackageName -in $JSON.PackageName)
-									{
-										[void]$packagesToRemove.Add($PSItem)
+									Foreach($PackageName in $PackageNames){
+										If ($PSItem.PackageName -eq $PackageName -or ($PackageName -Match "\*" -and $PSItem.PackageName -like $PackageName))
+										{
+											[void]$packagesToRemove.Add($PSItem)
+										}
 									}
 								}
 							}
