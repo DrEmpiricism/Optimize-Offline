@@ -1093,10 +1093,15 @@ Function Optimize-Offline
 								$Names = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
 
 								$WindowsCapabilities | ForEach-Object -Process {
+									$ToRemove = $true
 									Foreach($Name in $Names){
-										If ($PSItem.Name -ne $Name -or ($Name -match "\*" -and $PSItem.Name -notlike $Name)){
-											[void]$capabilitiesToRemove.Add($PSItem)
+										If ($PSItem.Name -eq $Name -or ($Name -match "\*" -and $PSItem.Name -like $Name)){
+											$ToRemove = $false
+											Break
 										}
+									}
+									If($ToRemove){
+										[void]$capabilitiesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1112,6 +1117,7 @@ Function Optimize-Offline
 									Foreach($Name in $Names){
 										If ($PSItem.Name -eq $Name -or ($Name -match "\*" -and $PSItem.Name -like $Name)){
 											[void]$capabilitiesToRemove.Add($PSItem)
+											Break
 										}
 									}
 								}
@@ -1133,7 +1139,7 @@ Function Optimize-Offline
 							LogLevel         = 1
 							ErrorAction      = 'Stop'
 						}
-						Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name.Split('~')[0])
+						Log ($OptimizeData.RemovingWindowsCapability -f $PSItem.Name)
 						[Void](Remove-WindowsCapability @RemoveCapabilityParams)
 					}
 
@@ -1175,11 +1181,16 @@ Function Optimize-Offline
 								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.Packages.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
 
 								$WindowsPackages | ForEach-Object -Process {
+									$ToRemove = $true
 									Foreach($PackageName in $PackageNames){
-										If ($PSItem.PackageName -ne $PackageName -or ($PackageName -Match "\*" -and $PSItem.PackageName -notlike $PackageName))
+										If ($PSItem.PackageName -eq $PackageName -or ($PackageName -Match "\*" -and $PSItem.PackageName -like $PackageName))
 										{
-											[void]$packagesToRemove.Add($PSItem)
+											$ToRemove = $false
+											Break
 										}
+									}
+									If($ToRemove){
+										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
 							}
@@ -1197,6 +1208,7 @@ Function Optimize-Offline
 										If ($PSItem.PackageName -eq $PackageName -or ($PackageName -Match "\*" -and $PSItem.PackageName -like $PackageName))
 										{
 											[void]$packagesToRemove.Add($PSItem)
+											Break
 										}
 									}
 								}
@@ -1219,7 +1231,7 @@ Function Optimize-Offline
 							LogLevel         = 1
 							ErrorAction      = 'Stop'
 						}
-						Log ($OptimizeData.RemovingWindowsPackage -f $PSItem.PackageName.Replace('Package', $null).Split('~')[0].TrimEnd('-'))
+						Log ($OptimizeData.RemovingWindowsPackage -f $PSItem.PackageName)
 						[Void](Remove-WindowsPackage @RemovePackageParams)
 					}
 					$DynamicParams.Packages = $($packagesToRemove.Count -gt 0)
