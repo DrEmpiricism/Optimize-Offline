@@ -1,15 +1,9 @@
 {
 	"PackageName": [
-		"Microsoft-Windows-Hello-Face-Migration-Package~31bf3856ad364e35~amd64~~10.0.19041.1202",
-    "Microsoft-Windows-Hello-Face-Package~31bf3856ad364e35~amd64~~10.0.19041.1202",
-		"Microsoft-Windows-LanguageFeatures-Handwriting-en-us-Package~31bf3856ad364e35~amd64~~10.0.19041.1",
-    "Microsoft-Windows-LanguageFeatures-OCR-en-us-Package~31bf3856ad364e35~amd64~~10.0.19041.1",
-    "Microsoft-Windows-LanguageFeatures-Speech-en-us-Package~31bf3856ad364e35~amd64~~10.0.19041.1",
-		"Microsoft-Windows-QuickAssist-Package~31bf3856ad364e35~amd64~~10.0.19041.1151",
-    "Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~amd64~~10.0.19041.746",
-    "Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~amd64~en-US~10.0.19041.1",
-    "Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~wow64~~10.0.19041.1",
-    "Microsoft-Windows-StepsRecorder-Package~31bf3856ad364e35~wow64~en-US~10.0.19041.1",
-    "Microsoft-Windows-TabletPCMath-Package~31bf3856ad364e35~amd64~~10.0.19041.746"
+		"Microsoft-Windows-Hello-Face-*",
+		"Microsoft-Windows-LanguageFeatures-*",
+		"Microsoft-Windows-QuickAssist-Package*",
+    "Microsoft-Windows-StepsRecorder-Package*",
+    "Microsoft-Windows-TabletPCMath-Package*"
 	]
 }
