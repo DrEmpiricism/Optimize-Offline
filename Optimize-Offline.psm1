@@ -261,6 +261,7 @@ Function Optimize-Offline
 		{
 			$Host.UI.RawUI.WindowTitle = "Validating Image Metadata."
 			$InstallInfo = $InstallWim | Get-ImageData -Index $ImageIndex -ErrorAction Stop
+			$Global:InstallInfo = $InstallInfo
 		}
 		Catch
 		{
@@ -290,7 +291,7 @@ Function Optimize-Offline
 			Break
 		}
 
-		If ($InstallInfo.InstallationType.Contains('Server') -or $InstallInfo.InstallationType.Contains('WindowsPE'))
+		If ($InstallInfo.InstallationType.Contains('WindowsPE'))
 		{
 			$PSCmdlet.WriteWarning($OptimizeData.UnsupportedImageType -f $InstallInfo.InstallationType)
 			$TempDirectory | Purge
@@ -2601,6 +2602,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference
 		$Global:ProgressPreference = $LocalScope.ProgressPreference
 		$Global:Error.Clear()
+		$Global:InstallInfo = $null
 		Log "Clearing temp directory..."
 		Start-Sleep 5
 		Remove-Item -Recurse -Force -ErrorAction Ignore $TempDirectory

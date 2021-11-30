@@ -19,6 +19,10 @@ Function Get-AppxPackages {
 		[Int]$Build
 	)
 
+	If($Global:InstallInfo.InstallationType.ToLower().Contains('server core')) {
+		return @{}
+	}
+
 	$AppxPackages = Get-AppxProvisionedPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
 
 	If ($Build -ge '19041')
