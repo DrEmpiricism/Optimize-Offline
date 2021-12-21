@@ -130,6 +130,16 @@ Function Set-Additional
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\cbdhsvc" -Name Start -Value 4 -Force
         }
 
+        If ($Build -ge 18363) {
+            $WebClient = New-Object System.Net.WebClient
+            $WebClient.DownloadFile("https://github.com/riverar/mach2/releases/download/0.7.0.0/mach2_0.7.0.0_$(If([Environment]::Is64BitOperatingSystem) {"x64"} Else { "x86" }).zip", ".\mach.zip")
+            Unblock-File .\mach.zip
+            Expand-Archive -Path .\mach.zip -DestinationPath .\mach
+            .\mach\mach2 disable 18755234
+            Remove-Item .\mach.zip
+            Remove-Item .\mach -Recurse
+        }
+
         # Uninstall Cortana.
         If ($Build -ge 19041) { Get-AppxPackage -Name *Microsoft.549981C3F5F10* | Remove-AppxPackage -AllUsers | Out-Null }
 
