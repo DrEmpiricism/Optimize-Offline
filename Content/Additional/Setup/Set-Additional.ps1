@@ -146,7 +146,9 @@ Function Set-Additional
             If ($QueryReFS) { Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY REFS 0') | Out-Null }
 
             # Disable Swapfile.sys which can improve SSD performance.
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name SwapfileControl -Value 0 -Force
+            If(!(Get-AppxProvisionedPackage -Online | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore)){
+                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name SwapfileControl -Value 0 -Force
+            }
 
             # Disable Prefetch and Superfetch (optimal for SSD drives).
             If (!(Test-Path -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters")) { New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -ItemType Directory -Force | Out-Null }
@@ -181,7 +183,7 @@ Function Set-Additional
         If ($Memory -is [Double]) { Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name SvcHostSplitThresholdInKB -Value $Memory -Force }
 
         # If the Windows 10 build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
-        If ($Build -eq 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
+        If ($Build -ge 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
 
         # Remove the dism log file if present.
         If (Test-Path -Path $Env:SystemRoot\Logs\DISM\dism.log) { Remove-Item -Path $Env:SystemRoot\Logs\DISM\dism.log -Force }

@@ -77,6 +77,7 @@ Function Optimize-Offline
 		[Parameter(Mandatory=$false)]
 		[Hashtable]$SelectiveRegistry = @{
 			DisableWindowsUpdate = $false
+			DisableWindowsUpdateMicrosoft = $false
 			DisableDriverUpdate = $false
 			DormantOneDrive = $false
 		},
