@@ -131,13 +131,7 @@ Function Set-Additional
         }
 
         If ($Build -ge 18363) {
-            $WebClient = New-Object System.Net.WebClient
-            $WebClient.DownloadFile("https://github.com/riverar/mach2/releases/download/0.7.0.0/mach2_0.7.0.0_$(If([Environment]::Is64BitOperatingSystem) {"x64"} Else { "x86" }).zip", ".\mach.zip")
-            Unblock-File .\mach.zip
-            Expand-Archive -Path .\mach.zip -DestinationPath .\mach
-            .\mach\mach2 disable 18755234
-            Remove-Item .\mach.zip
-            Remove-Item .\mach -Recurse
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Classes\CLSID\{1d64637d-31e9-4b06-9124-e83fb178ac6e}\TreatAs" -Name "(Default)" -Value "{64bc32b5-4eec-4de7-972d-bd8bd0324537}" -Force
         }
 
         # Uninstall Cortana.
