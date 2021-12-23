@@ -264,3 +264,10 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
             description?: [optional, not used in the code, but just for you to know more about the services you're including]
         }
     . . . from /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesAdvanced.json
+
+## Selective registry tweaks
+
+- DisableWindowsUpgrade - Tweak will prevent windows update from receiving cummulative updates and feature updates
+- DisableWindowsUpdateMicrosoft - Tweak disables completely windows update the microsoft way, breaks the ability of MS Store to download apps
+- DisableDriverUpdate - Will disable windows update from updating hw drivers
+- DormantOneDrive - Will disable the startup installation of Onedrive, but will not physically remove the setup of it

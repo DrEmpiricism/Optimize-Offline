@@ -8,9 +8,9 @@
     "Services : None | Select | List | Advanced"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "Select",
-  "SystemApps": "Select",
-  "Capabilities": "Select",
+  "WindowsApps": "None",
+  "SystemApps": "None",
+  "Capabilities": "None",
   "Packages": "None",
   "FeaturesToEnable": "None",
   "FeaturesToDisable": "None",
@@ -34,12 +34,12 @@
     "NetFx3": false
   },
   "ComponentCleanup": true,
-  "ISO": "No-Prompt",
+  "ISO": "Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
-    "DisableWindowsUpdate": false,
-    "DisableWindowsUpdateMicrosoft": false,
-    "DisableDriverUpdate": false,
-    "DormantOneDrive": false
+    "DisableWindowsUpgrade": true,
+    "DisableWindowsUpdateMicrosoft": true,
+    "DisableDriverUpdate": true,
+    "DormantOneDrive": true
   }
 }
