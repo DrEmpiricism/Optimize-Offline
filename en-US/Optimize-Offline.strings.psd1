@@ -106,6 +106,7 @@ SelectiveRegistryWindowsUpgrade         = Disabling Windows Upgrade
 SelectiveRegistryWindowsUpdateMS        = Disabling Windows Update using Microsoft's Method
 SelectiveRegistryDriverUpdate           = Disabling automatic driver update
 SelectiveRegistryDormantOneDrive        = Enabling dormant OneDrive fix
+SelectiveRegistryDisable3rdPartyApps    = Disabling 3rd party apps
 ServiceStartBoot 								 = Boot
 ServiceStartSystem                      = System
 ServiceStartAutomatic                   = Automatic

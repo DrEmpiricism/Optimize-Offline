@@ -80,6 +80,7 @@ Function Optimize-Offline
 			DisableWindowsUpdateMicrosoft = $false
 			DisableDriverUpdate = $false
 			DormantOneDrive = $false
+			Disable3rdPartyApps = $false
 		},
 		[Parameter(HelpMessage = 'Removal of windows services.')]
 		[ValidateSet('None', 'List', 'Advanced', 'Select')]

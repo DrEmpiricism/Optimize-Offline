@@ -271,3 +271,4 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
 - DisableWindowsUpdateMicrosoft - Tweak disables completely windows update the microsoft way, breaks the ability of MS Store to download apps
 - DisableDriverUpdate - Will disable windows update from updating hw drivers
 - DormantOneDrive - Will disable the startup installation of Onedrive, but will not physically remove the setup of it
+- Disable3rdPartyApps - Will remove the 3rd party apps installed with windows
