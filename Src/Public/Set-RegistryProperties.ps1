@@ -338,6 +338,16 @@ Function Set-RegistryProperties
         # classic search in explorer
         If($InstallInfo.Build -ge '18363') { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{1d64637d-31e9-4b06-9124-e83fb178ac6e}\TreatAs" -Name "(default)" -Value "{64bc32b5-4eec-4de7-972d-bd8bd0324537}" -Type String -Force }
 
+        ## Disable news and feeds
+        RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Type Dword -Value "2" -Force
+        RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type Dword -Value "0" -Force
+
+        ## Disable tasbar taskview button
+		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type Dword -Value "0" -Force
+
+        ## Disable widgets button
+		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Type Dword -Value "0" -Force
+
         If ($InstallInfo.Build -ge '22000' -and (Test-Path -Path $BootMount)) {
             RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassCPUCheck" -Type DWord -Value 1
             RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassRAMCheck" -Type DWord -Value 1
