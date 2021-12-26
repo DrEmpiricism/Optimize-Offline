@@ -4,7 +4,17 @@
 	],
 	"Services": [
 		"BDESVC",
-		"ConsentUxUserSvc",
-		"CredentialEnrollmentManagerUserSvc"
+		"iphlpsvc",
+		"lfsvc",
+		"lmhosts",
+		"PcaSvc",
+		"PimIndexMaintenanceSvc",
+		"Spooler",
+		"SSDPSRV",
+		"VSS",
+		"WPDBusEnum",
+		"WSearch",
+		"DiagTrack",
+		"DusmSvc"
 	]
 }
