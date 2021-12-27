@@ -336,49 +336,7 @@ Function Set-RegistryProperties
         $RegistryData.EnableStrongCrypto | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
         RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\.NETFramework\v4.0.30319" -Name "SchUseStrongCrypto" -Value 1 -Type DWord
-
-        # classic search in explorer
-        If($InstallInfo.Build -ge '18363' -and $SelectiveRegistry.ClassicSearchExplorer) {
-
-            Log $OptimizeData.SelectiveRegistryClassicSearchExplorer
-
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{1d64637d-31e9-4b06-9124-e83fb178ac6e}\TreatAs" -Name "(default)" -Value "{64bc32b5-4eec-4de7-972d-bd8bd0324537}" -Type String -Force 
-        }
-
-        If($SelectiveRegistry.RemoveTaskbarPinnedIcons){
-
-            Log $OptimizeData.SelectiveRegistryRemoveTaskbarPinnedIcons
-
-            ## Disable news and feeds
-            RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Type Dword -Value "2" -Force
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type Dword -Value "0" -Force
-
-            ## Disable taskbar taskview button
-            RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type Dword -Value "0" -Force
-
-            ## Disable widgets button
-            RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Type Dword -Value "0" -Force
-
-            If($InstallInfo.Build -ge '22000') {
-                #Remove Chat icon in taskbar
-                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Chat" -Name "ChatIcon" -Type dword -Value "3"
-                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type dword -Value "0"
-
-                #Hide MeetNow icon in taskbar
-                RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
-                RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
-            }
-
-        }
-
-        If($SelectiveRegistry.W11ClassicInterface -and $InstallInfo.Build -ge '22000') {
-            Log $OptimizeData.SelectiveRegistryW11ClassicInterface
-
-            # Classic context menus
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
-            # W10 UI ribbon in explorer
-            RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
-        }
+        
     }
     Catch
     {
