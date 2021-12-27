@@ -774,7 +774,9 @@ Function Optimize-Offline
 						ErrorAction      = 'Stop'
 					}
 					Log ($OptimizeData.RemovingWindowsApp -f $PSItem.DisplayName)
-					[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
+					If ($PSItem.DisplayName -notin @("Microsoft.SecHealthUI") -or [System.Environment]::OSVersion.Version.Build -lt '22000'){
+						[Void](Remove-AppxProvisionedPackage @RemoveAppxParams)
+					}
 					$RemovedAppxPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 					$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
 				}
