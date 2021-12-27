@@ -40,6 +40,10 @@
     "DisableWindowsUpgrade": false,
     "DisableWindowsUpdateMicrosoft": false,
     "DisableDriverUpdate": false,
-    "DormantOneDrive": false
+    "DormantOneDrive": false,
+    "Disable3rdPartyApps": false,
+    "W11ClassicInterface": false,
+    "ClassicSearchExplorer": false,
+    "RemoveTaskbarPinnedIcons": false
   }
 }
