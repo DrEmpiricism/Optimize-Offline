@@ -224,7 +224,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "ConsentUX User Service",
+                         "description":  "ConsentUX",
                          "name":  "ConsentUxUserSvc",
                          "start":  3
                      },
@@ -409,7 +409,7 @@
                          "start":  2
                      },
                      {
-                         "description":  "CPU Scheduler for High Performance I/O",
+                         "description":  "",
                          "name":  "ExecutionContext",
                          "start":  3
                      },
@@ -459,7 +459,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "Windows Camera Frame Server Monitor",
+                         "description":  "",
                          "name":  "FrameServerMonitor",
                          "start":  3
                      },
@@ -489,7 +489,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "HidSpi KMDF Class Extension",
+                         "description":  "",
                          "name":  "HidSpiCx",
                          "start":  3
                      },
@@ -634,7 +634,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "McpManagementService",
+                         "description":  "",
                          "name":  "McpManagementService",
                          "start":  3
                      },
@@ -644,7 +644,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "Windows Mixed Reality OpenXR Service",
+                         "description":  "",
                          "name":  "MixedRealityOpenXRSvc",
                          "start":  3
                      },
@@ -769,7 +769,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "NDKPerf Driver",
+                         "description":  "",
                          "name":  "NDKPerf",
                          "start":  3
                      },
@@ -834,7 +834,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "NPSMSvc",
+                         "description":  "",
                          "name":  "NPSMSvc",
                          "start":  3
                      },
@@ -864,12 +864,12 @@
                          "start":  3
                      },
                      {
-                         "description":  "Plan 9 Redirector Driver",
+                         "description":  "",
                          "name":  "P9Rdr",
                          "start":  3
                      },
                      {
-                         "description":  "P9RdrService",
+                         "description":  "",
                          "name":  "P9RdrService",
                          "start":  3
                      },
@@ -889,7 +889,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "PenService",
+                         "description":  "",
                          "name":  "PenService",
                          "start":  3
                      },
@@ -1189,12 +1189,12 @@
                          "start":  3
                      },
                      {
-                         "description":  "spaceparser",
+                         "description":  "Space Parser",
                          "name":  "spaceparser",
                          "start":  3
                      },
                      {
-                         "description":  "Holographic Spatial Graph Filter",
+                         "description":  "",
                          "name":  "SpatialGraphFilter",
                          "start":  3
                      },
@@ -1299,7 +1299,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "@%SystemRoot%\\System32\\drivers\\tcpipreg.sys,-10110,",
+                         "description":  "TCP/IP Registry Compatibility",
                          "name":  "tcpipreg",
                          "start":  2
                      },
@@ -1534,7 +1534,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "Warp JIT Service",
+                         "description":  "WarpJITSvc",
                          "name":  "WarpJITSvc",
                          "start":  3
                      },
@@ -1629,7 +1629,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "Wifi Network Adapter Class Extension",
+                         "description":  "",
                          "name":  "WifiCx",
                          "start":  3
                      },
@@ -1699,7 +1699,7 @@
                          "start":  3
                      },
                      {
-                         "description":  "",
+                         "description":  "Work Folders",
                          "name":  "workfolderssvc",
                          "start":  3
                      },
@@ -1729,7 +1729,7 @@
                          "start":  2
                      },
                      {
-                         "description":  "Windows Socket 2.0 Non-IFS Service Provider Support Environment",
+                         "description":  "Winsock IFS Driver",
                          "name":  "ws2ifsl",
                          "start":  4
                      },

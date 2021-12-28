@@ -4,17 +4,21 @@
 	],
 	"Services": [
 		"BDESVC",
-		"iphlpsvc",
-		"lfsvc",
 		"lmhosts",
-		"PcaSvc",
-		"PimIndexMaintenanceSvc",
-		"Spooler",
-		"SSDPSRV",
-		"VSS",
-		"WPDBusEnum",
-		"WSearch",
 		"DiagTrack",
-		"DusmSvc"
+		"DusmSvc",
+		"edgeupdate",
+		"edgeupdatem",
+		"FontCache",
+		"iphlpsvc",
+		"PimIndexMaintenanceSvc",
+		"SSDPSRV",
+		"PcaSvc",
+		"Spooler",
+		"VSS",
+		"UsoSvc",
+		"WaaSMedicSvc",
+		"WSearch",
+		"wuauserv"
 	]
 }

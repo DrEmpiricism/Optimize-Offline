@@ -1,7 +1,6 @@
 {
 	"DisplayName": [
 		"Microsoft.AccountsControl",
-		"Microsoft.AsyncTextService",
 		"Microsoft.CredDialogHost",
 		"Microsoft.MicrosoftEdge",
 		"Microsoft.MicrosoftEdgeDevToolsClient",
@@ -9,10 +8,12 @@
 		"Microsoft.Windows.CloudExperienceHost",
 		"Microsoft.Windows.OOBENetworkCaptivePortal",
 		"Microsoft.Windows.OOBENetworkConnectionFlow",
-		"Microsoft.Windows.PinningConfirmationDialog",
-		"Microsoft.Windows.SecureAssessmentBrowser",
 		"Microsoft.Windows.ShellExperienceHost",
 		"Microsoft.Windows.StartMenuExperienceHost",
+		"Microsoft.Windows.SecureAssessmentBrowser",
+		"MicrosoftWindows.Client.CBS",
+		"MicrosoftWindows.UndockedDevKit",
+		"NcsiUwpApp",
 		"windows.immersivecontrolpanel",
 		"Windows.PrintDialog"
 	]

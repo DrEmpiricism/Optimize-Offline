@@ -1,4 +1,6 @@
 {
 	"FeatureName" : [
+		"Microsoft-Windows-Subsystem-Linux",
+		"VirtualMachinePlatform"
 	]
 }

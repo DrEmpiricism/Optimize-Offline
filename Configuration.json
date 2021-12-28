@@ -12,7 +12,7 @@
   "SystemApps": "Whitelist",
   "Capabilities": "Blacklist",
   "Packages": "Blacklist",
-  "FeaturesToEnable": "None",
+  "FeaturesToEnable": "List",
   "FeaturesToDisable": "List",
   "Services": "List",
   "DeveloperMode": false,
@@ -39,11 +39,11 @@
   "SelectiveRegistry": {
     "DisableWindowsUpgrade": true,
     "DisableWindowsUpdateMicrosoft": false,
-    "DisableDriverUpdate": false,
-    "DormantOneDrive": false,
-    "Disable3rdPartyApps": false,
-    "W11ClassicInterface": false,
-    "ClassicSearchExplorer": false,
-    "RemoveTaskbarPinnedIcons": false
+    "DisableDriverUpdate": true,
+    "DormantOneDrive": true,
+    "Disable3rdPartyApps": true,
+    "W11ClassicInterface": true,
+    "ClassicSearchExplorer": true,
+    "RemoveTaskbarPinnedIcons": true
   }
 }
