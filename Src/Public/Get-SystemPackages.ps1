@@ -7,11 +7,16 @@ Function Get-SystemPackages {
 		[String]$RegKeyPath
 	)
 
-	if(-Not $RegKeyPath){
+	If(-Not $RegKeyPath){
 		$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
 	}
 
 	RegHives -Load
+
+	If (!(Test-Path -Path $RegKeyPath)) {
+		return @()
+	}
+
 	$InboxAppsPackages = Get-ChildItem -Path $RegKeyPath -Name | ForEach-Object -Process {
 		$DisplayName = $PSItem.Split('_')[0]; $PackageName = $PSItem
 		If ($DisplayName -like '1527c705-839a-4832-9118-54d4Bd6a0c89') { $DisplayName = 'Microsoft.Windows.FilePicker' }

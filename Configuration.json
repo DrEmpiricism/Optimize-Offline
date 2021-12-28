@@ -39,7 +39,11 @@
   "SelectiveRegistry": {
     "DisableWindowsUpgrade": true,
     "DisableWindowsUpdateMicrosoft": false,
-    "DisableDriverUpdate": true,
-    "DormantOneDrive": true
+    "DisableDriverUpdate": false,
+    "DormantOneDrive": false,
+    "Disable3rdPartyApps": false,
+    "W11ClassicInterface": false,
+    "ClassicSearchExplorer": false,
+    "RemoveTaskbarPinnedIcons": false
   }
 }

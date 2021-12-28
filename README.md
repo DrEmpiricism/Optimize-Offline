@@ -272,3 +272,6 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
 - DisableDriverUpdate - Will disable windows update from updating hw drivers
 - DormantOneDrive - Will disable the startup installation of Onedrive, but will not physically remove the setup of it
 - Disable3rdPartyApps - Will remove the 3rd party apps installed with windows
+- W11ClassicInterface - Will make the context menu look like in W10 and add the UI ribbon of W10 in explorer
+- ClassicSearchExplorer - Tweak is needed in case you uninstall Search app or when applying the /Content/Additional/Setup/Set-Additional.ps1 on an online image. Works only on builds higher than 18363.
+- RemoveTaskbarPinnedIcons - Tries to remove based on system version the automatically pinned taskbar icons
