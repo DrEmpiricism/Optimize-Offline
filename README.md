@@ -268,9 +268,9 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
 ## Selective registry tweaks
 
 - DisableWindowsUpgrade - Tweak will prevent windows update from receiving cummulative updates and feature updates
-- DisableWindowsUpdateMicrosoft - Tweak disables completely windows update the microsoft way, breaks the ability of MS Store to download apps
+- DisableWindowsUpdateMicrosoft - Applies the official developers solution to prevents Windows Update from connecting to Microsoft update services. This includes connecting to the MS Store to download apps. [Microsoft Document] (https://docs.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#bkmk-wu) Easy to turn on an off using a toggle script [GitHub Gist] (https://gist.github.com/espanafly/3041ce74cd2493d349e58c31630f98e5) 
 - DisableDriverUpdate - Will disable windows update from updating hw drivers
-- DormantOneDrive - Will disable the startup installation of Onedrive, but will not physically remove the setup of it
+- DormantOneDrive - Disables the startup installation of Onedrive, but allows you to manually install by using the dormant physical setup file
 - Disable3rdPartyApps - Will remove the 3rd party apps installed with windows
 - W11ClassicInterface - Will make the context menu look like in W10 and add the UI ribbon of W10 in explorer
 - ClassicSearchExplorer - Tweak is needed in case you uninstall Search app or when applying the /Content/Additional/Setup/Set-Additional.ps1 on an online image. Works only on builds higher than 18363.
