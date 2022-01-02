@@ -2094,7 +2094,9 @@ Function Optimize-Offline
 			}
 			If ($Additional.Drivers)
 			{
-				Get-ChildItem -Path $OptimizeOffline.Drivers -Recurse -Force | ForEach-Object -Process { $PSItem.Attributes = 0x80 }
+				Get-ChildItem -Path $OptimizeOffline.Drivers -Recurse -Force | ForEach-Object -Process { 
+					Set-ItemProperty -Path $PSItem.FullName -Name IsReadOnly -Value $false -ErrorAction Ignore
+				}
 				If (Get-ChildItem -Path $OptimizeOffline.InstallDrivers -Include *.inf -Recurse -Force)
 				{
 					Try
