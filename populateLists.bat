@@ -1,1 +1,1 @@
-powershell .\Start-Optimize -populateLists
+powershell "%~dp0Start-Optimize -populateLists"
