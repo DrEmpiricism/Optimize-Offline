@@ -134,6 +134,14 @@ It is also recommended to be well versed and aware of all recovery tools Microso
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
+### About Dormant Microsoft Defender ###
+	
+Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document] (https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). For numerous reasons, users prefer having better control of their cyberthreat defence application than what's natively allowed by Microsoft Windows. 
+
+Optimize-Offline supplies two methods to control Microsoft Defender. The first method is to totally and permanently disable Defender by removing the System Application SecHealthUI. The second method is to apply the Dormant Defender parameter which provides a more flexible control solution than complete permanent removal. Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
+				
+When the Dormant Defender parameter is used, Optimize-Offline applies entries and values to the image registry hives forcing Microsoft Defender into an inactive state. To re-enable Defender apply the "Microsoft Defender Enable" script [GitHub] (https://github.com/TairikuOokami/Windows/blob/main/Microsoft%20Defender%20Enable.bat). After Microsoft Defender is restored, retain full control by applying the "ToggleDefender" script [GitHub] (https://github.com/AveYo/LeanAndMean#toggledefender---lean-and-mean-snippet-by-aveyo-2020-2021). 
+
 ### About Data Deduplication ###
 
 > Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
@@ -196,6 +204,18 @@ Once you have edited the Configuration.json to your specific optimization requir
 
 ```PowerShell
 .\Start-Optimize.ps1
+```
+
+## Using Optimize-Offline as TrustedInstaller ##
+
+Running Optimize-Offline as Trusted Installer enhances every operation it performs including properly unloading the image. This enhanced capability is provided by the "Start-Optimize-BAU-TI.ps1" script. The script is a the custom-made version of the generic "RunAsTI" script [GitHub] (https://github.com/AveYo/LeanAndMean/blob/main/RunAsTI.bat) and includes a unique solution for providing the power of Trusted Installer, but still correctly loading the HKCU USER hive as opposed to Window's natively loading the TI SYSTEM hive.
+
+Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
+
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and execute the Start-Optimize call script:
+
+```PowerShell
+.\Start-Optimize-BAU-TI.ps1
 ```
 
 ## Using component removal lists
