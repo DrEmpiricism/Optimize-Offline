@@ -212,7 +212,7 @@ Running Optimize-Offline as Trusted Installer enhances every operation it perfor
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
-Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and execute the Start-Optimize call script:
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and execute the Start-Optimize-BAU-TI call script:
 
 ```PowerShell
 .\Start-Optimize-BAU-TI.ps1
