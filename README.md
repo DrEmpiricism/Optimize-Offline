@@ -141,8 +141,8 @@ Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replac
 **Methods of Controlling Defender
 
 Optimize-Offline supplies two methods to control Microsoft Defender. 
-The first method is to totally and permanently disable Defender by removing the SecHealthUI package. 
-The second method is to apply the Dormant Defender parameter which provides a more flexible control solution than complete permanent removal. Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
+- The first method is to totally and permanently disable Defender by removing the SecHealthUI package. 
+- The second method is to apply the Dormant Defender parameter which provides a more flexible control solution than complete permanent removal. Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
 
 **The Dormant Defender parameter
 
