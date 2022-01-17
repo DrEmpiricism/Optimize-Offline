@@ -136,20 +136,21 @@ Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replac
 
 ### About Dormant Microsoft Defender ###
 	
->Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, the Defender application starts with Windows. For numerous reasons, users prefer having control over if, and when, to run Defender.
+>Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, the Defender application starts with Windows. For numerous reasons, users prefer having control over if, and when, to run Microsoft Defender.
 
-**Methods of Controlling Defender
+***Methods of Controlling Defender***
 
 Optimize-Offline supplies two methods to control Microsoft Defender. 
 - The first method is to remove the SecHealthUI package which totally and permanently disables Defender. 
-- The second method is to apply the Dormant Defender parameter which provides greater flexiblility in controling Microsoft Defender. Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
+- The second method is to apply the Dormant Defender parameter which provides greater flexiblility in controling Microsoft Defender.
 
-**The Dormant Defender parameter
+***The Dormant Defender parameter***
 
 When the Dormant Defender parameter is used, Optimize-Offline applies entries and values to the image registry hives forcing Microsoft Defender into an inactive state. 
+Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
 To re-enable Defender apply the "Microsoft Defender Enable" script [GitHub-TairikuOokami](https://github.com/TairikuOokami/Windows/blob/main/Microsoft%20Defender%20Enable.bat). After Microsoft Defender is restored, retain full control by applying the "ToggleDefender" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean#toggledefender---lean-and-mean-snippet-by-aveyo-2020-2021). 
 
-**Note:
+***Note:***
 
 If you apply both methods to control Microsoft Defender e.g. remove the SecHealthU package and apply the Dormant Defender parameter, then the former removal method takes precedence. Meaning that the outcome of applying both methods is the same as if you only removed the SecHealthU package.
 
