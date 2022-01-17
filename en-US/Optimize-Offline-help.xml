@@ -476,7 +476,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features --Win32Calc -DormantDefender -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
+        <dev:code>Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -DormantDefender -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; Drivers = $true } -ISO "No-Prompt"</dev:code>
         <dev:remarks>
           <maml:para>This command starts optimizing an image by manually passing parameters to the cmdlet.</maml:para>
         </dev:remarks>
