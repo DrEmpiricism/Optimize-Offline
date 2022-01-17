@@ -54,7 +54,6 @@ $OptimizeOffline.DevMode = (Resolve-FullPath -Path $OptimizeOffline.Packages -Ch
 $OptimizeOffline.WindowsStore = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child WindowsStore)
 $OptimizeOffline.MicrosoftEdge = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child MicrosoftEdge)
 $OptimizeOffline.Win32Calc = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Win32Calc)
-$OptimizeOffline.DormantDefender = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DormantDefender)
 $OptimizeOffline.Dedup = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child Deduplication)
 $OptimizeOffline.DaRT = (Resolve-FullPath -Path $OptimizeOffline.Packages -Child DaRT)
 $OptimizeOffline.Setup = (Resolve-FullPath -Path $OptimizeOffline.Additional -Child Setup)
