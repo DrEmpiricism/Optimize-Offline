@@ -134,25 +134,32 @@ It is also recommended to be well versed and aware of all recovery tools Microso
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
-### About Dormant Microsoft Defender ###
+### About Microsoft Defender ###
 	
->Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, the Defender application starts with Windows. For numerous reasons, users prefer having control over if, and when, to run Microsoft Defender.
+>Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, unless replaced by another antivirus, the Defender application always starts with Windows. For numerous reasons, users prefer having control over the initial activation and ongoing operation of Microsoft Defender.
 
-***Methods of Controlling Defender***
+***Optimize-Offline supplies two methods to control Microsoft Defender***
 
-Optimize-Offline supplies two methods to control Microsoft Defender. 
 - The first method is to remove the SecHealthUI package which totally and permanently disables Defender. 
 - The second method is to apply the Dormant Defender parameter which provides greater flexiblility in controling Microsoft Defender.
 
-***The Dormant Defender parameter***
+***Option #1 - remove the SecHealthUI package and permanently disable Defender***
+			
+- For Windows 10: Remove SecHealthUI from System Applications. See [GitHub-DrEmpiricism](https://github.com/DrEmpiricism/Optimize-Offline#about-system-applications)
+- For Windows 11: SecHealthUI removal is handled by your chosen WindowsApps list. See [GitHub-gdeliana](https://github.com/gdeliana/Optimize-Offline/blob/master/README.md#using-component-removal-lists)
 
-When the Dormant Defender parameter is used, Optimize-Offline applies entries and values to the image registry hives forcing Microsoft Defender into an inactive state. 
-Dormant Defender fully disables Microsoft Defender, but leaves the application and folder structure intact allowing the possibility for later restoration.
-To re-enable Defender apply the "Microsoft Defender Enable" script [GitHub-TairikuOokami](https://github.com/TairikuOokami/Windows/blob/main/Microsoft%20Defender%20Enable.bat). After Microsoft Defender is restored, retain full control by applying the "ToggleDefender" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean#toggledefender---lean-and-mean-snippet-by-aveyo-2020-2021). 
+***Option #2 - Apply the Dormant Defender parameter to gain full control of Defender***
+
+For all Windows builds. The Dormant Defender parameter applies entries and values to the image registry hives forcing Microsoft Defender into an inactive state. 
+Dormant Defender fully disables Microsoft Defender, but by leaving the application and folder structure intact, retains the possibility to restore it to full functionality.
+
+To re-enable Defender apply the "Microsoft Defender Enable" script [GitHub-TairikuOokami](https://github.com/TairikuOokami/Windows/blob/main/Microsoft%20Defender%20Enable.bat). 
+
+After Microsoft Defender is restored, retain full control by applying the "ToggleDefender" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean#toggledefender---lean-and-mean-snippet-by-aveyo-2020-2021). 
 
 ***Note:***
 
-If you apply both methods to control Microsoft Defender e.g. remove the SecHealthU package and apply the Dormant Defender parameter, then the former removal method takes precedence. Meaning that the outcome of applying both methods is the same as if you only removed the SecHealthU package.
+If you apply both methods to control Microsoft Defender e.g. remove the SecHealthUI package and apply the Dormant Defender parameter, then the former removal method takes precedence. Meaning that the outcome of applying both methods is the same as if you only removed the SecHealthUI package.
 
 ### About Data Deduplication ###
 
