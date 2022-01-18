@@ -220,7 +220,7 @@ Once you have edited the Configuration.json to your specific optimization requir
 
 ## Using Optimize-Offline as TrustedInstaller ##
 
-Running Optimize-Offline as Trusted Installer enhances every operation it performs including properly unloading the image. This enhanced capability is provided by the "Start-Optimize-BAU-TI.ps1" script. The script is a the custom-made version of the generic "RunAsTI" script [GitHub] (https://github.com/AveYo/LeanAndMean/blob/main/RunAsTI.bat) and includes a unique solution for providing the power of Trusted Installer, but still correctly loading the HKCU USER hive as opposed to Window's natively loading the TI SYSTEM hive.
+Running Optimize-Offline as Trusted Installer enhances every operation it performs including properly unloading the image. This enhanced capability is provided by the "Start-Optimize-BAU-TI.ps1" script. The script is a the custom-made version of the generic "RunAsTI" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean/blob/main/RunAsTI.bat) and includes a unique solution for providing the power of Trusted Installer, but still correctly loading the HKCU USER hive as opposed to Window's natively loading the TI SYSTEM hive.
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
@@ -274,18 +274,18 @@ Please note that the interactive filling of lists, will fill the list chosen in 
 
 ## Windows services removal
 
-== Services Template ==
+***==Services Template==***
 Use populateTemplates feature to assign your images available services to ServicesTemplate.json
     Some filtering out of non-service related entries is complete in the provided ServicesTemplate.json, but each OS requires more filtering.   
    
-== List ==
+***==List==***
 Set the Services parameter in configuration.json: List
 Assigns the start behavior of the services listed in ServicesList.json to "Disabled"
     For Services you want to disable, copy the service object "name" . . .
     . . . from     /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesList.json
     Alternatively, if you already have a list of services you know you want to disable, add their names following the pattern seen in the provided example ServicesList.json
 
-== Advanced==
+***==Advanced==***
 Set the Services parameter in configuration.json: Advanced
 Useful for specifying any type of start behavior (including "4" "Disabled") to the services listed in ServicesAdvanced.json
     Specify the start behavior of each service by copying the object . . .
