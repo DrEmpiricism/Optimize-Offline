@@ -104,7 +104,12 @@ Content can be in the form of files, folders or directories, unless a specific f
 
 #### Registry Template Integration ####
 
-Any custom registry template (.reg) file to be imported into the offline image's registry hives can be placed in the '\Content\Additional\RegistryTemplates' folder. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate hives.
+Custom registry template (.reg) files placed in the '\Content\Additional\RegistryTemplates' folder are imported by Optimize-Offline into the offline image's appropriate registry hive. 
+
+***Note:***
+To qualify for Optimize-Offline hive import, all custom registry template additions are constrained to having unrestricted permissions. If any key change included in a custom registry template addition requires restricted access, the entire Optimize-Offline script fails without notice and without any descriptive warning. The solution is to remove any registry key change that requires access to protected registry keys.
+
+>Registry templates that users can add to be automatically imported into the offline registry hives are not granted the token privileges required for access to protected registry keys. Only certain values applied by the script itself are granted these privileges. [GitHub-DrEmpiricism](https://github.com/DrEmpiricism/Optimize-Offline/issues/136#issuecomment-554158335)
 
 #### Adding Drivers ####
 
@@ -136,12 +141,12 @@ Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replac
 
 ### About Microsoft Defender ###
 	
->Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, unless replaced by another antivirus, the Defender application always starts with Windows. For numerous reasons, users prefer having control over the initial activation and ongoing operation of Microsoft Defender.
+>Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, unless replaced by another antivirus, the Defender application always starts with Windows. Optimize-Offline provides methods to regain control over the initial activation and ongoing operation of Microsoft Defender.
 
 ***Optimize-Offline supplies two methods to control Microsoft Defender***
 
 - The first method is to remove the SecHealthUI package which totally and permanently disables Defender. 
-- The second method is to apply the Dormant Defender parameter which provides greater flexiblility in controling Microsoft Defender.
+- The second method is to apply the Dormant Defender parameter which provides greater flexibility in controlling Microsoft Defender.
 
 ***Option #1 - remove the SecHealthUI package and permanently disable Defender***
 			
