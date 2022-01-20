@@ -25,6 +25,7 @@ RemovingSystemApp                       = Removing System App: {0}
 FailedRemovingSystemApp                 = Failed to Remove System App: {0}
 FailedRemovingSystemApps                = Failed to Remove System Apps.
 RemovedPackageCleanup                   = Disabling Services, Drivers and Integration Content for Removed Apps.
+DisableDefender                         = Disabling Defender Start-up and Feature Packages.
 RemovingBiometricCapability             = Removing Windows Biometric Capability: {0}
 FailedRemovingBiometricCapability       = Failed to Remove Windows Biometric Capabilities.
 DisablingDefenderOptionalFeature        = Disabling Optional Feature: Windows-Defender-Default-Definitions
