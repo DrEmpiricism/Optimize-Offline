@@ -19,7 +19,7 @@
   "WindowsStore": false,
   "MicrosoftEdge": false,
   "Win32Calc": true,
-  "DormantDefender": false,
+  "DormantDefender": true,
   "Dedup": false,
   "DaRT": [],
   "Registry": true,
