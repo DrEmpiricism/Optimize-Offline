@@ -104,7 +104,12 @@ Content can be in the form of files, folders or directories, unless a specific f
 
 #### Registry Template Integration ####
 
-Any custom registry template (.reg) file to be imported into the offline image's registry hives can be placed in the '\Content\Additional\RegistryTemplates' folder. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate hives.
+Custom registry template (.reg) files placed in the '\Content\Additional\RegistryTemplates' folder are imported by Optimize-Offline into the offline image's appropriate registry hive. 
+
+***Note:***
+To qualify for Optimize-Offline hive import, all custom registry template additions are constrained to having unrestricted permissions. If any key change included in a custom registry template addition requires restricted access, the entire Optimize-Offline script fails without notice and without any descriptive warning. The solution is to remove any registry key change that requires access to protected registry keys.
+
+>Registry templates that users can add to be automatically imported into the offline registry hives are not granted the token privileges required for access to protected registry keys. Only certain values applied by the script itself are granted these privileges. [GitHub-DrEmpiricism](https://github.com/DrEmpiricism/Optimize-Offline/issues/136#issuecomment-554158335)
 
 #### Adding Drivers ####
 
@@ -133,6 +138,33 @@ It is also recommended to be well versed and aware of all recovery tools Microso
 ### About Win32Calc ###
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
+
+### About Microsoft Defender ###
+	
+>Microsoft Defender is the built-in antimalware and antivirus protection component of Microsoft Windows. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-antivirus-windows?view=o365-worldwide). Natively, unless replaced by another antivirus, the Defender application always starts with Windows. Optimize-Offline provides methods to regain control over the initial activation and ongoing operation of Microsoft Defender.
+
+***Optimize-Offline supplies two methods to control Microsoft Defender***
+
+- The first method is to remove the SecHealthUI package which totally and permanently disables Defender. 
+- The second method is to apply the Dormant Defender parameter which provides greater flexibility in controlling Microsoft Defender.
+
+***Option #1 - remove the SecHealthUI package and permanently disable Defender***
+			
+- For Windows 10: Remove SecHealthUI from System Applications. See [GitHub-DrEmpiricism](https://github.com/DrEmpiricism/Optimize-Offline#about-system-applications)
+- For Windows 11: SecHealthUI removal is handled by your chosen WindowsApps list. See [GitHub-gdeliana](https://github.com/gdeliana/Optimize-Offline/blob/master/README.md#using-component-removal-lists)
+
+***Option #2 - Apply the Dormant Defender parameter to gain full control of Defender***
+
+For all Windows builds. The Dormant Defender parameter applies entries and values to the image registry hives forcing Microsoft Defender into an inactive state. 
+Dormant Defender fully disables Microsoft Defender, but by leaving the application and folder structure intact, retains the possibility to restore it to full functionality.
+
+To re-enable Defender apply the "Microsoft Defender Enable" script [GitHub-TairikuOokami](https://github.com/TairikuOokami/Windows/blob/main/Microsoft%20Defender%20Enable.bat). 
+
+After Microsoft Defender is restored, retain full control by applying the "ToggleDefender" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean#toggledefender---lean-and-mean-snippet-by-aveyo-2020-2021). 
+
+***Note:***
+
+If you apply both methods to control Microsoft Defender e.g. remove the SecHealthUI package and apply the Dormant Defender parameter, then the former removal method takes precedence. Meaning that the outcome of applying both methods is the same as if you only removed the SecHealthUI package.
 
 ### About Data Deduplication ###
 
@@ -198,6 +230,18 @@ Once you have edited the Configuration.json to your specific optimization requir
 .\Start-Optimize.ps1
 ```
 
+## Using Optimize-Offline as TrustedInstaller ##
+
+Running Optimize-Offline as Trusted Installer enhances every operation it performs including properly unloading the image. This enhanced capability is provided by the "Start-Optimize-BAU-TI.ps1" script. The script is a the custom-made version of the generic "RunAsTI" script [GitHub-AveYo](https://github.com/AveYo/LeanAndMean/blob/main/RunAsTI.bat) and includes a unique solution for providing the power of Trusted Installer, but still correctly loading the HKCU USER hive as opposed to Window's natively loading the TI SYSTEM hive.
+
+Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
+
+Once you have edited the Configuration.json to your specific optimization requirements, open an elevated PowerShell console in the root directory of the Optimize-Offline project and execute the Start-Optimize-BAU-TI call script:
+
+```PowerShell
+.\Start-Optimize-BAU-TI.ps1
+```
+
 ## Using component removal lists
 
 Removal lists can be found in ./Content/Lists. There are 6 basic categories spread out through each of the subfolders. In each subcategory you will find a Whitelist, Blacklist and a template. The template contains all the possible packages to be inserted either in the blacklist or in the whitelist. The features contain only a list json and a template.
@@ -242,18 +286,18 @@ Please note that the interactive filling of lists, will fill the list chosen in 
 
 ## Windows services removal
 
-== Services Template ==
+***==Services Template==***
 Use populateTemplates feature to assign your images available services to ServicesTemplate.json
     Some filtering out of non-service related entries is complete in the provided ServicesTemplate.json, but each OS requires more filtering.   
    
-== List ==
+***==List==***
 Set the Services parameter in configuration.json: List
 Assigns the start behavior of the services listed in ServicesList.json to "Disabled"
     For Services you want to disable, copy the service object "name" . . .
     . . . from     /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesList.json
     Alternatively, if you already have a list of services you know you want to disable, add their names following the pattern seen in the provided example ServicesList.json
 
-== Advanced==
+***==Advanced==***
 Set the Services parameter in configuration.json: Advanced
 Useful for specifying any type of start behavior (including "4" "Disabled") to the services listed in ServicesAdvanced.json
     Specify the start behavior of each service by copying the object . . .
