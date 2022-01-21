@@ -14,7 +14,7 @@ Offline optimization framework for Windows 10 image versions 1803-to-2004 with 6
 
 ```
 Optimize-Offline [-SourcePath] <FileInfo> [[-WindowsApps] <String>] [-SystemApps] [-Capabilities] [-Packages]
- [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-Dedup] [[-DaRT] <String[]>]
+ [-Features] [-DeveloperMode] [-WindowsStore] [-MicrosoftEdge] [-Win32Calc] [-DormantDefender] [-Dedup] [[-DaRT] <String[]>]
  [-Registry] [[-Additional] <Hashtable>] [-ComponentCleanup] [[-ISO] <String>] [<CommonParameters>]
 ```
 
@@ -38,7 +38,7 @@ This command automatically starts optimizing an image by importing the configura
 
 ### EXAMPLE 2
 ```
-Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; LayoutModification = $true; Drivers = $true } -ISO "No-Prompt"
+Optimize-Offline -SourcePath "D:\Images\Windows 10 1903\18362.1.190318-1202.19H1_RELEASE_CLIENTMULTI_X64FRE_EN-US.iso" -WindowsApps "Select" -SystemApps -Capabilities -Packages -Features -Win32Calc -DormantDefender -Dedup -DaRT "Setup" -Registry -Additional @{ Setup = $true; RegistryTemplates = $true; LayoutModification = $true; Drivers = $true } -ISO "No-Prompt"
 ```
 
 This command starts optimizing an image by manually passing parameters to the module.
@@ -189,6 +189,21 @@ Accept wildcard characters: False
 
 ### -Win32Calc
 Integrates the traditional Win32 Calculator into the image.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DormantDefender
+Disable Windows defender while retaining the option to reactivate it.
 
 ```yaml
 Type: SwitchParameter

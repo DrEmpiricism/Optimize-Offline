@@ -55,6 +55,8 @@ Function Optimize-Offline
 		[Switch]$MicrosoftEdge,
 		[Parameter(HelpMessage = 'Integrates the traditional Win32 Calculator into the image.')]
 		[Switch]$Win32Calc,
+		[Parameter(HelpMessage = 'Disable Windows defender while retaining the option to reactivate it.')]
+		[Switch]$DormantDefender,
 		[Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication Feature into the image.')]
 		[Switch]$Dedup,
 		[Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.')]
@@ -959,8 +961,9 @@ Function Optimize-Offline
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 			}
-			If ($RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI')
+			If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI')
 			{
+				Write-Host "Disabling Defender and Feature Packages" -ForegroundColor Cyan
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 
 				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "PUAProtection" -Value 1 -Type DWord
@@ -1022,6 +1025,8 @@ Function Optimize-Offline
 				}
 				[Void]$Visibility.Append('windowsdefender;')
 				$DynamicParams.SecHealthUI = $true
+				Log $OptimizeData.DisableDefender
+				Clear-Host
 			}
 			If ($Visibility.Length -gt 5)
 			{
