@@ -9,9 +9,6 @@ IF %ERRORLEVEL% NEQ 0 (
     EXIT
 ) ELSE (
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File .\Set-Additional.ps1 -Argument 2> .\Set-Additional.error
-    DEL /F /Q "%~dp0Set-Additional.error" >NUL 2>&1
-    DEL /F /Q "%~dp0Set-Additional.ps1" >NUL 2>&1
-    DEL /F /Q "%~f0" >NUL 2>&1
 )
 PAUSE
 EXIT
