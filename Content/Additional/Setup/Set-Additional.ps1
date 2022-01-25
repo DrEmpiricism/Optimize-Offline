@@ -127,7 +127,6 @@ Function Set-Additional
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Terminal Server Client" -Name DisableClipboardRedirection -Value 1 -Force
             If (!(Test-Path -Path "HKCU:\Software\Microsoft\Clipboard")) { New-Item -Path "HKCU:\Software\Microsoft\Clipboard" -ItemType Directory -Force | Out-Null }
             Set-ItemProperty -Path "HKCU:\Software\Microsoft\Clipboard" -Name EnableClipboardHistory -Value 0 -Force
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\cbdhsvc" -Name Start -Value 4 -Force
         }
 
         If ($Build -ge 18363) {
