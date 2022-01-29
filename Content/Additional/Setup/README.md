@@ -1,6 +1,14 @@
 If adding additional user content, place any setup files, scripts or content to be added to the image here.
 
+## Consider the following to assure a successful application of SetupComplete.cmd ##
+
 Any setup content, including answer files, scripts and executables, should ALWAYS be removed immediately after they are run by the installing Administrator unless they are designed for specific tasks when a new user account is created or logs in. Not doing so can allow other users with access to the system to run this content or extract potential sensitive data. This can be automated by adding their automatic removal to the SetupComplete.cmd that is supplied by default.
+
+Typically %WINDIR%\Setup\Scripts\SetupComplete.cmd runs with local system permissions and starts immediately after image installation reaches the desktop. By Microsoft design, using OEM Activation also referred to as System Locked Pre-installation (SLP) has the potential to disallow application of SetupComplete.cmd which is "disabled when using OEM product keys" [Microsoft Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-a-custom-script-to-windows-setup?view=windows-11).
+
+Post image installation best practice is to is to confirm SetupComplete.cmd was successfully run by inspecting the contents of the %WINDIR%\Setup\Scripts folder. To resolve any case where SetupComplete.cmd was disabled, simply run %WINDIR%\Setup\Scripts\Run_TI_SetupComplete_online.cmd which applies the SetupComplete.cmd as Trusted Installer.
+
+## Additional Script folder Content ##
 
 The Set-Additional and Remove-OneDrive PowerShell scripts can be run by executing their associated Set-Additional.cmd and Remove-OneDrive.cmd scripts by right-clicking them and selecting 'Run as Administrator.'
 
