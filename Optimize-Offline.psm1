@@ -883,6 +883,8 @@ Function Optimize-Offline
 		}
 		#endregion System App Removal
 
+		$DynamicParams.RemovedPackages = $RemovedPackages;
+
 		#region Removed Package Clean-up
 		If ($DynamicParams.WindowsApps -or $DynamicParams.SystemApps)
 		{
