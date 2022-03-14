@@ -277,7 +277,7 @@ Function Optimize-Offline
 			Break
 		}
 
-		If ($Registry.IsPresent -and $InstallInfo.Build -ge 22000 -and -not $BootWim -and $ISOMedia.Exists)
+		If ($InstallInfo.Build -ge 22000 -and -not $BootWim -and $ISOMedia.Exists)
 		{
 			Try { $BootWim = Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter boot.* -File | Move-Item -Destination $ImageFolder -PassThru -ErrorAction Stop | Set-ItemProperty -Name IsReadOnly -Value $false -PassThru | Get-Item | Select-Object -ExpandProperty FullName }
 			Catch [Management.Automation.ItemNotFoundException] { Break }
@@ -889,201 +889,201 @@ Function Optimize-Offline
 		If ($DynamicParams.WindowsApps -or $DynamicParams.SystemApps)
 		{
 			Log $OptimizeData.RemovedPackageCleanup
-			If ($DynamicParams.WindowsApps)
+		}
+		If ($DynamicParams.WindowsApps)
+		{
+			If ($InstallInfo.Build -lt '19041')
 			{
-				If ($InstallInfo.Build -lt '19041')
-				{
-					If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
-					Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
-				}
-				Else
-				{
-					If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
-				}
+				If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
+				Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
 			}
-			RegHives -Load
-			$Visibility = [Text.StringBuilder]::New('hide:')
-			If ($RemovedPackages.'Microsoft.WindowsMaps')
+			Else
 			{
-				RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
-				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
-				[Void]$Visibility.Append('maps;maps-downloadmaps;')
+				If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 			}
-			If ($RemovedPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
-			If ($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI')
-			{
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "ShowStartupPanel" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
-				@("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
-				[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
-				If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
-			}
-			If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp')
-			{
-				[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
-				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
-			}
-			If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
-			If ($RemovedPackages.'Microsoft.BioEnrollment')
-			{
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
-				If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
-				$DynamicParams.BioEnrollment = $true
-			}
-			If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
-			{
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
-			}
-			If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
-			{
-				@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
-					"RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
-					"SubscribedContent-202913Enabled", "SubscribedContent-202914Enabled", "SubscribedContent-280797Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280812Enabled",
-					"SubscribedContent-280813Enabled", "SubscribedContent-280814Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280817Enabled",
-					"SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-310094Enabled", "SubscribedContent-314558Enabled",
-					"SubscribedContent-314559Enabled", "SubscribedContent-314562Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-314566Enabled", "SubscribedContent-314567Enabled",
-					"SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338381Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338382Enabled",
-					"SubscribedContent-338389Enabled", "SubscribedContent-338386Enabled", "SubscribedContent-338393Enabled", "SubscribedContent-346480Enabled", "SubscribedContent-346481Enabled",
-					"SubscribedContent-353694Enabled", "SubscribedContent-353695Enabled", "SubscribedContent-353696Enabled", "SubscribedContent-353697Enabled", "SubscribedContent-353698Enabled",
-					"SubscribedContent-353699Enabled", "SubscribedContent-88000044Enabled", "SubscribedContent-88000045Enabled", "SubscribedContent-88000105Enabled", "SubscribedContent-88000106Enabled",
-					"SubscribedContent-88000161Enabled", "SubscribedContent-88000162Enabled", "SubscribedContent-88000163Enabled", "SubscribedContent-88000164Enabled", "SubscribedContent-88000165Enabled",
-					"SubscribedContent-88000166Enabled") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $PSItem -Value 0 -Type DWord }
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
-			}
-			If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI')
-			{
-				Write-Host "Disabling Defender and Feature Packages" -ForegroundColor Cyan
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
+		}
+		RegHives -Load
+		$Visibility = [Text.StringBuilder]::New('hide:')
+		If ($RemovedPackages.'Microsoft.WindowsMaps')
+		{
+			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
+			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
+			[Void]$Visibility.Append('maps;maps-downloadmaps;')
+		}
+		If ($RemovedPackages.'Microsoft.Wallet' -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
+		If ($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI')
+		{
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "CursorCaptureEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "UseNexusForGameBarEnabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\GameBar" -Name "ShowStartupPanel" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehavior" -Value 2 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord
+			@("xbgm", "XblAuthManager", "XblGameSave", "xboxgip", "XboxGipSvc", "XboxNetApiSvc") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
+			[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
+			If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
+		}
+		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp')
+		{
+			[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
+			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
+		}
+		If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
+		If ($RemovedPackages.'Microsoft.BioEnrollment')
+		{
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
+			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
+			$DynamicParams.BioEnrollment = $true
+		}
+		If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
+		{
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
+		}
+		If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
+		{
+			@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
+				"RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
+				"SubscribedContent-202913Enabled", "SubscribedContent-202914Enabled", "SubscribedContent-280797Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280812Enabled",
+				"SubscribedContent-280813Enabled", "SubscribedContent-280814Enabled", "SubscribedContent-280815Enabled", "SubscribedContent-280810Enabled", "SubscribedContent-280817Enabled",
+				"SubscribedContent-310091Enabled", "SubscribedContent-310092Enabled", "SubscribedContent-310093Enabled", "SubscribedContent-310094Enabled", "SubscribedContent-314558Enabled",
+				"SubscribedContent-314559Enabled", "SubscribedContent-314562Enabled", "SubscribedContent-314563Enabled", "SubscribedContent-314566Enabled", "SubscribedContent-314567Enabled",
+				"SubscribedContent-338380Enabled", "SubscribedContent-338387Enabled", "SubscribedContent-338381Enabled", "SubscribedContent-338388Enabled", "SubscribedContent-338382Enabled",
+				"SubscribedContent-338389Enabled", "SubscribedContent-338386Enabled", "SubscribedContent-338393Enabled", "SubscribedContent-346480Enabled", "SubscribedContent-346481Enabled",
+				"SubscribedContent-353694Enabled", "SubscribedContent-353695Enabled", "SubscribedContent-353696Enabled", "SubscribedContent-353697Enabled", "SubscribedContent-353698Enabled",
+				"SubscribedContent-353699Enabled", "SubscribedContent-88000044Enabled", "SubscribedContent-88000045Enabled", "SubscribedContent-88000105Enabled", "SubscribedContent-88000106Enabled",
+				"SubscribedContent-88000161Enabled", "SubscribedContent-88000162Enabled", "SubscribedContent-88000163Enabled", "SubscribedContent-88000164Enabled", "SubscribedContent-88000165Enabled",
+				"SubscribedContent-88000166Enabled") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $PSItem -Value 0 -Type DWord }
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
+		}
+		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI')
+		{
+			Write-Host "Disabling Defender and Feature Packages" -ForegroundColor Cyan
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "PUAProtection" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "PUAProtection" -Value 1 -Type DWord
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\MpEngine" -Name "MpEnablePus" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Reporting" -Name "DisableEnhancedNotifications" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableRealtimeMonitoring" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableIOAVProtection" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -Value 2 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\UX Configuration" -Name "Notification_Suppress" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpyNetReporting" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\MpEngine" -Name "MpEnablePus" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Reporting" -Name "DisableEnhancedNotifications" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableRealtimeMonitoring" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableIOAVProtection" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowBehaviorMonitoring" -Value 2 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowCloudProtection" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "AllowRealtimeMonitoring" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager" -Name "SubmitSamplesConsent" -Value 2 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\UX Configuration" -Name "Notification_Suppress" -Value 1 -Type DWord
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\UX Configuration" -Name "UILockdown" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Notifications" -Name "DisableNotifications" -Value 1 -Type DWord
-				
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray" -Name "HideSystray" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Defender\Features" -Name "TamperProtection" -Value 0 -Type DWord -Force
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AppAndBrowser_EdgeSmartScreenOff" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "SmartScreenEnabled" -Value "Off" -Type String
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "PreventOverride" -Value 0 -Type DWord -Force
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "PreventOverride" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\UX Configuration" -Name "UILockdown" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Notifications" -Name "DisableNotifications" -Value 1 -Type DWord
+			
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontOfferThroughWUAU" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MRT" -Name "DontReportInfectionInformation" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray" -Name "HideSystray" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows Defender\Features" -Name "TamperProtection" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AccountProtection_MicrosoftAccount_Disconnected" -Value 1 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows Security Health\State" -Name "AppAndBrowser_EdgeSmartScreenOff" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "SmartScreenEnabled" -Value "Off" -Type String
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer" -Name "SmartScreenEnabled" -Value "Off" -Type String
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "EnableWebContentEvaluation" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" -Name "PreventOverride" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" -Name "PreventOverride" -Value 0 -Type DWord -Force
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Edge\SmartScreenEnabled" -Name "(default)" -Value 0 -Type DWord -Force
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Edge\SmartScreenEnabled" -Name "(default)" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Edge\SmartScreenEnabled" -Name "(default)" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Edge\SmartScreenEnabled" -Name "(default)" -Value 0 -Type DWord -Force
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Edge\SmartScreenPuaEnabled" -Name "(default)" -Value 0 -Type DWord -Force
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Edge\SmartScreenPuaEnabled" -Name "(default)" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Edge\SmartScreenPuaEnabled" -Name "(default)" -Value 0 -Type DWord -Force
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Edge\SmartScreenPuaEnabled" -Name "(default)" -Value 0 -Type DWord -Force
 
 
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "ShellSmartScreenLevel" -Value 0 -Type DWord -Force
-				@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
-				@("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\EPP",
-					"HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger", "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger") | Purge
-				Remove-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth"
-				If (!$DynamicParams.LTSC -or $MicrosoftEdge.IsPresent)
-				{
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
-				}
-				If ($InstallInfo.Build -ge '17763')
-				{
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControlEnabled" -Value 1 -Type DWord
-					RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControl" -Value "Anywhere" -Type String
-				}
-				[Void]$Visibility.Append('windowsdefender;')
-				$DynamicParams.SecHealthUI = $true
-				Log $OptimizeData.DisableDefender
-				Clear-Host
-			}
-			If ($Visibility.Length -gt 5)
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "ShellSmartScreenLevel" -Value 0 -Type DWord -Force
+			@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
+			@("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\EPP",
+				"HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger", "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger") | Purge
+			Remove-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth"
+			If (!$DynamicParams.LTSC -or $MicrosoftEdge.IsPresent)
 			{
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
-				RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Policies\Microsoft\MicrosoftEdge\PhishingFilter" -Name "EnabledV9" -Value 0 -Type DWord
 			}
-			If($RemovedPackages."Microsoft.Windows.Search") {
-				$DynamicParams.RemovedWindowsSearchPackage = $true
-			}
-			RegHives -Unload
-			If ($DynamicParams.BioEnrollment -and (Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed))
+			If ($InstallInfo.Build -ge '17763')
 			{
-				Try
-				{
-					Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | ForEach-Object -Process {
-						$RemoveBiometricCapability = @{
-							Path             = $InstallMount
-							Name             = $PSItem.Name
-							ScratchDirectory = $ScratchFolder
-							LogPath          = $DISMLog
-							LogLevel         = 1
-							ErrorAction      = 'Stop'
-						}
-						Log ($OptimizeData.RemovingBiometricCapability -f $PSItem.Name)
-						[Void](Remove-WindowsCapability @RemoveBiometricCapability)
-					}
-				}
-				Catch
-				{
-					Log $OptimizeData.FailedRemovingBiometricCapability -Type Error -ErrorRecord $Error[0]
-					Start-Sleep 3
-				}
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControlEnabled" -Value 1 -Type DWord
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender\SmartScreen" -Name "ConfigureAppInstallControl" -Value "Anywhere" -Type String
 			}
-			If ($DynamicParams.SecHealthUI -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled))
+			[Void]$Visibility.Append('windowsdefender;')
+			$DynamicParams.SecHealthUI = $true
+			Log $OptimizeData.DisableDefender
+			Clear-Host
+		}
+		If ($Visibility.Length -gt 5)
+		{
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
+			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "SettingsPageVisibility" -Value $Visibility.ToString().TrimEnd(';') -Type String
+		}
+		If($RemovedPackages."Microsoft.Windows.Search") {
+			$DynamicParams.RemovedWindowsSearchPackage = $true
+		}
+		RegHives -Unload
+		If ($DynamicParams.BioEnrollment -and (Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed))
+		{
+			Try
 			{
-				Try
-				{
-					$DisableDefenderOptionalFeature = @{
+				Get-WindowsCapability -Path $InstallMount -Name *Hello* -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Installed | ForEach-Object -Process {
+					$RemoveBiometricCapability = @{
 						Path             = $InstallMount
-						FeatureName      = 'Windows-Defender-Default-Definitions'
-						Remove           = $true
-						NoRestart        = $true
+						Name             = $PSItem.Name
 						ScratchDirectory = $ScratchFolder
 						LogPath          = $DISMLog
 						LogLevel         = 1
 						ErrorAction      = 'Stop'
 					}
-					Log $OptimizeData.DisablingDefenderOptionalFeature
-					[Void](Disable-WindowsOptionalFeature @DisableDefenderOptionalFeature)
+					Log ($OptimizeData.RemovingBiometricCapability -f $PSItem.Name)
+					[Void](Remove-WindowsCapability @RemoveBiometricCapability)
 				}
-				Catch
-				{
-					Log $OptimizeData.FailedDisablingDefenderOptionalFeature -Type Error -ErrorRecord $Error[0]
-					Start-Sleep 3
+			}
+			Catch
+			{
+				Log $OptimizeData.FailedRemovingBiometricCapability -Type Error -ErrorRecord $Error[0]
+				Start-Sleep 3
+			}
+		}
+		If ($DynamicParams.SecHealthUI -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName Windows-Defender-Default-Definitions -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ Enabled))
+		{
+			Try
+			{
+				$DisableDefenderOptionalFeature = @{
+					Path             = $InstallMount
+					FeatureName      = 'Windows-Defender-Default-Definitions'
+					Remove           = $true
+					NoRestart        = $true
+					ScratchDirectory = $ScratchFolder
+					LogPath          = $DISMLog
+					LogLevel         = 1
+					ErrorAction      = 'Stop'
 				}
+				Log $OptimizeData.DisablingDefenderOptionalFeature
+				[Void](Disable-WindowsOptionalFeature @DisableDefenderOptionalFeature)
+			}
+			Catch
+			{
+				Log $OptimizeData.FailedDisablingDefenderOptionalFeature -Type Error -ErrorRecord $Error[0]
+				Start-Sleep 3
 			}
 		}
 		#endregion Removed Package Clean-up
