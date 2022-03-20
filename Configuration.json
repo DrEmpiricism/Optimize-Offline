@@ -46,5 +46,8 @@
     "W11ClassicInterface": true,
     "ClassicSearchExplorer": true,
     "RemoveTaskbarPinnedIcons": true
+  },
+  "Miscellaneous": {
+    "ShutDownOnComplete": false
   }
 }

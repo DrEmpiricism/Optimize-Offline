@@ -17,6 +17,10 @@ If($SelectiveRegistry.DisableWindowsUpgrade) {
 		$TargetReleaseVersionInfo = "21H2"
 	}
 
+	If ($Global:InstallInfo.Build -ge "22500") {
+		$TargetReleaseVersionInfo = "22H2"
+	}
+
 	If ($TargetReleaseVersionInfo){
 
 		Log $OptimizeData.SelectiveRegistryWindowsUpgrade
@@ -30,6 +34,8 @@ If($SelectiveRegistry.DisableWindowsUpgrade) {
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "TargetReleaseVersionInfo" -Type String -Value $TargetReleaseVersionInfo
 
 		If ($Global:InstallInfo.Build -ge "17134" -and $Global:InstallInfo.Build -le "20348") { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ProductVersion" -Type String -Value "Windows 10" }
+
+		If ($Global:InstallInfo.Build -ge "22000") { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ProductVersion" -Type String -Value "Windows 11" }
 		
 	}
 	Start-Sleep 1
@@ -124,7 +130,6 @@ If($SelectiveRegistry.W11ClassicInterface -and $InstallInfo.Build -ge '22000') {
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
 
 	Start-Sleep 1
-
 }
 
 RegHives -Unload

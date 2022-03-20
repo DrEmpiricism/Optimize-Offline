@@ -87,6 +87,9 @@ Function Optimize-Offline
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
 		},
+		[Hashtable]$Miscellaneous = @{
+			ShutDownOnComplete = $false
+		},
 		[Parameter(HelpMessage = 'Removal of windows services.')]
 		[ValidateSet('None', 'List', 'Advanced', 'Select')]
 		[String]$Services
@@ -1012,7 +1015,7 @@ Function Optimize-Offline
 
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableSmartScreen" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "ShellSmartScreenLevel" -Value 0 -Type DWord -Force
-			@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
+			@("SecurityHealthService", "WinDefend", "WdNisSvc", "WdNisDrv", "WdBoot", "WdFilter", "Sense", "webthreatdefsvc", "webthreatdefusersvc") | ForEach-Object -Process { If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)" -Name "Start" -Value 4 -Type DWord } }
 			@("HKLM:\WIM_HKLM_SOFTWARE\Classes\*\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Directory\shellex\ContextMenuHandlers\EPP", "HKLM:\WIM_HKLM_SOFTWARE\Classes\Drive\shellex\ContextMenuHandlers\EPP",
 				"HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderApiLogger", "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\WMI\AutoLogger\DefenderAuditLogger") | Purge
 			Remove-KeyProperty -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "SecurityHealth"
@@ -2653,6 +2656,26 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Log "Clearing temp directory..."
 		Start-Sleep 5
 		Remove-Item -Recurse -Force -ErrorAction Ignore $TempDirectory
+		If($Miscellaneous.ShutDownOnComplete){
+			$continue = $true
+			for ($i = 1; $i -le 100; $i++ )
+			{
+				Write-Progress -Activity "Press Spacebar to cancel shutdown" -Status "Shutting down ..." -PercentComplete $i
+				Start-Sleep -Milliseconds 100
+				if ([console]::KeyAvailable)
+				{
+					$keypress = [System.Console]::ReadKey() 
+					switch ($keypress.key)
+					{
+						Spacebar { $continue = $false }
+					}
+				}
+				if ($continue -eq $false) {
+					break
+				}
+			}
+			Stop-Computer -ComputerName localhost
+		}
 		#endregion Post-Processing Block
 	}
 }
