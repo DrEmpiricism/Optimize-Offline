@@ -1,9 +1,7 @@
 {
 	"DisplayName": [
-		"Microsoft.VCLibs.140.00",
-		"Microsoft.UI.Xaml.2.4",
-		"Microsoft.UI.Xaml.2.6",
-		"Microsoft.UI.Xaml.2.7",
+		"Microsoft.VCLibs.*",
+		"Microsoft.UI.Xaml.*",
 		"Microsoft.WindowsTerminal"
 	]
 }

@@ -86,6 +86,7 @@ Function Optimize-Offline
 			W11ClassicInterface = $false
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
+			DisableTeamsApp = $false
 		},
 		[Hashtable]$Miscellaneous = @{
 			ShutDownOnComplete = $false
@@ -2364,6 +2365,10 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassSecureBootCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassStorageCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassTPMCheck" -Type DWord -Value 1
+			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -Type DWord -Value 1
+			if (Get-ChildItem -Path (GetPath -Path $ImageFolder -Child sources) -Filter appraiserres.dll -File) {
+				Get-ChildItem -Path (GetPath -Path $ImageFolder -Child sources) -Filter appraiserres.dll -File | Rename-Item -NewName appraiserres.dll.bak
+			}
 			RegHives -Unload
 	  	}
 		#endregion disable W11 boot image HW checks

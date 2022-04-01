@@ -39,13 +39,14 @@
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpgrade": true,
-    "DisableWindowsUpdateMicrosoft": false,
+    "DisableWindowsUpdateMicrosoft": true,
     "DisableDriverUpdate": true,
     "DormantOneDrive": true,
     "Disable3rdPartyApps": true,
     "W11ClassicInterface": true,
     "ClassicSearchExplorer": true,
-    "RemoveTaskbarPinnedIcons": true
+    "RemoveTaskbarPinnedIcons": true,
+    "DisableTeamsApp": true
   },
   "Miscellaneous": {
     "ShutDownOnComplete": false
