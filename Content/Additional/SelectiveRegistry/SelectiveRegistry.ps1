@@ -135,7 +135,8 @@ If($SelectiveRegistry.W11ClassicInterface -and $InstallInfo.Build -ge '22000') {
 	Start-Sleep 1
 }
 
-if($SelectiveRegistry.disableTeamsApp -and $InstallInfo.Build -ge '10240') {
+if($SelectiveRegistry.DisableTeamsApp -and $InstallInfo.Build -ge '10240') {
+	Log $OptimizeData.SelectiveRegistryDisableTeamsApp
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" -Name "ConfigureChatAutoInstall" -Value "0" -Type DWord -Force
 }
 
