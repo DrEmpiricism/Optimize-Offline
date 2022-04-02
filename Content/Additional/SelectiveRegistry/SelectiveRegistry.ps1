@@ -103,18 +103,18 @@ If($SelectiveRegistry.RemoveTaskbarPinnedIcons){
 	
 	If($Global:InstallInfo.Build -ge '18362') {
 		#Hide MeetNow icon in taskbar
-		RegKey -Path "HKLM:\NTUSER\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
+		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
 	}
 
 	# Disable News & Interests icon
-	RegKey -Path "HKLM:\NTUSER\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Type dword -Value "2"
+	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Type dword -Value "2"
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type dword -Value "0"
 
 	If($Global:InstallInfo.Build -ge '22000') {
 		#Remove Chat icon in taskbar
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Chat" -Name "ChatIcon" -Type dword -Value "3"
-		RegKey -Path "HKLM:\NTUSER\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type dword -Value "0"
+		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type dword -Value "0"
 
 		## Disable widgets button
 		RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Type Dword -Value "0" -Force
