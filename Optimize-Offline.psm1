@@ -2366,8 +2366,8 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassStorageCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassTPMCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -Type DWord -Value 1
-			if (Get-ChildItem -Path (GetPath -Path $ImageFolder -Child sources) -Filter appraiserres.dll -File) {
-				Get-ChildItem -Path (GetPath -Path $ImageFolder -Child sources) -Filter appraiserres.dll -File | Rename-Item -NewName appraiserres.dll.bak
+			if (Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File) {
+				Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File | Rename-Item -NewName appraiserres.dll.bak
 			}
 			RegHives -Unload
 	  	}
