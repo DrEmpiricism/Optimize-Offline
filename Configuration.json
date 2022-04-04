@@ -8,8 +8,8 @@
     "Services : None | Select | List | Advanced"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "List",
-  "SystemApps": "List",
+  "WindowsApps": "Select",
+  "SystemApps": "Select",
   "Capabilities": "None",
   "Packages": "None",
   "FeaturesToEnable": "None",
@@ -34,8 +34,8 @@
     "Drivers": false,
     "NetFx3": false
   },
-  "ComponentCleanup": true,
-  "ISO": "Prompt",
+  "ComponentCleanup": false,
+  "ISO": "No-Prompt",
   "CompressionType": "Maximum",
   "SelectiveRegistry": {
     "DisableWindowsUpgrade": false,
@@ -46,7 +46,8 @@
     "W11ClassicInterface": false,
     "ClassicSearchExplorer": false,
     "RemoveTaskbarPinnedIcons": false,
-    "DisableTeamsApp": false
+    "DisableTeamsApp": false,
+    "RunAsTiContextMenu": false
   },
   "Miscellaneous": {
     "ShutDownOnComplete": false

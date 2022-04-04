@@ -1,0 +1,121 @@
+Windows Registry Editor Version 5.00
+
+; Context Menu entries to use RunAsTI - lean and mean snippet by AveYo, 2018-2022
+; [FEATURES]
+; - innovative HKCU load, no need for reg load / unload ping-pong; programs get the user profile
+; - sets ownership privileges, high priority, and explorer support; get System if TI unavailable       
+; - accepts special characters in paths for which default run as administrator fails
+; - show on the new 11 contextmenu via whitelisted id; plenty other available, f**k needing an app!
+; 2022.01.28: workaround for 11 release (22000) hindering explorer as TI; fix 7 args
+
+[-HKEY_CLASSES_ROOT\RunAsTI]
+[-HKEY_CLASSES_ROOT\batfile\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\cmdfile\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\exefile\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\mscfile\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\regfile\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\Folder\shell\setdesktopwallpaper]
+[-HKEY_CLASSES_ROOT\Directory\background\shell\extract]
+; To remove entries, copy paste above into undo_RunAsTI.reg file, then import it
+
+; RunAsTI on .bat
+[HKEY_CLASSES_ROOT\batfile\shell\setdesktopwallpaper]
+"MUIVerb"="Run as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\batfile\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% \"%L\""
+
+; RunAsTI on .cmd
+[HKEY_CLASSES_ROOT\cmdfile\shell\setdesktopwallpaper]
+"MUIVerb"="Run as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\cmdfile\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% \"%L\""
+
+; RunAsTI on .exe
+[HKEY_CLASSES_ROOT\exefile\shell\setdesktopwallpaper]
+"MUIVerb"="Run as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\exefile\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% \"%L\""
+
+; RunAsTI on .msc
+[HKEY_CLASSES_ROOT\mscfile\shell\setdesktopwallpaper]
+"MUIVerb"="Run as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\mscfile\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% \"%L\""
+
+; RunAsTI on .ps1
+[HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1\shell\setdesktopwallpaper]
+"MUIVerb"="Run as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% powershell -nop -c iex((gc -lit '%L')-join[char]10)"
+
+; RunAsTI on .reg
+[HKEY_CLASSES_ROOT\regfile\shell\setdesktopwallpaper]
+"MUIVerb"="Import as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\regfile\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% regedit /s \"%L\""
+
+; RunAsTI on Folder
+[HKEY_CLASSES_ROOT\Folder\shell\setdesktopwallpaper]
+"MuiVerb"="Open as trustedinstaller"
+"HasLUAShield"=""
+"Icon"="powershell.exe,0"
+"AppliesTo"="NOT System.ParsingName:=\"::{645FF040-5081-101B-9F08-00AA002F954E}\""
+[HKEY_CLASSES_ROOT\Folder\shell\setdesktopwallpaper\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% \"%L\""
+
+; Open Powershell as trustedinstaller here
+[HKEY_CLASSES_ROOT\Directory\background\shell\extract]
+"MuiVerb"="Powershell as trustedinstaller"
+"HasLUAShield"=""
+"NoWorkingDirectory"=""
+"Position"="Middle"
+"Icon"="powershell.exe,0"
+[HKEY_CLASSES_ROOT\Directory\background\shell\extract\command]
+@="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -win 1 -nop -c iex((10..39|%%{(gp 'Registry::HKCR\\RunAsTI' $_ -ea 0).$_})-join[char]10); # --%% cmd /c set \"1=%V\"& start powershell -nop -noe -c $host.ui.RawUI.WindowTitle=$(whoami); set-location -lit $env:1"
+
+; RunAsTI function
+[HKEY_CLASSES_ROOT\RunAsTI]
+"10"="function RunAsTI ($cmd,$arg) { $id='RunAsTI'; $key=\"Registry::HKU\\$(((whoami /user)-split' ')[-1])\\Volatile Environment\"; $code=@'"
+"11"=" $I=[int32]; $M=$I.module.gettype(\"System.Runtime.Interop`Services.Mar`shal\"); $P=$I.module.gettype(\"System.Int`Ptr\"); $S=[string]"
+"12"=" $D=@(); $T=@(); $DM=[AppDomain]::CurrentDomain.\"DefineDynami`cAssembly\"(1,1).\"DefineDynami`cModule\"(1); $Z=[uintptr]::size "
+"13"=" 0..5|% {$D += $DM.\"Defin`eType\"(\"AveYo_$_\",1179913,[ValueType])}; $D += [uintptr]; 4..6|% {$D += $D[$_].\"MakeByR`efType\"()}"
+"14"=" $F='kernel','advapi','advapi', ($S,$S,$I,$I,$I,$I,$I,$S,$D[7],$D[8]), ([uintptr],$S,$I,$I,$D[9]),([uintptr],$S,$I,$I,[byte[]],$I)"
+"15"=" 0..2|% {$9=$D[0].\"DefinePInvok`eMethod\"(('CreateProcess','RegOpenKeyEx','RegSetValueEx')[$_],$F[$_]+'32',8214,1,$S,$F[$_+3],1,4)}"
+"16"=" $DF=($P,$I,$P),($I,$I,$I,$I,$P,$D[1]),($I,$S,$S,$S,$I,$I,$I,$I,$I,$I,$I,$I,[int16],[int16],$P,$P,$P,$P),($D[3],$P),($P,$P,$I,$I)"
+"17"=" 1..5|% {$k=$_; $n=1; $DF[$_-1]|% {$9=$D[$k].\"Defin`eField\"('f' + $n++, $_, 6)}}; 0..5|% {$T += $D[$_].\"Creat`eType\"()}"
+"18"=" 0..5|% {nv \"A$_\" ([Activator]::CreateInstance($T[$_])) -fo}; function F ($1,$2) {$T[0].\"G`etMethod\"($1).invoke(0,$2)}"
+"19"=" $TI=(whoami /groups)-like'*1-16-16384*'; $As=0; if(!$cmd) {$cmd='control';$arg='admintools'}; if ($cmd-eq'This PC'){$cmd='file:'}"
+"20"=" if (!$TI) {'TrustedInstaller','lsass','winlogon'|% {if (!$As) {$9=sc.exe start $_; $As=@(get-process -name $_ -ea 0|% {$_})[0]}}"
+"21"=" function M ($1,$2,$3) {$M.\"G`etMethod\"($1,[type[]]$2).invoke(0,$3)}; $H=@(); $Z,(4*$Z+16)|% {$H += M \"AllocHG`lobal\" $I $_}"
+"22"=" M \"WriteInt`Ptr\" ($P,$P) ($H[0],$As.Handle); $A1.f1=131072; $A1.f2=$Z; $A1.f3=$H[0]; $A2.f1=1; $A2.f2=1; $A2.f3=1; $A2.f4=1"
+"23"=" $A2.f6=$A1; $A3.f1=10*$Z+32; $A4.f1=$A3; $A4.f2=$H[1]; M \"StructureTo`Ptr\" ($D[2],$P,[boolean]) (($A2 -as $D[2]),$A4.f2,$false)"
+"24"=" $Run=@($null, \"powershell -win 1 -nop -c iex `$env:R; # $id\", 0, 0, 0, 0x0E080600, 0, $null, ($A4 -as $T[4]), ($A5 -as $T[5]))"
+"25"=" F 'CreateProcess' $Run; return}; $env:R=''; rp $key $id -force; $priv=[diagnostics.process].\"GetM`ember\"('SetPrivilege',42)[0]"
+"26"=" 'SeSecurityPrivilege','SeTakeOwnershipPrivilege','SeBackupPrivilege','SeRestorePrivilege' |% {$priv.Invoke($null, @(\"$_\",2))}"
+"27"=" $HKU=[uintptr][uint32]2147483651; $NT='S-1-5-18'; $reg=($HKU,$NT,8,2,($HKU -as $D[9])); F 'RegOpenKeyEx' $reg; $LNK=$reg[4]"
+"28"=" function L ($1,$2,$3) {sp 'Registry::HKCR\\AppID\\{CDCBCFCA-3CDC-436f-A4E2-0E02075250C2}' 'RunAs' $3 -force -ea 0"
+"29"="  $b=[Text.Encoding]::Unicode.GetBytes(\"\\Registry\\User\\$1\"); F 'RegSetValueEx' @($2,'SymbolicLinkValue',0,6,[byte[]]$b,$b.Length)}"
+"30"=" function Q {[int](gwmi win32_process -filter 'name=\"explorer.exe\"'|?{$_.getownersid().sid-eq$NT}|select -last 1).ProcessId}"
+"31"=" $11bug=($((gwmi Win32_OperatingSystem).BuildNumber)-eq'22000')-AND(($cmd-eq'file:')-OR(test-path -lit $cmd -PathType Container))"
+"32"=" if ($11bug) {'System.Windows.Forms','Microsoft.VisualBasic' |% {$9=[Reflection.Assembly]::LoadWithPartialName(\"'$_\")}}"
+"33"=" if ($11bug) {$path='^(l)'+$($cmd -replace '([\\+\\^\\%\\~\\(\\)\\[\\]])','{$1}')+'{ENTER}'; $cmd='control.exe'; $arg='admintools'}"
+"34"=" L ($key-split'\\\\')[1] $LNK ''; $R=[diagnostics.process]::start($cmd,$arg); if ($R) {$R.PriorityClass='High'; $R.WaitForExit()}"
+"35"=" if ($11bug) {$w=0; do {if($w-gt40){break}; sleep -mi 250;$w++} until (Q); [Microsoft.VisualBasic.Interaction]::AppActivate($(Q))}"
+"36"=" if ($11bug) {[Windows.Forms.SendKeys]::SendWait($path)}; do {sleep 7} while(Q); L '.Default' $LNK 'Interactive User'"
+"37"="'@; $V='';'cmd','arg','id','key'|%{$V+=\"`n`$$_='$($(gv $_ -val)-replace\"'\",\"''\")';\"}; sp $key $id $($V,$code) -type 7 -force -ea 0"
+"38"=" start powershell -args \"-win 1 -nop -c `n$V `$env:R=(gi `$key -ea 0).getvalue(`$id)-join''; iex `$env:R\" -verb runas"
+"39"="}; $A=([environment]::commandline-split'-[-]%+ ?',2)[1]-split'\"([^\"]+)\"|([^ ]+)',2|%{$_.Trim(' \"')}; RunAsTI $A[1] $A[2]; # AveYo, 2022.01.28"
+;

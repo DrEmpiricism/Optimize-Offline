@@ -87,6 +87,7 @@ Function Optimize-Offline
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
 			DisableTeamsApp = $false
+			RunAsTiContextMenu = $false
 		},
 		[Hashtable]$Miscellaneous = @{
 			ShutDownOnComplete = $false
@@ -2077,7 +2078,7 @@ Function Optimize-Offline
 			}
 			If ($Additional.RegistryTemplates -and (Test-Path -Path (GetPath -Path $OptimizeOffline.RegistryTemplates -Child *.reg)))
 			{
-				Import-RegistryTemplates
+				Import-Registry -Path $OptimizeOffline.RegistryTemplates
 				Start-Sleep 3
 			}
 			If ($Additional.LayoutModification -and (Test-Path -Path (GetPath -Path $OptimizeOffline.LayoutModification -Child *.xml)))
@@ -2227,7 +2228,11 @@ Function Optimize-Offline
 			}
 		}
 		#endregion Additional Content Integration
-
+		#region selective registry
+		Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter *.ps1 -Recurse | ForEach-Object -Process {
+			& $_.FullName
+		}
+		#endregion selective registry
 		#region Component Store Clean-up
 		If ($ComponentCleanup.IsPresent)
 		{
@@ -2350,12 +2355,6 @@ Function Optimize-Offline
 			}
 		}
 		#endregion Start Menu Clean-up
-
-		#region selective registry
-		Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter *.ps1 -Recurse | ForEach-Object -Process {
-			& $_.FullName
-		}
-		#endregion selective registry
 
 		#region disable W11 boot image HW checks
 		If ($InstallInfo.Build -ge '22000' -and (Test-Path -Path $BootMount)) {

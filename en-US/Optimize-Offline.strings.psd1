@@ -112,6 +112,7 @@ SelectiveRegistryW11ClassicInterface    = Setting W11 classic interface
 SelectiveRegistryRemoveTaskbarPinnedIcons = Removing taskbar pinned icons
 SelectiveRegistryClassicSearchExplorer  = Setting classic search explorer
 SelectiveRegistryDisableTeamsApp        = Disabling Microsoft Teams autostart entry
+SelectiveRegistryRunAsTiContextMenu     = Adding Powershell as trusted installer context menu entry
 ServiceStartBoot 								 = Boot
 ServiceStartSystem                      = System
 ServiceStartAutomatic                   = Automatic

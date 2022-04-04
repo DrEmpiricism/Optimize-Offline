@@ -140,6 +140,12 @@ if($SelectiveRegistry.DisableTeamsApp -and $InstallInfo.Build -ge '10240') {
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" -Name "ConfigureChatAutoInstall" -Value "0" -Type DWord -Force
 }
 
+if($SelectiveRegistry.RunAsTiContextMenu){
+	Log $OptimizeData.SelectiveRegistryRunAsTiContextMenu
+	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter RunAsTi.reg).FullName
+}
+
+
 RegHives -Unload
 
 Clear-Host
