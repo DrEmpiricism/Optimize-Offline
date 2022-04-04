@@ -32,9 +32,15 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 	Stop-Process -Id $PID
 }
 
+$configration_selected = "Configuration.json"
+
+If (Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "Configuration_custom.json")) {
+	$configration_selected = "Configuration_custom.json"
+}
+
 # Ensure the configuration JSON file exists.
-If (!(Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json))) {
-	Write-Warning ('The required configuration JSON file does not exist: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json))
+If (!(Test-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath $configration_selected))) {
+	Write-Warning ('The required configuration JSON file does not exist: "{0}"' -f (Join-Path -Path $PSScriptRoot -ChildPath $configration_selected))
 	Start-Sleep 3
 	Exit
 }
@@ -46,12 +52,12 @@ If ((Test-Path -Path Variable:\ContentJSON) -or (Test-Path -Path Variable:\Confi
 
 # Use a Try/Catch/Finally block in case the configuration JSON file URL formatting is invalid so we can catch it, correct its formatting and continue.
 Try {
-	$ContentJSON = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw | ConvertFrom-Json
+	$ContentJSON = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath $configration_selected) -Raw | ConvertFrom-Json
 }
 Catch [ArgumentException] {
-	$ContentJSON = (Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath Configuration.json) -Raw).Replace('\', '\\') | Set-Content -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Encoding UTF8 -Force -PassThru
+	$ContentJSON = (Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath $configration_selected) -Raw).Replace('\', '\\') | Set-Content -Path (Join-Path -Path $Env:TEMP -ChildPath $configration_selected) -Encoding UTF8 -Force -PassThru
 	$ContentJSON = $ContentJSON | ConvertFrom-Json
-	Move-Item -Path (Join-Path -Path $Env:TEMP -ChildPath Configuration.json) -Destination $PSScriptRoot -Force
+	Move-Item -Path (Join-Path -Path $Env:TEMP -ChildPath $configration_selected) -Destination $PSScriptRoot -Force
 	$Global:Error.Remove($Error[-1])
 }
 Finally {

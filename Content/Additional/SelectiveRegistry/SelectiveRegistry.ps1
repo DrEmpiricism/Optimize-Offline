@@ -107,6 +107,12 @@ If($SelectiveRegistry.RemoveTaskbarPinnedIcons){
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type dword -Value "1"
 	}
 
+	if($Global:InstallInfo.Build -le '19044'){
+		RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Windows\Explorer" -Name "NoPinningStoreToTaskbar" -Value 1 -Type DWord
+		RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins" -Name "MailPin" -Value 2 -Type DWord
+		RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Value 0 -Type DWord
+	}
+
 	# Disable News & Interests icon
 	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Type dword -Value "2"
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type dword -Value "0"
@@ -124,25 +130,36 @@ If($SelectiveRegistry.RemoveTaskbarPinnedIcons){
 
 }
 
-If($SelectiveRegistry.W11ClassicInterface -and $InstallInfo.Build -ge '22000') {
-	Log $OptimizeData.SelectiveRegistryW11ClassicInterface
-
+If($SelectiveRegistry.W11ClassicContextMenu -and $Global:InstallInfo.Build -ge '22000') {
+	Log $OptimizeData.SelectiveRegistryW11ClassicContextMenu
 	# Classic context menus
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
-	# W10 UI ribbon in explorer
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
-
 	Start-Sleep 1
 }
 
-if($SelectiveRegistry.DisableTeamsApp -and $InstallInfo.Build -ge '10240') {
+if($SelectiveRegistry.DisableTeamsApp -and $Global:InstallInfo.Build -ge '10240') {
 	Log $OptimizeData.SelectiveRegistryDisableTeamsApp
 	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" -Name "ConfigureChatAutoInstall" -Value "0" -Type DWord -Force
+	Start-Sleep 1
 }
 
 if($SelectiveRegistry.RunAsTiContextMenu){
 	Log $OptimizeData.SelectiveRegistryRunAsTiContextMenu
 	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter RunAsTi.reg).FullName
+	Start-Sleep 1
+}
+
+if ($SelectiveRegistry.ExplorerUIRibbon) {
+	if ($Global:InstallInfo.Build -le "19044"){
+		Log $OptimizeData.SelectiveRegistryExplorerUIRibbon
+		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{e2bf9676-5f8f-435c-97eb-11607a5bedf7}" -Value "" -Type String -Force
+		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked" -Name "{e2bf9676-5f8f-435c-97eb-11607a5bedf7}" -Value "" -Type String -Force
+		Start-Sleep 1
+	} elseif ($Global:InstallInfo.Build -eq "22000") {
+		Log $OptimizeData.SelectiveRegistryExplorerUIRibbon
+		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
+		Start-Sleep 1
+	}
 }
 
 

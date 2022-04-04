@@ -83,7 +83,8 @@ Function Optimize-Offline
 			DisableDriverUpdate = $false
 			DormantOneDrive = $false
 			Disable3rdPartyApps = $false
-			W11ClassicInterface = $false
+			W11ClassicContextMenu = $false
+   		ExplorerUIRibbon = $false
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
 			DisableTeamsApp = $false
@@ -2271,7 +2272,7 @@ Function Optimize-Offline
 		#endregion Component Store Clean-up
 
 		#region Start Menu Clean-up
-		If (!$DynamicParams.LayoutModification)
+		If (!$DynamicParams.LayoutModification -and $InstallInfo.Build -le '19044')
 		{
 			$LayoutTemplate = @"
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
