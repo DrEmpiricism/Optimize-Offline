@@ -48,7 +48,9 @@
     "ClassicSearchExplorer": false,
     "RemoveTaskbarPinnedIcons": false,
     "DisableTeamsApp": false,
-    "RunAsTiContextMenu": false
+    "DisableVirtualizationSecurity": false,
+    "RunAsTiContextMenu": false,
+    "AmoledBlackTheme": false
   },
   "Miscellaneous": {
     "ShutDownOnComplete": false

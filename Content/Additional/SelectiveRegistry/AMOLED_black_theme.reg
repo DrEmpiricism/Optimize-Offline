@@ -1,0 +1,87 @@
+Windows Registry Editor Version 5.00
+
+; Pitch Black Theme preset by AveYo, AccentPalette idea by /u/Egg-Tricky
+; for Ctrl+Alt+Del, Logon, Taskbar, Start Menu, Action Center, Title Bar (10 & 11)
+
+[-HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+"AccentColorMenu"=dword:1f000000      ; Window borders and titlebar
+"StartColorMenu"=dword:1f202020       ; Modals in UWP ex. Apply new refresh rate in 10
+"AccentPalette"=hex:\
+    00,9d,ff,1f,\                     ; Links in action center and apps
+    00,9d,ff,1f,\                     ; Taskbar icons underline
+    00,9d,ff,1f,\                     ; Start button hover
+    00,9d,ff,1f,\                     ; Settings icons and links [Blue]
+    00,00,00,00,\                     ; Startmenu background / Active taskbar button - IF "EnableTransparency"=dword:00000000
+    00,00,00,00,\                     ; Taskbar front and Folders on start list background [None]
+    00,00,00,00,\                     ; Taskbar background - IF "EnableTransparency"=dword:00000001
+    00,00,00,00                       ; Unused
+
+[-HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+[HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+"AccentColorMenu"=dword:1f000000      ; Window borders and titlebar
+"StartColorMenu"=dword:1f202020       ; Modals in UWP ex. Apply new refresh rate in 10
+"AccentPalette"=hex:\
+    00,9d,ff,1f,\                     ; Links in action center and apps
+    00,9d,ff,1f,\                     ; Taskbar icons underline
+    00,9d,ff,1f,\                     ; Start button hover
+    00,9d,ff,1f,\                     ; Settings icons and links [Blue]
+    00,00,00,00,\                     ; Startmenu background / Active taskbar button - IF "EnableTransparency"=dword:00000000
+    00,00,00,00,\                     ; Taskbar front and Folders on start list background [None]
+    00,00,00,00,\                     ; Taskbar background - IF "EnableTransparency"=dword:00000001
+    00,00,00,00                       ; Unused
+
+[-HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\DWM]
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\DWM]
+"ColorPrevalence"=dword:00000001      ; Show accent color on Title bars and window borders [x]
+"AccentColor"=dword:1f000000          ; Active title bars - black unsupported in the UI but works with AccentPalette
+"AccentColorInactive"=dword:1f202020  ; Inactive title bars
+
+[-HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\DWM]
+[HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\DWM]
+"ColorPrevalence"=dword:00000001      ; Show accent color on Title bars and window borders [x]
+"AccentColor"=dword:1f000000          ; Active title bars - black unsupported in the UI but works with AccentPalette
+"AccentColorInactive"=dword:1f202020  ; Inactive title bars
+
+[-HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"ColorPrevalence"=dword:00000001      ; Show accent color on Start, taskbar and action center [x]
+"AppsUseLightTheme"=dword:00000000    ; Apps mode [Dark]
+"SystemUsesLightTheme"=dword:00000000 ; Windows mode [Dark]
+"EnabledBlurBehind"=dword:00000001    ; Blur [x]
+"EnableTransparency"=dword:00000000   ; Transparency []
+
+[-HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+[HKEY_USERS\.DEFAULT\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"ColorPrevalence"=dword:00000001      ; Show accent color on Start, taskbar and action center [x]
+"AppsUseLightTheme"=dword:00000000    ; Apps mode [Dark]
+"SystemUsesLightTheme"=dword:00000000 ; Windows mode [Dark]
+"EnabledBlurBehind"=dword:00000001    ; Blur [x]
+"EnableTransparency"=dword:00000000   ; Transparency []
+
+[-HKEY_CURRENT_USER\Control Panel\Colors]
+[HKEY_CURRENT_USER\Control Panel\Colors]
+"Hilight"="0 157 255" ; [Blue]
+"HotTrackingColor"="0 157 255"
+"MenuHilight"="0 157 255"
+
+[-HKEY_USERS\.DEFAULT\Control Panel\Colors]
+[HKEY_USERS\.DEFAULT\Control Panel\Colors]
+"Hilight"="0 157 255" ; [Blue]
+"HotTrackingColor"="0 157 255"
+"MenuHilight"="0 157 255"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]
+"Background"="0 0 0"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System]
+"DisableAcrylicBackgroundOnLogon"=dword:00000001 ; AveYo: enable pure black logon on 11
+"DisableLogonBackgroundImage"=dword:00000001 ; enable solid color logon - separate undo.reg provided
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\Personalization]
+"PersonalColors_Background"="#000000" ; AveYo: this is what was missing to make Ctrl+Alt+Del background black as well
+"PersonalColors_Accent"=-
+"NoLockScreen"=dword:00000001 ; no lock screen entirely - separate undo.reg provided
+
+[-HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DWM]
+; done - log off and back on to see all changes

@@ -88,7 +88,9 @@ Function Optimize-Offline
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
 			DisableTeamsApp = $false
+			DisableVirtualizationSecurity = $false
 			RunAsTiContextMenu = $false
+			AmoledBlackTheme = $false
 		},
 		[Hashtable]$Miscellaneous = @{
 			ShutDownOnComplete = $false
@@ -2369,6 +2371,12 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassStorageCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\BOOT_HKLM_SYSTEM\Setup\LabConfig" -Name "BypassTPMCheck" -Type DWord -Value 1
 			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -Type DWord -Value 1
+
+			RegKey -Path "HKLM:\WIM_HKCU\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV1" -Type DWord -Value 0
+			RegKey -Path "HKLM:\WIM_HKCU\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV2" -Type DWord -Value 0
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "TargetReleaseVersion" -Value 1 -Type Dword -Force
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "TargetReleaseVersionInfo" -Value "25H1" -Type String -Force
+
 			if (Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File) {
 				Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File | Rename-Item -NewName appraiserres.dll.bak
 			}

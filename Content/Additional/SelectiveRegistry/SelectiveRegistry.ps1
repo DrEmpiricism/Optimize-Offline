@@ -143,6 +143,13 @@ if($SelectiveRegistry.DisableTeamsApp -and $Global:InstallInfo.Build -ge '10240'
 	Start-Sleep 1
 }
 
+if($SelectiveRegistry.DisableVirtualizationSecurity -and $Global:InstallInfo.Build -ge '22000') {
+	Log $OptimizeData.SelectiveRegistryDisableVirtualizationSecurity
+	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\DeviceGuard\Scenarios" -Name "HypervisorEnforcedCodeIntegrity" -Value "0" -Type DWord -Force
+	RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Control\DeviceGuard" -Name "EnableVirtualizationBasedSecurity" -Value "0" -Type DWord -Force
+	Start-Sleep 1
+}
+
 if($SelectiveRegistry.RunAsTiContextMenu){
 	Log $OptimizeData.SelectiveRegistryRunAsTiContextMenu
 	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter RunAsTi.reg).FullName
@@ -157,11 +164,18 @@ if ($SelectiveRegistry.ExplorerUIRibbon) {
 		Start-Sleep 1
 	} elseif ($Global:InstallInfo.Build -eq "22000") {
 		Log $OptimizeData.SelectiveRegistryExplorerUIRibbon
+		# RegKey -Path "HKLM:\WIM_HKCU\Software\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
 		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32" -Name "(default)" -Value "" -Type String -Force
 		Start-Sleep 1
 	}
 }
 
+
+if($SelectiveRegistry.AmoledBlackTheme -and $Global:InstallInfo.Build -ge '10240') {
+	Log $OptimizeData.SelectiveRegistryAmoledBlackTheme
+	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter AMOLED_black_theme.reg).FullName
+	Start-Sleep 1
+}
 
 RegHives -Unload
 

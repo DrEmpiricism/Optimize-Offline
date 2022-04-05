@@ -321,4 +321,6 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
 - ClassicSearchExplorer - Tweak is needed in case you uninstall Search app or when applying the /Content/Additional/Setup/Set-Additional.ps1 on an online image. Works only on builds higher than 18363.
 - RemoveTaskbarPinnedIcons - Tries to remove based on system version the automatically pinned taskbar icons
 - DisableTeamsApp - Will remove Microsoft Teams from installing at the first logon
+- DisableVirtualizationSecurity - Disables Core integrity and Virtualization based security (builds >= 22000)
 - RunAsTiContextMenu - Adds Powershell as trusted installer context menu entry
+- AmoledBlackTheme - Enables pitch black AMOLED theme on W10 and W11 all builds
