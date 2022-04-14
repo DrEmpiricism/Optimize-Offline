@@ -188,12 +188,12 @@ Function Set-Additional
         # If the Windows 10 build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
         If ($Build -ge 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
 
-        Try{
+        <#Try{
             If ($Build -ge 19041 -and (Get-WmiObject -Class Win32_Processor | Select-Object -Property Name).Name.ToLower() -Like "*amd*") {
                 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name FeatureSettingsOverride -Value 3 -Force
                 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name FeatureSettingsOverrideMask -Value 3 -Force
             }
-        } Catch {}
+        } Catch {}#>
 
         # Remove the dism log file if present.
         If (Test-Path -Path $Env:SystemRoot\Logs\DISM\dism.log) { Remove-Item -Path $Env:SystemRoot\Logs\DISM\dism.log -Force }
