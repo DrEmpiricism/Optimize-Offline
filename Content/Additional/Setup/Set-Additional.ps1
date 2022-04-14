@@ -17,7 +17,7 @@ Function Set-Additional
         If ((Get-ExecutionPolicy -Scope CurrentUser) -ne 'RemoteSigned') { Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Confirm:$false }
         If ((Get-ExecutionPolicy -Scope LocalMachine) -ne 'RemoteSigned') { Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Confirm:$false }
 
-        # Get the current build number for the Windows 10 version.
+        # Get the current build number for the Windows version.
         $Build = Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber
 
         If (Test-Path -Path .\ScheduledTasks.json)
@@ -185,7 +185,7 @@ Function Set-Additional
         $Memory = (Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1KB
         If ($Memory -is [Double]) { Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name SvcHostSplitThresholdInKB -Value $Memory -Force }
 
-        # If the Windows 10 build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
+        # If the Windows build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
         If ($Build -ge 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
 
         <#Try{

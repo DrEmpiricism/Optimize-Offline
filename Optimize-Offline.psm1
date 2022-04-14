@@ -27,7 +27,7 @@ Function Optimize-Offline
 	(
 		[Parameter(Mandatory = $true,
 			ValueFromPipeline = $true,
-			HelpMessage = 'The full path to a Windows 10 Installation Media ISO, or a Windows 10 WIM, SWM or ESD file.')]
+			HelpMessage = 'The full path to a Windows Installation Media ISO, or a Windows WIM, SWM or ESD file.')]
 		[Object]$SourcePath,
 		[Parameter(HelpMessage = 'Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle).')]
 		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All')]
@@ -265,7 +265,7 @@ Function Optimize-Offline
 			Do
 			{
 				$Host.UI.RawUI.WindowTitle = $OptimizeData.SelectWindowsEdition
-				$EditionList = Get-WindowsImage -ImagePath $InstallWim -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property @{ Label = 'Index'; Expression = { ($PSItem.ImageIndex) } }, @{ Label = 'Name'; Expression = { ($PSItem.ImageName) } }, @{ Label = 'Size (GB)'; Expression = { '{0:N2}' -f ($PSItem.ImageSize / 1GB) } } | Out-GridView -Title "Select the Windows 10 Edition to Optimize." -OutputMode Single
+				$EditionList = Get-WindowsImage -ImagePath $InstallWim -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property @{ Label = 'Index'; Expression = { ($PSItem.ImageIndex) } }, @{ Label = 'Name'; Expression = { ($PSItem.ImageName) } }, @{ Label = 'Size (GB)'; Expression = { '{0:N2}' -f ($PSItem.ImageSize / 1GB) } } | Out-GridView -Title $OptimizeData.SelectWindowsEdition -OutputMode Single
 			}
 			While ($EditionList.Length -eq 0)
 			$ImageIndex = $EditionList.Index

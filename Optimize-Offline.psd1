@@ -17,7 +17,7 @@
 	ModuleVersion          = '4.0.1.9'
 	Author                 = 'Ben White'
 	Copyright              = '(c) 2021. All rights reserved.'
-	Description            = 'The Optimize-Offline module enables the offline optimizing of Windows 10 image (WIM/ESD) files for optimal runtime environments.'
+	Description            = 'The Optimize-Offline module enables the offline optimizing of Windows images (WIM/ESD) files for optimal runtime environments.'
 	HelpInfoUri            = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/en-US/Optimize-Offline-help.xml'
 	PowerShellVersion      = '5.1'
 	DotNetFrameworkVersion = '4.0'
@@ -30,7 +30,7 @@
 	CmdletsToExport        = @()
 	PrivateData            = @{
 		PSData = @{
-			Tags         = @('Image Optimization', 'WIM Optimization', 'Offline Windows Image', 'Offline Servicing', 'Offline Imaging', 'WIM', 'SWM', 'ESD', 'Windows 10', 'LTSC', 'Enterprise', '19H1', '19H2', '20H1', '20H2', '21H1', '21H2', 'Deployment', 'Debloat', 'DISM', 'PSModule')
+			Tags         = @('Image Optimization', 'WIM Optimization', 'Offline Windows Image', 'Offline Servicing', 'Offline Imaging', 'WIM', 'SWM', 'ESD', 'Windows 10', 'Windows 11', 'LTSC', 'Enterprise', '19H1', '19H2', '20H1', '20H2', '21H1', '21H2', 'Deployment', 'Debloat', 'DISM', 'PSModule')
 			LicenseUri   = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/LICENSE'
 			ProjectUri   = 'https://github.com/DrEmpiricism/Optimize-Offline'
 			ReleaseNotes = 'https://github.com/DrEmpiricism/Optimize-Offline/blob/master/ChangeLog.md'
