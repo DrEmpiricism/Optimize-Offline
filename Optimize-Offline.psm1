@@ -84,13 +84,13 @@ Function Optimize-Offline
 			DormantOneDrive = $false
 			Disable3rdPartyApps = $false
 			W11ClassicContextMenu = $false
-   		ExplorerUIRibbon = $false
 			ClassicSearchExplorer = $false
 			RemoveTaskbarPinnedIcons = $false
 			DisableTeamsApp = $false
 			DisableVirtualizationSecurity = $false
 			RunAsTiContextMenu = $false
 			AmoledBlackTheme = $false
+			ClassicFileExplorer = $false
 		},
 		[Hashtable]$Miscellaneous = @{
 			ShutDownOnComplete = $false
