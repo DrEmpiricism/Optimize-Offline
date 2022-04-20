@@ -150,11 +150,7 @@ if($SelectiveRegistry.DisableVirtualizationSecurity -and $Global:InstallInfo.Bui
 	Start-Sleep 1
 }
 
-if($SelectiveRegistry.RunAsTiContextMenu){
-	Log $OptimizeData.SelectiveRegistryRunAsTiContextMenu
-	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter RunAsTi.reg).FullName
-	Start-Sleep 1
-}
+
 
 if ($SelectiveRegistry.ExplorerUIRibbon) {
 	if ($Global:InstallInfo.Build -le "19044"){
@@ -170,6 +166,7 @@ if ($SelectiveRegistry.ExplorerUIRibbon) {
 	}
 }
 
+RegHives -Unload
 
 if($SelectiveRegistry.AmoledBlackTheme -and $Global:InstallInfo.Build -ge '10240') {
 	Log $OptimizeData.SelectiveRegistryAmoledBlackTheme
@@ -177,6 +174,10 @@ if($SelectiveRegistry.AmoledBlackTheme -and $Global:InstallInfo.Build -ge '10240
 	Start-Sleep 1
 }
 
-RegHives -Unload
+if($SelectiveRegistry.RunAsTiContextMenu){
+	Log $OptimizeData.SelectiveRegistryRunAsTiContextMenu
+	Import-Registry -Path (Get-ChildItem -Path $OptimizeOffline.SelectiveRegistry -Filter RunAsTi.reg).FullName
+	Start-Sleep 1
+}
 
 Clear-Host

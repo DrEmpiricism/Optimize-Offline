@@ -1,1 +1,1 @@
-powershell "%~dp0Start-Optimize"
+powershell "%~dp0Start-Optimize.ps1"

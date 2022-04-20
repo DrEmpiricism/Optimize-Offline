@@ -1,1 +1,1 @@
-powershell "%~dp0Start-Optimize -populateTemplates"
+powershell "%~dp0Start-Optimize.ps1 -populateTemplates"
