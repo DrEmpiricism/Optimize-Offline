@@ -5,30 +5,30 @@ Function Import-Registry
 		[String]$Path
     )
 
-    $RegKeyProcessor = { 
+    $REGContentHandler = {
         param(
-            [String[]]$REGContent
+            [string]$Content
         ) 
-        $REGContent = $REGContent -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
-        $REGContent = $REGContent -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
-        $REGContent = $REGContent -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
-        $REGContent = $REGContent -replace 'HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM\ControlSet001'
-
-        return $REGContent
+	    $Content = $Content -replace 'HKEY_CLASSES_ROOT', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE\Classes'
+        $Content = $Content -replace 'HKEY_LOCAL_MACHINE\\SOFTWARE', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SOFTWARE'
+        $Content = $Content -replace 'HKEY_LOCAL_MACHINE\\SYSTEM', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM'
+        $Content = $Content -replace 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE\WIM_HKCU'
+        $Content = $Content -replace 'HKEY_USERS\\.DEFAULT', 'HKEY_LOCAL_MACHINE\WIM_HKU_DEFAULT'
+        $Content = $Content -replace 'HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet', 'HKEY_LOCAL_MACHINE\WIM_HKLM_SYSTEM\ControlSet001'
+        return $Content
     }
+
+    RegHives -Load
 
     If ((Get-Item $Path) -is [System.IO.DirectoryInfo]){
         Get-ChildItem -Path $Path -Filter *.Offline | Purge
         Get-ChildItem -Path $Path -Filter *.reg | ForEach-Object -Process {
-            $REGContent = Get-Content -Path $PSItem.FullName
-            $REGContent = $RegKeyProcessor.Invoke($REGContent)
+            $REGContent = Get-Content -Path $PSItem.FullName -Raw
+            $REGContent = $REGContentHandler.Invoke($REGContent)
             $REGContent | Set-Content -Path $PSItem.FullName.Replace($PSItem.Extension, '.Offline') -Encoding Unicode -Force
         }
         If (Get-ChildItem -Path $Path -Filter *.Offline)
         {
-            RegHives -Load
             Get-ChildItem -Path $Path -Filter *.Offline | ForEach-Object -Process {
                 Try
                 {
@@ -42,16 +42,16 @@ Function Import-Registry
                 }
                 Finally
                 {
-                    RegHives -Unload; Purge $PSItem.FullName; Start-Sleep 2
+                    Purge $PSItem.FullName; Start-Sleep 2
                 }
             }
         }
     } Else {
         $RegFile = Get-Item $Path
-        $REGContent = Get-Content -Path $RegFile.FullName
-        $REGContent = $RegKeyProcessor.Invoke($REGContent)
+        $REGContent = Get-Content -Path $RegFile.FullName -Raw
+        $REGContent = $REGContentHandler.Invoke($REGContent)
         $REGContent | Set-Content -Path $RegFile.FullName.Replace($RegFile.Extension, '.Offline') -Encoding Unicode -Force
-        RegHives -Load
+        
         $ProcessedItem = Get-Item $RegFile.FullName.Replace($RegFile.Extension, '.Offline')
         Try
         {
@@ -65,7 +65,9 @@ Function Import-Registry
         }
         Finally
         {
-            RegHives -Unload; Purge $ProcessedItem.FullName; Start-Sleep 2
+            Purge $ProcessedItem.FullName; Start-Sleep 2
         }
     }
+
+    RegHives -Unload
 }
