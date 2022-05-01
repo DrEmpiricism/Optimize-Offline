@@ -64,6 +64,8 @@ Function Optimize-Offline
 		[String[]]$DaRT,
 		[Parameter(HelpMessage = 'Applies optimized settings to the image registry hives.')]
 		[Switch]$Registry,
+		[Parameter(HelpMessage = 'Sets the output path')]
+		[String]$OutputPath,
 		[Parameter(HelpMessage = 'Integrates user-specific content added to the "Content/Additional" directory into the image when enabled within the hashtable.')]
 		[Hashtable]$Additional = @{ Setup = $false; Wallpaper = $false; SystemLogo = $false; LockScreen = $false; RegistryTemplates = $false; LayoutModification = $false; Unattend = $false; Drivers = $false; NetFx3 = $false },
 		[Parameter(HelpMessage = 'Performs a clean-up of the Component Store by compressing all superseded components.')]
@@ -283,6 +285,23 @@ Function Optimize-Offline
 			$PSCmdlet.WriteWarning($OptimizeData.FailedToRetrieveImageMetadata -f (GetPath -Path $InstallWim -Split Leaf))
 			$TempDirectory | Purge
 			Break
+		}
+
+		If($OutputPath.ToLower().Trim() -eq 'select'){
+			Add-Type -AssemblyName System.Windows.Forms
+			If($SourcePath.Extension.ToLower() -eq '.iso'){
+				$SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+				$SaveFileDialog.InitialDirectory = [Environment]::GetFolderPath('Desktop')
+				$SaveFileDialog.FileName = ($($InstallInfo.Edition).Replace(' ', '') + "_$($InstallInfo.Build)")
+				$SaveFileDialog.Filter = "ISO files (*.iso)| *.iso"
+				If($SaveFileDialog.ShowDialog() -eq 'Ok'){
+					$OutputPath = $SaveFileDialog.FileName
+				}
+			} Else {
+				$FolderBrowserDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+				$null = $FolderBrowserDialog.ShowDialog()
+				$OutputPath = $FolderBrowserDialog.SelectedPath
+			}
 		}
 
 		If ($InstallInfo.Build -ge 22000 -and -not $BootWim -and $ISOMedia.Exists)
@@ -2642,12 +2661,42 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Try
 		{
 			Log $OptimizeData.FinalizingOptimizations
-			$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
-			If ($ISOFile) { Move-Item -Path $ISOFile -Destination $SaveDirectory.FullName }
-			Else
-			{
-				If ($ISOMedia.Exists) { Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName }
-				Else { Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination $SaveDirectory.FullName }
+			If($OutputPath.ToLower().Trim() -eq 'default'){
+				$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
+			} ElseIf ($OutputPath.ToLower().Trim() -ne 'select') {
+				Try{
+					$OutputPath = $OutputPath -replace "{filename}", $(If ($ISOFile) { (Split-Path -Path $ISOFile -leaf) } Else { "" })
+					If($OutputPath -match "\.[^\.]+$"){
+						$SaveDirectory = Get-Item -Path $(Split-Path -Path $OutputPath)
+					} Else {
+						$SaveDirectory = Get-Item -Path $OutputPath
+					}
+					If(!(Test-Path -Path $SaveDirectory.FullName -PathType Container)) {
+						New-Item -ItemType Directory -Force -Path $SaveDirectory.FullName
+					}
+					Try{
+						$NewFileName = (Split-Path $OutputPath -leaf)
+					} Catch { }
+				} Catch {
+					$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
+				}
+			}
+			If ($ISOFile) {
+				Move-Item -Path $ISOFile -Destination $SaveDirectory.FullName -Force
+				$MovedItem = Get-ChildItem -Path $SaveDirectory.FullName -Filter (Split-Path -Path $ISOFile -leaf)
+			} Else {
+				If ($ISOMedia.Exists) {
+					Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName -Force
+				} Else {
+					Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination $SaveDirectory.FullName -Force 
+				}
+			}
+			Try{
+				If ($NewFileName -and $MovedItem -and ([IO.FileInfo]$NewFileName).Extension -eq $MovedItem.Extension){
+					Rename-Item -Path $MovedItem.FullName -NewName $NewFileName
+				}
+			} Catch {
+				Log "Failed renaming file" -Type Error -ErrorRecord $Error[0]
 			}
 		}
 		Finally
@@ -2655,7 +2704,13 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			$OptimizeTimer.Stop()
 			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, [Math]::Round($OptimizeTimer.Elapsed.TotalMinutes, 0).ToString(), ($Global:Error.Count + $OptimizeErrors.Count)) -Finalized
 			If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
+			If (Test-Path -Path (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip)){
+				Remove-Item -Path (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip)
+			}
 			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
+			If (Test-Path -Path (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml)){
+				Remove-Item -Path (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml)
+			}
 			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
 			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log'), (GetPath -Path $Env:SystemRoot -Child 'Logs\CBS\CBS.log')) | Purge -ErrorAction Ignore
 		}
@@ -2670,7 +2725,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		$Global:Error.Clear()
 		$Global:InstallInfo = $null
 		Log "Clearing temp directory..."
-		Start-Sleep 5
+		Start-Sleep 3
 		Remove-Item -Recurse -Force -ErrorAction Ignore $TempDirectory
 		If($Miscellaneous.ShutDownOnComplete){
 			$continue = $true

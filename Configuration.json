@@ -5,7 +5,8 @@
     "Boolean parameter values use true and false. String parameter values must be enclosed in double-quotes.",
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
-    "Services : None | Select | List | Advanced"
+    "Services : None | Select | List | Advanced",
+    "OutputPath : default | path[{filaneme}?] | select"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
@@ -23,6 +24,7 @@
   "Dedup": false,
   "DaRT": [],
   "Registry": false,
+  "OutputPath": "default",
   "Additional": {
     "Setup": false,
     "Wallpaper": false,
