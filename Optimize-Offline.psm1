@@ -2661,8 +2661,9 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 		Try
 		{
 			Log $OptimizeData.FinalizingOptimizations
+			$SaveDirectoryOOFiles = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
 			If($OutputPath.ToLower().Trim() -eq 'default'){
-				$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
+				$SaveDirectory = $SaveDirectoryOOFiles
 			} ElseIf ($OutputPath.ToLower().Trim() -ne 'select') {
 				Try{
 					$OutputPath = $OutputPath -replace "{filename}", $(If ($ISOFile) { (Split-Path -Path $ISOFile -leaf) } Else { "" })
@@ -2678,7 +2679,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 						$NewFileName = (Split-Path $OutputPath -leaf)
 					} Catch { }
 				} Catch {
-					$SaveDirectory = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
+					$SaveDirectory = $SaveDirectoryOOFiles
 				}
 			}
 			If ($ISOFile) {
@@ -2704,14 +2705,14 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			$OptimizeTimer.Stop()
 			Log ($OptimizeData.OptimizationsCompleted -f $OptimizeOffline.BaseName, [Math]::Round($OptimizeTimer.Elapsed.TotalMinutes, 0).ToString(), ($Global:Error.Count + $OptimizeErrors.Count)) -Finalized
 			If ($Global:Error.Count -gt 0 -or $OptimizeErrors.Count -gt 0) { Export-ErrorLog }
-			If (Test-Path -Path (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip)){
-				Remove-Item -Path (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip)
+			If (Test-Path -Path (GetPath -Path $SaveDirectoryOOFiles.FullName -Child OptimizeLogs.zip)){
+				Remove-Item -Path (GetPath -Path $SaveDirectoryOOFiles.FullName -Child OptimizeLogs.zip)
 			}
-			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectory.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
-			If (Test-Path -Path (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml)){
-				Remove-Item -Path (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml)
+			[Void](Get-ChildItem -Path $LogFolder -Include *.log -Exclude DISM.log -Recurse | Compress-Archive -DestinationPath (GetPath -Path $SaveDirectoryOOFiles.FullName -Child OptimizeLogs.zip) -CompressionLevel Fastest)
+			If (Test-Path -Path (GetPath -Path $SaveDirectoryOOFiles.FullName -Child WimFileInfo.xml)){
+				Remove-Item -Path (GetPath -Path $SaveDirectoryOOFiles.FullName -Child WimFileInfo.xml)
 			}
-			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectory.FullName -Child WimFileInfo.xml) -Encoding UTF8
+			($InstallInfo | Out-String).Trim() | Out-File -FilePath (GetPath -Path $SaveDirectoryOOFiles.FullName -Child WimFileInfo.xml) -Encoding UTF8
 			@($TempDirectory, (GetPath -Path $Env:SystemRoot -Child 'Logs\DISM\dism.log'), (GetPath -Path $Env:SystemRoot -Child 'Logs\CBS\CBS.log')) | Purge -ErrorAction Ignore
 		}
 		#endregion Image Finalization
