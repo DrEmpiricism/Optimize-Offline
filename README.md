@@ -309,6 +309,15 @@ Useful for specifying any type of start behavior (including "4" "Disabled") to t
         }
     . . . from /Content/Lists/Services/ServicesTemplate.json -> /Content/Lists/Services/ServicesAdvanced.json
 
+
+## Selecting the output path and filename
+You can override the default path for ISO/WIM/SWM/ESD files by entering a specific path with an optional filename in Configuration.json "OutputPath" key. The possible key values are the following:
+
+- default - is the default value for this setting and represents the default behavior of the script
+- select - will popup a save file dialog for ISO input and a choose directory dialog for WIM/SWM/ESD inputs
+- your specific path - you can as well specify the exact path of the output. For WIM/SWM/ESD files the path will chose only the directory path and any filename will be ignored.
+- your specific path with {filename} variable for ISO inputs - The name of the ISO can be left to the script to be specified automatically based on the filename convention: {Windows_Edition}_{Build_nr}.ISO (ex. Professional_22000.ISO)
+
 ## Selective registry tweaks
 
 - DisableWindowsUpgrade - Tweak will prevent windows update from receiving cummulative updates and feature updates
