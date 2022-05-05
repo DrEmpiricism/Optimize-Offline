@@ -6,7 +6,7 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List | Advanced",
-    "OutputPath : default | path[{fileneme}?] | select"
+    "OutputPath : default | path[{filename}?] | select"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
