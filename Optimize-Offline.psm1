@@ -2123,6 +2123,23 @@ Function Optimize-Offline
 					Start-Sleep 3
 				}
 			}
+			If ($Additional.LayoutModification -and $InstallInfo.Build -ge "22000" -and (Test-Path -Path (GetPath -Path $OptimizeOffline.LayoutModification -Child *.json)))
+			{
+				Try
+				{
+					Log $OptimizeData.ApplyingLayoutModification
+					Copy-Item -Path (GetPath -Path $OptimizeOffline.LayoutModification -Child *.json) -Destination (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.json') -Force -ErrorAction Stop
+					$DynamicParams.LayoutModification = $true
+				}
+				Catch
+				{
+					Log $OptimizeData.FailedApplyingLayoutModification -Type Error -ErrorRecord $Error[0]
+				}
+				Finally
+				{
+					Start-Sleep 3
+				}
+			}
 			If ($Additional.Unattend -and (Test-Path -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml)))
 			{
 				Try
@@ -2293,9 +2310,9 @@ Function Optimize-Offline
 		#endregion Component Store Clean-up
 
 		#region Start Menu Clean-up
-		If (!$DynamicParams.LayoutModification -and $InstallInfo.Build -le '19044')
+		If (!$DynamicParams.LayoutModification)
 		{
-			$LayoutTemplate = @"
+			$LayoutTemplate = If ($InstallInfo.Build -le '19044') { @"
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
     xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1"
     xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
@@ -2323,7 +2340,20 @@ Function Optimize-Offline
         </defaultlayout:TaskbarLayout>
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
-"@
+"@ } Elseif ($InstallInfo.Build -ge '22000') { @"
+{
+	"primaryOEMPins":[
+		{"desktopAppID": "Microsoft.Windows.Computer"},
+		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\System Tools\\Control Panel.lnk"},
+		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
+		{"desktopAppID":"Microsoft.Windows.AdministrativeTools"}
+	],
+	"secondaryOEMPins" : [
+		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
+		{"desktopAppID":"Microsoft.Windows.Shell.RunDialog"}
+	]
+}
+"@ } Else {""}
 			Try
 			{
 				Log $OptimizeData.CleanupStartMenu
@@ -2368,7 +2398,11 @@ Function Optimize-Offline
 			}
 			Try
 			{
-				$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
+				If ($InstallInfo.Build -le '19044') {
+					$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
+				} Elseif ($InstallInfo.Build -ge '22000') {
+					$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.json') -Encoding UTF8 -Force -ErrorAction Stop
+				}
 			}
 			Catch
 			{
