@@ -2342,13 +2342,11 @@ Function Optimize-Offline
 </LayoutModificationTemplate>
 "@ } Elseif ($InstallInfo.Build -ge '22000') { @"
 {
-	"primaryOEMPins":[
+	"pinnedList":[
 		{"desktopAppID": "Microsoft.Windows.Computer"},
 		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\System Tools\\Control Panel.lnk"},
 		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
-		{"desktopAppID":"Microsoft.Windows.AdministrativeTools"}
-	],
-	"secondaryOEMPins" : [
+		{"desktopAppID":"Microsoft.Windows.AdministrativeTools"},
 		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
 		{"desktopAppID":"Microsoft.Windows.Shell.RunDialog"}
 	]
