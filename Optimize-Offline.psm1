@@ -2435,6 +2435,12 @@ Function Optimize-Offline
 	  	}
 		#endregion disable W11 boot image HW checks
 
+		#region enable W11 local account support
+		If ($InstallInfo.Build -ge '22000') {
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -Name "BypassNRO" -Value 1 -Type DWord
+		}
+		#endregion enable W11 local account support
+
 		#region Create Package Summary
 		@('DeveloperMode', 'WindowsStore', 'MicrosoftEdge', 'MicrosoftEdgeChromium', 'DataDeduplication', 'InstallImageDrivers', 'BootImageDrivers', 'RecoveryImageDrivers', 'NetFx3') | ForEach-Object -Process { If ($DynamicParams.ContainsKey($PSItem)) { $DynamicParams.PackageSummary = $true } }
 		If ($DynamicParams.PackageSummary)
