@@ -2437,7 +2437,9 @@ Function Optimize-Offline
 
 		#region enable W11 local account support
 		If ($InstallInfo.Build -ge '22000') {
-			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -Name "BypassNRO" -Value 1 -Type DWord
+			RegHives -Load
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -Name "BypassNRO" -Value 1 -Type DWord -Force
+			RegHives -Unload
 		}
 		#endregion enable W11 local account support
 
