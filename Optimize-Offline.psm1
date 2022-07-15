@@ -764,11 +764,18 @@ Function Optimize-Offline
 					{
 						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Whitelist)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 
 							$AppxPackages | ForEach-Object -Process {
-								If ($PSItem.DisplayName -notin $JSON.DisplayName)
-								{
+								$ToRemove = $true
+								Foreach($App in $AppsJson){
+									If ($PSItem.DisplayName -eq $App -or ($App -Match "\*" -and $PSItem.DisplayName -like $App))
+									{
+										$ToRemove = $false
+										Break
+									}
+								}
+								If($ToRemove){
 									[void]$appsToRemove.Add($PSItem)
 								}
 							}
@@ -779,12 +786,15 @@ Function Optimize-Offline
 					{
 						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Blacklist)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop  | Select-Object -ExpandProperty DisplayName
 
 							$AppxPackages | ForEach-Object -Process {
-								If ($PSItem.DisplayName -in $JSON.DisplayName)
-								{
-									[void]$appsToRemove.Add($PSItem)
+								Foreach($App in $AppsJson){
+									If ($PSItem.DisplayName -eq $App -or ($App -Match "\*" -and $PSItem.DisplayName -like $App))
+									{
+										[void]$appsToRemove.Add($PSItem)
+										Break
+									}
 								}
 							}
 						}
@@ -860,11 +870,17 @@ Function Optimize-Offline
 						{
 							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Whitelist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-
+								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 								$InboxAppsPackages | ForEach-Object -Process {
-									If ($PSItem.DisplayName -notin $JSON.DisplayName)
-									{
+									$ToRemove = $true
+									Foreach($SystemApp in $SystemAppsJson){
+										If ($PSItem.DisplayName -eq $SystemApp -or ($SystemApp -Match "\*" -and $PSItem.DisplayName -like $SystemApp))
+										{
+											$ToRemove = $false
+											Break
+										}
+									}
+									If($ToRemove){
 										[void]$packagesToRemove.Add($PSItem)
 									}
 								}
@@ -875,12 +891,14 @@ Function Optimize-Offline
 						{
 							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Blacklist)
 							{
-								$JSON = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-
+								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 								$InboxAppsPackages | ForEach-Object -Process {
-									If ($PSItem.DisplayName -in $JSON.DisplayName)
-									{
-										[void]$packagesToRemove.Add($PSItem)
+									Foreach($SystemApp in $SystemAppsJson){
+										If ($PSItem.DisplayName -eq $SystemApp -or ($SystemApp -Match "\*" -and $PSItem.DisplayName -like $SystemApp))
+										{
+											[void]$packagesToRemove.Add($PSItem)
+											Break
+										}
 									}
 								}
 							}
