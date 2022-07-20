@@ -8,7 +8,7 @@
     "Services : None | Select | List | Advanced",
     "OutputPath : default | path[{filename}?] | select"
   ],
-  "SourcePath": "Select",
+  "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
   "SystemApps": "None",
   "Capabilities": "None",
