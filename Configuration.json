@@ -8,8 +8,8 @@
     "Services : None | Select | List | Advanced",
     "OutputPath : default | path[{filename}?] | select"
   ],
-  "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "None",
+  "SourcePath": "Select",
+  "WindowsApps": "Select",
   "SystemApps": "None",
   "Capabilities": "None",
   "Packages": "None",
@@ -24,7 +24,7 @@
   "Dedup": false,
   "DaRT": [],
   "Registry": false,
-  "OutputPath": "c:\\dfhdh.iso",
+  "OutputPath": "default",
   "Additional": {
     "Setup": false,
     "Wallpaper": false,
@@ -56,6 +56,6 @@
   },
   "Miscellaneous": {
     "ShutDownOnComplete": false,
-    "FlashToUSB": true
+    "FlashToUSB": false
   }
 }
