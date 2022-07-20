@@ -1,58 +1,34 @@
 Function FlashUSB {
 
-	Add-Type -AssemblyName System.Windows.Forms
-		
-	$FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
-		InitialDirectory = [Environment]::GetFolderPath('Documents')
-		Filter = 'All allowed types|*.iso;*.ISO'
-		Multiselect = $false
-		AddExtension = $true
-		CheckPathExists = $true
+	[CmdletBinding()]
+
+	Param (
+		[Parameter(
+			Mandatory = $true,
+			HelpMessage = 'full path of the iso file to be flashed to the usb device'
+		)]
+		[String]$ISOPath,
+		[Parameter(
+			Mandatory = $true,
+			HelpMessage = 'USB device drive object'
+		)]
+		[PSCustomObject]$USB
+	)
+
+	If ($USB.Count -eq 0 -or $USB.BusType -ne "USB") {
+		throw "Could not find USB partition"
 	}
 
-	$null = $FileBrowser.ShowDialog()
-
-	If($FileBrowser.FileName){
-		$ISOPath = Get-Item -Path $FileBrowser.FileName
-	} Else {
-		Write-Host "No iso file selected"
-		return $false
-	}
-
-	$Results = Get-Disk |
-	Where-Object BusType -eq USB
-
-	If ($Results.Count -eq 0) {
-		Write-Host "No USB drives found"
-		return $false
-	}
-	
-	$USB = $Results |
-	Out-GridView -Title 'Select USB Drive to Format' -OutputMode Single
-	$USB_Number = $USB.Number
-	
-	$USB | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru
-	
-	Set-Disk -PartitionStyle GPT -Number $USB_Number
-
+	[Void]($USB | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru)
+	[Void](Set-Disk -PartitionStyle GPT -Number $USB.Number)
 	$USB = $USB | New-Partition -UseMaximumSize -AssignDriveLetter |
 	Format-Volume -FileSystem FAT32
 
-	If ($USB.Count -eq 0) {
-		Write-Host "No USB drive selected"
-		return $false
-	}
-
 	$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
-	Mount-DiskImage -ImagePath $ISOPath
-	$ISO = (Compare-Object -ReferenceObject $Volumes -DifferenceObject (Get-Volume).Where({$_.DriveLetter}).DriveLetter).InputObject
+	[Void](Mount-DiskImage -ImagePath $ISOPath)
+	$ISOMount = (Compare-Object -ReferenceObject $Volumes -DifferenceObject (Get-Volume).Where({$_.DriveLetter}).DriveLetter).InputObject
 
-	& "$($ISO):\boot\bootsect.exe" /nt60 "$($USB.DriveLetter):"
-	Copy-Item -Path "$($ISO):\*" -Destination "$($USB.DriveLetter):" -Recurse -Verbose
-
-	Dismount-DiskImage -ImagePath $ISOPath
-
-	Write-Host "USB is is flashed and bootable"
-
-	return $true
+	[Void](& "$($ISOMount):\boot\bootsect.exe" /nt60 "$($USB.DriveLetter):")
+	Copy-Item -Path "$($ISOMount):\*" -Destination "$($USB.DriveLetter):" -Recurse
+	[Void](Dismount-DiskImage -ImagePath $ISOPath)
 }

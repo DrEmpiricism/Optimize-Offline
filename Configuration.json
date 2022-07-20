@@ -9,8 +9,8 @@
     "OutputPath : default | path[{filename}?] | select"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
-  "WindowsApps": "Select",
-  "SystemApps": "Select",
+  "WindowsApps": "None",
+  "SystemApps": "None",
   "Capabilities": "None",
   "Packages": "None",
   "FeaturesToEnable": "None",
@@ -24,7 +24,7 @@
   "Dedup": false,
   "DaRT": [],
   "Registry": false,
-  "OutputPath": "default",
+  "OutputPath": "c:\\dfhdh.iso",
   "Additional": {
     "Setup": false,
     "Wallpaper": false,
@@ -55,6 +55,7 @@
     "AmoledBlackTheme": false
   },
   "Miscellaneous": {
-    "ShutDownOnComplete": false
+    "ShutDownOnComplete": false,
+    "FlashToUSB": true
   }
 }

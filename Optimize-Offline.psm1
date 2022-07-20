@@ -96,6 +96,7 @@ Function Optimize-Offline
 		},
 		[Hashtable]$Miscellaneous = @{
 			ShutDownOnComplete = $false
+			FlashToUSB = $false
 		},
 		[Parameter(HelpMessage = 'Removal of windows services.')]
 		[ValidateSet('None', 'List', 'Advanced', 'Select')]
@@ -260,6 +261,13 @@ Function Optimize-Offline
 			Break
 		}
 		#endregion Media Export
+
+		#region USB device selection
+		$null = $USBDrive
+		If ($Miscellaneous.FlashToUSB) {
+			$USBDrive = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to Format' -OutputMode Single
+		}
+		#endregion USB device selection
 
 		#region Image and Metadata Validation
 		If ((Get-WindowsImage -ImagePath $InstallWim -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -gt 1)
@@ -2739,6 +2747,15 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			If ($ISOFile) {
 				Move-Item -Path $ISOFile -Destination $SaveDirectory.FullName -Force
 				$MovedItem = Get-ChildItem -Path $SaveDirectory.FullName -Filter (Split-Path -Path $ISOFile -leaf)
+				If ($Miscellaneous.FlashToUSB -and $USBDrive) {
+					Log "Creating bootable usb."
+					Try {
+						FlashUSB -ISOPath $MovedItem.FullName -USB $USBDrive
+						Log "Successfully created bootable usb."
+					} Catch {
+						Log "Failed creating bootable USB" -Type Error -ErrorRecord $Error[0]
+					}
+				}
 			} Else {
 				If ($ISOMedia.Exists) {
 					Move-Item -Path $ISOMedia.FullName -Destination $SaveDirectory.FullName -Force
