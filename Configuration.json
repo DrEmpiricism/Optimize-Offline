@@ -10,7 +10,7 @@
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
-  "SystemApps": "None",
+  "SystemApps": "Select",
   "Capabilities": "None",
   "Packages": "None",
   "FeaturesToEnable": "None",
