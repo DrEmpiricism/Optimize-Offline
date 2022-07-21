@@ -2750,10 +2750,10 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 				If ($Miscellaneous.FlashToUSB -and $USBDrive) {
 					Log "Creating bootable usb."
 					Try {
-						FlashUSB -ISOPath $MovedItem.FullName -USB $USBDrive
+						Write-USB -ISOPath $MovedItem.FullName -USBDrive $USBDrive -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 						Log "Successfully created bootable usb."
 					} Catch {
-						Log "Failed creating bootable USB" -Type Error -ErrorRecord $Error[0]
+						Log "Failed creating bootable USB, see the error log for details" -Type Error -ErrorRecord $Error[0]
 					}
 				}
 			} Else {
