@@ -1,3 +1,12 @@
+
+Function Update_bcd
+{
+	param ($usbpartition)
+	& bcdedit /store "$usbpartition\boot\bcd" /set '{default}' bootmenupolicy Legacy | Out-Null
+	& bcdedit /store "$usbpartition\EFI\Microsoft\boot\bcd" /set '{default}' bootmenupolicy Legacy |Out-Null
+	Set-ItemProperty -Path "$usbpartition\boot\bcd" -Name IsReadOnly -Value $true
+	Set-ItemProperty -Path "$usbpartition\EFI\Microsoft\boot\bcd" -Name IsReadOnly -Value $true
+}
 Function Write-USB {
 
 	[CmdletBinding()]
@@ -12,17 +21,7 @@ Function Write-USB {
 			Mandatory = $true,
 			HelpMessage = 'USB device drive object'
 		)]
-		[PSCustomObject]$USBDrive,
-		[Parameter(
-			Mandatory = $false,
-			HelpMessage = 'ScratchDirectory'
-		)]
-		[String]$ScratchDirectory,
-		[Parameter(
-			Mandatory = $false,
-			HelpMessage = 'Log path'
-		)]
-		[String]$LogPath
+		[PSCustomObject]$USBDrive
 	)
 
 	Try {
@@ -31,16 +30,14 @@ Function Write-USB {
 		}
 		$ISO = (Get-Item $ISOPath)
 		$ISOSize = $ISO.Length
-		$FreeSizeOffset = 1024*1024*30
 		If (!$ISO -or $ISOSize -eq 0) {
 			Throw "Invalid iso file"
 		}
-		If ($USBDrive.Size -lt ($ISOSize + $FreeSizeOffset)) {
+		If ($USBDrive.Size -lt $ISOSize + 200MB) {
 			Throw "USB disk size is smaller than ISO size"
 		}
-		If (($ISOSize + $FreeSizeOffset) -gt 32GB) {
-			Throw "ISO size exceeds the FAT32 partition size limit 32GB"
-		}
+
+		Stop-Service ShellHWDetection -erroraction silentlycontinue | Out-Null
 	
 		[Void]($USBDrive | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru)
 	
@@ -53,23 +50,38 @@ Function Write-USB {
 		$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
 		[Void](Mount-DiskImage -ImagePath $ISOPath)
 		$ISOMount = (Compare-Object -ReferenceObject $Volumes -DifferenceObject (Get-Volume).Where({$_.DriveLetter}).DriveLetter).InputObject
+
+		$USBUEFIVolume = $USBDrive |
+		New-Partition -Size 1GB -AssignDriveLetter |
+		Format-Volume -FileSystem FAT32 -NewFileSystemLabel "BOOT"
+
+		Copy-Item -Path "$($ISOMount):\bootmgr*" -Destination "$($USBUEFIVolume.DriveLetter):\"
+		Copy-Item -Path "$($ISOMount):\boot" -Destination "$($USBUEFIVolume.DriveLetter):\boot" -Recurse
+		Copy-Item -Path "$($ISOMount):\efi" -Destination "$($USBUEFIVolume.DriveLetter):\efi" -Recurse
+		
+		If (!(Test-Path -path "$($USBUEFIVolume.DriveLetter):\sources")) {
+			New-Item "$($USBUEFIVolume.DriveLetter):\sources" -Type Directory | Out-Null
+		}
+		Copy-Item -Path "$($ISOMount):\sources\boot.wim" -Destination "$($USBUEFIVolume.DriveLetter):\sources"
+
+		Update_bcd $($USBUEFIVolume.DriveLetter+":")
+		
 	
 		$USBVolume = $USBDrive |
-		New-Partition -Size ($ISOSize+$FreeSizeOffset) -AssignDriveLetter |
-		Format-Volume -FileSystem FAT32 -Force
-	
-		[Void](& "$($ISOMount):\boot\bootsect.exe" /NT60 "$($USBVolume.DriveLetter):")
-		Copy-Item -Path "$($ISOMount):\*" -Destination "$($USBVolume.DriveLetter):" -Recurse -Exclude "install.wim" -Force
-		If((Get-Item "$($ISOMount):\sources\install.wim").Length -gt 4GB) {
-			[Void](Split-WindowsImage -ImagePath "$($ISOMount):\sources\install.wim" -SplitImagePath "$($USBVolume.DriveLetter):\sources\install.swm" -FileSize 4096 -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1)
-		} else {
-			Copy-Item -Path "$($ISOMount):\sources\install.wim" -Destination "$($USBVolume.DriveLetter):\sources\install.wim" -Force
-		}
+		New-Partition -UseMaximumSize -AssignDriveLetter |
+		Format-Volume -FileSystem NTFS -NewFileSystemLabel "Windows Setup"
+
+		Copy-Item -Path "$($ISOMount):\*" -Destination "$($USBVolume.DriveLetter):" -Recurse -Force -Exclude "boot.wim"
+
+		Update_bcd $($USBVolume.DriveLetter+":")
+		
+		Get-Volume -Drive $USBUEFIVolume.DriveLetter | Get-Partition | Remove-PartitionAccessPath -accesspath "$($USBUEFIVolume.DriveLetter):\"
 	} Catch {
 		Throw $Error[0]
 	} Finally {
 		If ($ISOPath) {
 			[Void](Dismount-DiskImage -ImagePath $ISOPath)
 		}
+		Start-Service ShellHWDetection -erroraction silentlycontinue | Out-Null
 	}
 }
