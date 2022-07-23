@@ -42,9 +42,9 @@ Function Write-USB {
 		[Void]($USBDrive | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru)
 	
 		If ($USBDrive.PartitionStyle -eq 'RAW') {
-			[Void]($USBDrive | Initialize-Disk -PartitionStyle GPT)
+			[Void]($USBDrive | Initialize-Disk -PartitionStyle MBR)
 		} Else {
-			[Void]($USBDrive | Set-Disk -PartitionStyle GPT)
+			[Void]($USBDrive | Set-Disk -PartitionStyle MBR)
 		}
 	
 		$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
@@ -68,8 +68,8 @@ Function Write-USB {
 		
 	
 		$USBVolume = $USBDrive |
-		New-Partition -UseMaximumSize -AssignDriveLetter |
-		Format-Volume -FileSystem NTFS -NewFileSystemLabel "Windows Setup"
+		New-Partition -UseMaximumSize -AssignDriveLetter -IsActive |
+		Format-Volume -FileSystem NTFS -NewFileSystemLabel "$((Get-Volume -DriveLetter $ISOMount).FileSystemLabel)"
 
 		Copy-Item -Path "$($ISOMount):\*" -Destination "$($USBVolume.DriveLetter):" -Recurse -Force -Exclude "boot.wim"
 
