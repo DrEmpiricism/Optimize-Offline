@@ -37,14 +37,18 @@ Function Write-USB {
 			Throw "USB disk size is smaller than ISO size"
 		}
 
-		Stop-Service ShellHWDetection -erroraction silentlycontinue | Out-Null
+		Stop-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
 	
 		[Void]($USBDrive | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru)
-	
-		If ($USBDrive.PartitionStyle -eq 'RAW') {
-			[Void]($USBDrive | Initialize-Disk -PartitionStyle MBR)
-		} Else {
+		
+		Try{
 			[Void]($USBDrive | Set-Disk -PartitionStyle MBR)
+		} Catch {
+			Try{
+				[Void]($USBDrive | Initialize-Disk -PartitionStyle MBR -ErrorAction SilentlyContinue | Out-Null)
+			} Catch {
+				Throw $Error[0]
+			}
 		}
 	
 		$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
@@ -65,7 +69,6 @@ Function Write-USB {
 		Copy-Item -Path "$($ISOMount):\sources\boot.wim" -Destination "$($USBUEFIVolume.DriveLetter):\sources"
 
 		Update_bcd $($USBUEFIVolume.DriveLetter+":")
-		
 	
 		$USBVolume = $USBDrive |
 		New-Partition -UseMaximumSize -AssignDriveLetter -IsActive |
@@ -82,6 +85,6 @@ Function Write-USB {
 		If ($ISOPath) {
 			[Void](Dismount-DiskImage -ImagePath $ISOPath)
 		}
-		Start-Service ShellHWDetection -erroraction silentlycontinue | Out-Null
+		Start-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
 	}
 }
