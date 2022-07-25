@@ -45,6 +45,7 @@ $OptimizeOffline.Resources = (Resolve-FullPath -Path $OptimizeOffline.Directory 
 $OptimizeOffline.Content = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Content)
 $OptimizeOffline.LocalizedData = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child $OptimizeOffline.Culture)
 $OptimizeOffline.Additional = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Additional)
+$OptimizeOffline.Assets = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Assets)
 $OptimizeOffline.Packages = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Packages)
 $OptimizeOffline.LocalizedDataStrings = (Resolve-FullPath -Path $OptimizeOffline.LocalizedData -Child Optimize-Offline.strings.psd1)
 $OptimizeOffline.ConfigurationJSON = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Configuration.json)

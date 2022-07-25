@@ -2705,6 +2705,13 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			Log $OptimizeData.OptimizingInstallMedia
 			Optimize-InstallMedia
 			Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination (GetPath -Path $ISOMedia.FullName -Child sources) -Force
+			If(!(Test-Path -Path "$($ISOMedia.FullName)\Autorun.inf")) {
+				Copy-Item -Path (Get-Item -Path "$($OptimizeOffline.Assets)\setup.ico") -Destination $ISOMedia.FullName
+"[Autorun]
+Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
+				(Get-Item -Path "$($ISOMedia.FullName)\setup.ico").Attributes += 'Hidden'
+				(Get-Item -Path "$($ISOMedia.FullName)\Autorun.inf").Attributes += 'Hidden'
+			}
 			If ($ISO)
 			{
 				Try
