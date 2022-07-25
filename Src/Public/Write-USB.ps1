@@ -36,20 +36,16 @@ Function Write-USB {
 		If ($USBDrive.Size -lt $ISOSize + 200MB) {
 			Throw "USB disk size is smaller than ISO size"
 		}
+	
+		@"
+select disk $($USBDrive.DiskNumber)
+clean
+convert MBR
+rescan
+exit
+"@ | diskpart | Out-Null
 
 		Stop-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
-	
-		[Void]($USBDrive | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru)
-		
-		Try{
-			[Void]($USBDrive | Set-Disk -PartitionStyle MBR)
-		} Catch {
-			Try{
-				[Void]($USBDrive | Initialize-Disk -PartitionStyle MBR -ErrorAction SilentlyContinue | Out-Null)
-			} Catch {
-				Throw $Error[0]
-			}
-		}
 	
 		$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
 		[Void](Mount-DiskImage -ImagePath $ISOPath)
@@ -77,8 +73,7 @@ Function Write-USB {
 		Copy-Item -Path "$($ISOMount):\*" -Destination "$($USBVolume.DriveLetter):" -Recurse -Force -Exclude "boot.wim"
 
 		Update_bcd $($USBVolume.DriveLetter+":")
-		
-		Get-Volume -Drive $USBUEFIVolume.DriveLetter | Get-Partition | Remove-PartitionAccessPath -accesspath "$($USBUEFIVolume.DriveLetter):\"
+
 	} Catch {
 		Throw $Error[0]
 	} Finally {
@@ -86,5 +81,16 @@ Function Write-USB {
 			[Void](Dismount-DiskImage -ImagePath $ISOPath)
 		}
 		Start-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
+
+		If ($USBUEFIVolume -and $USBVolume -and $ISOMount) {
+@"
+select volume $($USBUEFIVolume.DriveLetter)
+remove letter=$($USBUEFIVolume.DriveLetter)
+select volume $($USBVolume.DriveLetter)
+assign letter=$($ISOMount)
+rescan
+exit
+"@ | diskpart | Out-Null
+		}
 	}
 }
