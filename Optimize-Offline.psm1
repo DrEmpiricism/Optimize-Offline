@@ -2336,9 +2336,9 @@ Function Optimize-Offline
 		#endregion Component Store Clean-up
 
 		#region Start Menu Clean-up
-		If (!$DynamicParams.LayoutModification)
+		If (!$DynamicParams.LayoutModification -and $InstallInfo.Build -le '19044')
 		{
-			$LayoutTemplate = If ($InstallInfo.Build -le '19044') { @"
+			$LayoutTemplate = @"
 <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
     xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1"
     xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
@@ -2366,18 +2366,7 @@ Function Optimize-Offline
         </defaultlayout:TaskbarLayout>
     </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
-"@ } Elseif ($InstallInfo.Build -ge '22000') { @"
-{
-	"pinnedList":[
-		{"desktopAppID": "Microsoft.Windows.Computer"},
-		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\System Tools\\Control Panel.lnk"},
-		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
-		{"desktopAppID":"Microsoft.Windows.AdministrativeTools"},
-		{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Windows PowerShell\\Windows PowerShell.lnk"},
-		{"desktopAppID":"Microsoft.Windows.Shell.RunDialog"}
-	]
-}
-"@ } Else {""}
+"@
 			Try
 			{
 				Log $OptimizeData.CleanupStartMenu
@@ -2422,11 +2411,7 @@ Function Optimize-Offline
 			}
 			Try
 			{
-				If ($InstallInfo.Build -le '19044') {
-					$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
-				} Elseif ($InstallInfo.Build -ge '22000') {
-					$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.json') -Encoding UTF8 -Force -ErrorAction Stop
-				}
+				$LayoutTemplate | Out-File -FilePath (GetPath -Path $InstallMount -Child 'Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml') -Encoding UTF8 -Force -ErrorAction Stop
 			}
 			Catch
 			{
@@ -2454,8 +2439,8 @@ Function Optimize-Offline
 
 				RegKey -Path "HKLM:\WIM_HKCU\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV1" -Type DWord -Value 0
 				RegKey -Path "HKLM:\WIM_HKCU\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV2" -Type DWord -Value 0
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "TargetReleaseVersion" -Value 1 -Type Dword -Force
-				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "TargetReleaseVersionInfo" -Value "25H1" -Type String -Force
+				RegKey -Path "HKLM:\WIM_HKU_DEFAULT\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV1" -Type DWord -Value 0
+				RegKey -Path "HKLM:\WIM_HKU_DEFAULT\Control Panel\UnsupportedHardwareNotificationCache" -Name "SV2" -Type DWord -Value 0
 
 				if (Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File) {
 					Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child sources) -Filter appraiserres.dll -File | Rename-Item -NewName appraiserres.dll.bak
