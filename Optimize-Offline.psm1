@@ -550,7 +550,7 @@ Function Optimize-Offline
 
 			Try {
 				$Items = [System.Collections.ArrayList]@( )
-				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build | ForEach-Object -Process {
+				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.DisplayName)
 				}
 				## Populate WindowsApps template
@@ -747,16 +747,12 @@ Function Optimize-Offline
 
 		#region Provisioned App Package Removal
 		$RemovedPackages = [Collections.Hashtable]::New();
-		$NoApps = $false
+		$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 		If ($WindowsApps -in $AllowedRemovalOptions)
 		{
 			Try
 			{
 				$Host.UI.RawUI.WindowTitle = "Remove Provisioned App Packages."
-
-				$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -Build $InstallInfo.Build
-
-				$NoApps = ($AppxPackages.Count -eq 0)
 
 				$appsToRemove = [System.Collections.ArrayList]@()
 
@@ -960,14 +956,14 @@ Function Optimize-Offline
 		}
 		RegHives -Load
 		$Visibility = [Text.StringBuilder]::New('hide:')
-		If ($RemovedPackages.'Microsoft.WindowsMaps' -or $NoApps)
+		If ($RemovedPackages.'Microsoft.WindowsMaps' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.WindowsMaps"}).Count -eq 0)
 		{
 			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
 			[Void]$Visibility.Append('maps;maps-downloadmaps;')
 		}
-		If (($RemovedPackages.'Microsoft.Wallet' -or $NoApps) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
-		If (($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI') -or $NoApps)
+		If (($RemovedPackages.'Microsoft.Wallet' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.Wallet"}).Count -eq 0) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
+		If (($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI') -or $($WindowsApps | Where-Object {$_.DisplayName -like "*Xbox*"}).Count -eq 0)
 		{
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
@@ -984,7 +980,7 @@ Function Optimize-Offline
 			[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
 			If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
 		}
-		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp' -or $NoApps)
+		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.YourPhone"}).Count -eq 0)
 		{
 			[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
@@ -1020,7 +1016,7 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 		}
-		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or ($NoApps -and $InstallInfo.Build -ge 22000))
+		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or ($($WindowsApps | Where-Object {$_.DisplayName -eq 'Microsoft.SecHealthUI'}).Count -eq 0 -and $InstallInfo.Build -ge 22000))
 		{
 			Write-Host "Disabling Defender and Feature Packages" -ForegroundColor Cyan
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord

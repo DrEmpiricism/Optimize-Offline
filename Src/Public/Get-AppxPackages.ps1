@@ -11,12 +11,7 @@ Function Get-AppxPackages {
 		[String]$ScratchDirectory,
 		[Parameter(Mandatory = $false,
 			HelpMessage = 'the full path and file name to log to. If not set, the default is %WINDIR%\Logs\Dism\dism.log')]
-		[String]$LogPath,
-		[Parameter(
-			Mandatory = $true,
-			HelpMessage = 'Windows offline image build number'
-		)]
-		[Int]$Build
+		[String]$LogPath
 	)
 
 	If($Global:InstallInfo.InstallationType.ToLower().Contains('server core')) {
@@ -25,7 +20,7 @@ Function Get-AppxPackages {
 
 	$AppxPackages = Get-AppxProvisionedPackage -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property DisplayName, PackageName | Sort-Object -Property DisplayName
 
-	If ($Build -ge '19041')
+	If ($Global:InstallInfo.Build -ge '19041')
 	{
 		$AppxPackages = $AppxPackages | ForEach-Object -Process {
 			$DisplayName = $PSItem.DisplayName; $PackageName = $PSItem.PackageName
