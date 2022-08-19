@@ -958,13 +958,21 @@ Function Optimize-Offline
 		$Visibility = [Text.StringBuilder]::New('hide:')
 		If ($RemovedPackages.'Microsoft.WindowsMaps' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.WindowsMaps"}).Count -eq 0)
 		{
+			Log "Applying Windows Maps removal tweak"
+			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\Maps" -Name "AutoUpdateEnabled" -Value 0 -Type DWord
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
 			[Void]$Visibility.Append('maps;maps-downloadmaps;')
 		}
-		If (($RemovedPackages.'Microsoft.Wallet' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.Wallet"}).Count -eq 0) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord }
+		If (($RemovedPackages.'Microsoft.Wallet' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.Wallet"}).Count -eq 0) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) {
+			Log "Applying Microsoft Wallet removal tweak"
+			Start-Sleep 1
+			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord
+		}
 		If (($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI') -or $($WindowsApps | Where-Object {$_.DisplayName -like "*Xbox*"}).Count -eq 0)
 		{
+			Log "Applying Xbox apps removal tweak"
+			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AudioCaptureEnabled" -Value 0 -Type DWord
@@ -982,12 +990,20 @@ Function Optimize-Offline
 		}
 		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.YourPhone"}).Count -eq 0)
 		{
+			Log "Applying YourPhone removal tweak"
+			Start-Sleep 1
 			[Void]$Visibility.Append('mobile-devices;mobile-devices-addphone;mobile-devices-addphone-direct;')
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\PhoneSvc" -Name "Start" -Value 4 -Type DWord }
 		}
-		If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) { RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord }
+		If ($RemovedPackages.'Microsoft.MicrosoftEdge' -and !$MicrosoftEdge.IsPresent) {
+			Log "Applying Microsoft Edge removal tweak"
+			Start-Sleep 1
+			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -Type DWord
+		}
 		If ($RemovedPackages.'Microsoft.BioEnrollment')
 		{
+			Log "Applying Microsoft BioEnrollment removal tweak"
+			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
@@ -995,12 +1011,16 @@ Function Optimize-Offline
 		}
 		If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
 		{
+			Log "Applying SecureAssessmentBrowser removal tweak"
+			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowScreenMonitoring" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
 		}
 		If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
 		{
+			Log "Applying ContentDeliveryManager removal tweak"
+			Start-Sleep 1
 			@("ContentDeliveryAllowed", "FeatureManagementEnabled", "OemPreInstalledAppsEnabled", "PreInstalledAppsEnabled", "PreInstalledAppsEverEnabled", "RotatingLockScreenEnabled",
 				"RotatingLockScreenOverlayEnabled", "SilentInstalledAppsEnabled", "SoftLandingEnabled", "SystemPaneSuggestionsEnabled", "SubscribedContentEnabled",
 				"SubscribedContent-202913Enabled", "SubscribedContent-202914Enabled", "SubscribedContent-280797Enabled", "SubscribedContent-280811Enabled", "SubscribedContent-280812Enabled",
@@ -1018,7 +1038,8 @@ Function Optimize-Offline
 		}
 		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or ($($WindowsApps | Where-Object {$_.DisplayName -eq 'Microsoft.SecHealthUI'}).Count -eq 0 -and $InstallInfo.Build -ge 22000))
 		{
-			Write-Host "Disabling Defender and Feature Packages" -ForegroundColor Cyan
+			Log "Applying Defender removal tweak"
+			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Type DWord
 
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows Defender" -Name "PUAProtection" -Value 1 -Type DWord
