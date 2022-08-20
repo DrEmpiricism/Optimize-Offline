@@ -835,6 +835,7 @@ Function Optimize-Offline
 			}
 			$Host.UI.RawUI.WindowTitle = $null; Clear-Host
 		}
+		$AppxPackages = Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog
 		#endregion Provisioned App Package Removal
 
 		#region System App Removal
@@ -946,17 +947,17 @@ Function Optimize-Offline
 		{
 			If ($InstallInfo.Build -lt '19041')
 			{
-				If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
+				If ($AppxPackages.Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 				Else { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Where-Object -Property Name -In $RemovedAppxPackages.Values | Purge -Force }
 			}
 			Else
 			{
-				If ((Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1).Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
+				If ($AppxPackages.Count -eq 0) { Get-ChildItem -Path (GetPath -Path $InstallMount -Child 'Program Files\WindowsApps') -Force | Purge -Force }
 			}
 		}
 		RegHives -Load
 		$Visibility = [Text.StringBuilder]::New('hide:')
-		If ($RemovedPackages.'Microsoft.WindowsMaps' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.WindowsMaps"}).Count -eq 0)
+		If ($RemovedPackages.'Microsoft.WindowsMaps' -or ($AppxPackages | Where-Object {$_.DisplayName -eq "Microsoft.WindowsMaps"}).Count -eq 0)
 		{
 			Log "Applying Windows Maps removal tweak"
 			Start-Sleep 1
@@ -964,12 +965,12 @@ Function Optimize-Offline
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\MapsBroker" -Name "Start" -Value 4 -Type DWord }
 			[Void]$Visibility.Append('maps;maps-downloadmaps;')
 		}
-		If (($RemovedPackages.'Microsoft.Wallet' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.Wallet"}).Count -eq 0) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) {
+		If (($RemovedPackages.'Microsoft.Wallet' -or ($AppxPackages | Where-Object {$_.DisplayName -eq "Microsoft.Wallet"}).Count -eq 0) -and (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService")) {
 			Log "Applying Microsoft Wallet removal tweak"
 			Start-Sleep 1
 			RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WalletService" -Name "Start" -Value 4 -Type DWord
 		}
-		If (($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI') -or $($WindowsApps | Where-Object {$_.DisplayName -like "*Xbox*"}).Count -eq 0)
+		If (($RemovedPackages.'Microsoft.XboxIdentityProvider' -and ($RemovedPackages.Keys -like "*Xbox*").Count -gt 1 -or $RemovedPackages.'Microsoft.XboxGameCallableUI') -or ($AppxPackages | Where-Object {$_.DisplayName -like "*Xbox*"}).Count -eq 0)
 		{
 			Log "Applying Xbox apps removal tweak"
 			Start-Sleep 1
@@ -988,7 +989,7 @@ Function Optimize-Offline
 			[Void]$Visibility.Append('gaming-gamebar;gaming-gamedvr;gaming-broadcasting;gaming-gamemode;gaming-xboxnetworking;quietmomentsgame;')
 			If ($InstallInfo.Build -lt '17763') { [Void]$Visibility.Append('gaming-trueplay;') }
 		}
-		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp' -or $($WindowsApps | Where-Object {$_.DisplayName -eq "Microsoft.YourPhone"}).Count -eq 0)
+		If ($RemovedPackages.'Microsoft.YourPhone' -or $RemovedPackages.'Microsoft.Windows.CallingShellApp' -or $($AppxPackages | Where-Object {$_.DisplayName -eq "Microsoft.YourPhone"}).Count -eq 0)
 		{
 			Log "Applying YourPhone removal tweak"
 			Start-Sleep 1
@@ -1036,7 +1037,7 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
 		}
-		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or ($($WindowsApps | Where-Object {$_.DisplayName -eq 'Microsoft.SecHealthUI'}).Count -eq 0 -and $InstallInfo.Build -ge 22000))
+		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or (($AppxPackages | Where-Object {$_.DisplayName -eq 'Microsoft.SecHealthUI'}).Count -eq 0 -and $InstallInfo.Build -ge 22000))
 		{
 			Log "Applying Defender removal tweak"
 			Start-Sleep 1
@@ -1650,7 +1651,10 @@ Function Optimize-Offline
 		#endregion DeveloperMode Integration
 
 		#region Windows Store Integration
-		$DynamicParams.WindowsStore = (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore)
+		$DynamicParams.WindowsStore = ($AppxPackages | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore)
+		$DynamicParams.DisableDeliveryOptimization = (!$DynamicParams.WindowsStore -and $($AppxPackages | Where-Object -Property DisplayName -eq "Microsoft.DesktopAppInstaller").Count -eq 0)
+		Write-Host $DynamicParams.DisableDeliveryOptimization
+		Exit
 		If ($WindowsStore.IsPresent -and (Test-Path -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.*xbundle) -and !$DynamicParams.WindowsStore)
 		{
 			Log $OptimizeData.IntegratingWindowsStore
@@ -2473,7 +2477,7 @@ Function Optimize-Offline
 		{
 			Log $OptimizeData.CreatingPackageSummaryLog
 			$PackageLog = New-Item -Path $LogFolder -Name PackageSummary.log -ItemType File -Force
-			If ($DynamicParams.WindowsStore) { "`t`t`t`tIntegrated Provisioned App Packages", (Get-AppxProvisionedPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
+			If ($DynamicParams.WindowsStore) { "`t`t`t`tIntegrated Provisioned App Packages", ($AppxPackages | Select-Object -Property PackageName) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.DeveloperMode -or $DynamicParams.MicrosoftEdge -or $DynamicParams.MicrosoftEdgeChromium -or $DynamicParams.DataDeduplication -or $DynamicParams.NetFx3) { "`t`t`t`tIntegrated Windows Packages", (Get-WindowsPackage -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object { $PSItem.PackageName -like "*DeveloperMode*" -or $PSItem.PackageName -like "*Internet-Browser*" -or $PSItem.PackageName -like "*KB4559309*" -or $PSItem.PackageName -like "*KB4584229*" -or $PSItem.PackageName -like "*Windows-FileServer-ServerCore*" -or $PSItem.PackageName -like "*Windows-Dedup*" -or $PSItem.PackageName -like "*NetFx3*" } | Select-Object -Property PackageName, PackageState) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.InstallImageDrivers) { "`t`t`t`tIntegrated Drivers (Install)", (Get-WindowsDriver -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ProviderName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
 			If ($DynamicParams.BootImageDrivers) { "`t`t`t`tIntegrated Drivers (Boot)", (Get-WindowsDriver -Path $BootMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Select-Object -Property ProviderName, ClassName, Version, BootCritical | Sort-Object -Property ProviderName | Format-Table -AutoSize) | Out-File -FilePath $PackageLog.FullName -Append -Encoding UTF8 -Force }
