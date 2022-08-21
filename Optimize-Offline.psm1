@@ -1653,8 +1653,6 @@ Function Optimize-Offline
 		#region Windows Store Integration
 		$DynamicParams.WindowsStore = ($AppxPackages | Where-Object -Property DisplayName -EQ Microsoft.WindowsStore)
 		$DynamicParams.DisableDeliveryOptimization = (!$DynamicParams.WindowsStore -and $($AppxPackages | Where-Object -Property DisplayName -eq "Microsoft.DesktopAppInstaller").Count -eq 0)
-		Write-Host $DynamicParams.DisableDeliveryOptimization
-		Exit
 		If ($WindowsStore.IsPresent -and (Test-Path -Path $OptimizeOffline.WindowsStore -Filter Microsoft.WindowsStore*.*xbundle) -and !$DynamicParams.WindowsStore)
 		{
 			Log $OptimizeData.IntegratingWindowsStore
