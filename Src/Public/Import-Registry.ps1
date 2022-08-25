@@ -2,7 +2,9 @@ Function Import-Registry
 {
     [CmdletBinding()]
     Param (
-		[String]$Path
+		[String]$Path,
+        [Parameter(Mandatory=$false)]
+        [switch]$RegistryLoaded = $false
     )
 
     $REGContentHandler = {
@@ -18,7 +20,10 @@ Function Import-Registry
         return $Content
     }
 
-    RegHives -Load
+    If(!$RegistryLoaded) {
+        RegHives -Load
+    }
+    
 
     If ((Get-Item $Path) -is [System.IO.DirectoryInfo]){
         Get-ChildItem -Path $Path -Filter *.Offline | Purge
@@ -66,8 +71,11 @@ Function Import-Registry
         Finally
         {
             Purge $ProcessedItem.FullName; Start-Sleep 2
+            If(!$RegistryLoaded) {
+                RegHives -Unload
+            }
         }
     }
 
-    RegHives -Unload
+    
 }

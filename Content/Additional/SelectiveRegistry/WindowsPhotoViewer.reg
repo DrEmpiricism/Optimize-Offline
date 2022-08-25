@@ -1,0 +1,197 @@
+Windows Registry Editor Version 5.00 
+ 
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations] 
+".bmp"="PhotoViewer.FileAssoc.BITMAP" 
+".dib"="PhotoViewer.FileAssoc.BITMAP" 
+".jpg"="PhotoViewer.FileAssoc.JPEG"
+".jpe"="PhotoViewer.FileAssoc.JPEG" 
+".jpeg"="PhotoViewer.FileAssoc.JPEG" 
+".jxr"="PhotoViewer.FileAssoc.JPEG"  
+".jfif"="PhotoViewer.FileAssoc.JFIF" 
+".wdp"="PhotoViewer.FileAssoc.WDP" 
+".png"="PhotoViewer.FileAssoc.PNG" 
+".gif"="PhotoViewer.FileAssoc.TIFF" 
+".tiff"="PhotoViewer.FileAssoc.TIFF" 
+".tif"="PhotoViewer.FileAssoc.TIFF" 
+
+; Bitmap
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP] 
+"ImageOptionFlags"=dword:00000001 
+"FriendlyTypeName"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,\ 
+   00,46,00,69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,\ 
+   77,00,73,00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,\ 
+   00,65,00,72,00,5c,00,50,00,68,00,6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,\ 
+   65,00,72,00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,35,00,36,00,00,\ 
+   00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP\DefaultIcon] 
+@="%SystemRoot%\\System32\\imageres.dll,-70" 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP\shell] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP\shell\open] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP\shell\open\command] 
+@=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,\ 
+   00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,72,00,75,00,\ 
+   6e,00,64,00,6c,00,6c,00,33,00,32,00,2e,00,65,00,78,00,65,00,20,00,22,00,25,\ 
+   00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,69,00,6c,00,65,00,73,00,\ 
+   25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,50,00,68,00,6f,\ 
+   00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,72,00,5c,00,50,00,68,00,\ 
+   6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,65,00,72,00,2e,00,64,00,6c,00,6c,\ 
+   00,22,00,2c,00,20,00,49,00,6d,00,61,00,67,00,65,00,56,00,69,00,65,00,77,00,\ 
+   5f,00,46,00,75,00,6c,00,6c,00,73,00,63,00,72,00,65,00,65,00,6e,00,20,00,25,\ 
+   00,31,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.BITMAP\shell\open\DropTarget] 
+"CLSID"="{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" 
+
+
+; JFIF
+
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF] 
+"EditFlags"=dword:00010000 
+"ImageOptionFlags"=dword:00000001 
+"FriendlyTypeName"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,\ 
+   00,46,00,69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,\ 
+   77,00,73,00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,\ 
+   00,65,00,72,00,5c,00,50,00,68,00,6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,\ 
+   65,00,72,00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,35,00,35,00,00,\ 
+   00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\DefaultIcon] 
+@="%SystemRoot%\\System32\\imageres.dll,-72" 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open] 
+"MuiVerb"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,\ 
+   69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,\ 
+   00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,\ 
+   72,00,5c,00,70,00,68,00,6f,00,74,00,6f,00,76,00,69,00,65,00,77,00,65,00,72,\ 
+   00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,34,00,33,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\command] 
+@=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,\ 
+   00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,72,00,75,00,\ 
+   6e,00,64,00,6c,00,6c,00,33,00,32,00,2e,00,65,00,78,00,65,00,20,00,22,00,25,\ 
+   00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,69,00,6c,00,65,00,73,00,\ 
+   25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,50,00,68,00,6f,\ 
+   00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,72,00,5c,00,50,00,68,00,\ 
+   6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,65,00,72,00,2e,00,64,00,6c,00,6c,\ 
+   00,22,00,2c,00,20,00,49,00,6d,00,61,00,67,00,65,00,56,00,69,00,65,00,77,00,\ 
+   5f,00,46,00,75,00,6c,00,6c,00,73,00,63,00,72,00,65,00,65,00,6e,00,20,00,25,\ 
+   00,31,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JFIF\shell\open\DropTarget] 
+"CLSID"="{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" 
+
+
+; Jpeg
+
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG] 
+"EditFlags"=dword:00010000 
+"ImageOptionFlags"=dword:00000001 
+"FriendlyTypeName"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,\ 
+   00,46,00,69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,\ 
+   77,00,73,00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,\ 
+   00,65,00,72,00,5c,00,50,00,68,00,6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,\ 
+   65,00,72,00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,35,00,35,00,00,\ 
+   00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG\DefaultIcon] 
+@="%SystemRoot%\\System32\\imageres.dll,-72" 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG\shell] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG\shell\open] 
+"MuiVerb"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,\ 
+   69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,\ 
+   00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,\ 
+   72,00,5c,00,70,00,68,00,6f,00,74,00,6f,00,76,00,69,00,65,00,77,00,65,00,72,\ 
+   00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,34,00,33,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG\shell\open\command] 
+@=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,\ 
+   00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,72,00,75,00,\ 
+   6e,00,64,00,6c,00,6c,00,33,00,32,00,2e,00,65,00,78,00,65,00,20,00,22,00,25,\ 
+   00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,69,00,6c,00,65,00,73,00,\ 
+   25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,50,00,68,00,6f,\ 
+   00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,72,00,5c,00,50,00,68,00,\ 
+   6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,65,00,72,00,2e,00,64,00,6c,00,6c,\ 
+   00,22,00,2c,00,20,00,49,00,6d,00,61,00,67,00,65,00,56,00,69,00,65,00,77,00,\ 
+   5f,00,46,00,75,00,6c,00,6c,00,73,00,63,00,72,00,65,00,65,00,6e,00,20,00,25,\ 
+   00,31,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.JPEG\shell\open\DropTarget] 
+"CLSID"="{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" 
+
+; PNG
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG] 
+"ImageOptionFlags"=dword:00000001 
+"FriendlyTypeName"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,\ 
+   00,46,00,69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,\ 
+   77,00,73,00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,\ 
+   00,65,00,72,00,5c,00,50,00,68,00,6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,\ 
+   65,00,72,00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,35,00,37,00,00,\ 
+   00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG\DefaultIcon] 
+@="%SystemRoot%\\System32\\imageres.dll,-71" 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG\shell] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG\shell\open] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG\shell\open\command] 
+@=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,\ 
+   00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,72,00,75,00,\ 
+   6e,00,64,00,6c,00,6c,00,33,00,32,00,2e,00,65,00,78,00,65,00,20,00,22,00,25,\ 
+   00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,69,00,6c,00,65,00,73,00,\ 
+   25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,50,00,68,00,6f,\ 
+   00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,72,00,5c,00,50,00,68,00,\ 
+   6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,65,00,72,00,2e,00,64,00,6c,00,6c,\ 
+   00,22,00,2c,00,20,00,49,00,6d,00,61,00,67,00,65,00,56,00,69,00,65,00,77,00,\ 
+   5f,00,46,00,75,00,6c,00,6c,00,73,00,63,00,72,00,65,00,65,00,6e,00,20,00,25,\ 
+   00,31,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.PNG\shell\open\DropTarget] 
+"CLSID"="{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}" 
+
+; WDP
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP] 
+"EditFlags"=dword:00010000 
+"ImageOptionFlags"=dword:00000001 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP\DefaultIcon] 
+@="%SystemRoot%\\System32\\wmphoto.dll,-400" 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP\shell] 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP\shell\open] 
+"MuiVerb"=hex(2):40,00,25,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,\ 
+   69,00,6c,00,65,00,73,00,25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,\ 
+   00,20,00,50,00,68,00,6f,00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,\ 
+   72,00,5c,00,70,00,68,00,6f,00,74,00,6f,00,76,00,69,00,65,00,77,00,65,00,72,\ 
+   00,2e,00,64,00,6c,00,6c,00,2c,00,2d,00,33,00,30,00,34,00,33,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP\shell\open\command] 
+@=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,\ 
+   00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,72,00,75,00,\ 
+   6e,00,64,00,6c,00,6c,00,33,00,32,00,2e,00,65,00,78,00,65,00,20,00,22,00,25,\ 
+   00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,46,00,69,00,6c,00,65,00,73,00,\ 
+   25,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,50,00,68,00,6f,\ 
+   00,74,00,6f,00,20,00,56,00,69,00,65,00,77,00,65,00,72,00,5c,00,50,00,68,00,\ 
+   6f,00,74,00,6f,00,56,00,69,00,65,00,77,00,65,00,72,00,2e,00,64,00,6c,00,6c,\ 
+   00,22,00,2c,00,20,00,49,00,6d,00,61,00,67,00,65,00,56,00,69,00,65,00,77,00,\ 
+   5f,00,46,00,75,00,6c,00,6c,00,73,00,63,00,72,00,65,00,65,00,6e,00,20,00,25,\ 
+   00,31,00,00,00 
+    
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\PhotoViewer.FileAssoc.WDP\shell\open\DropTarget] 
+"CLSID"="{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
+
