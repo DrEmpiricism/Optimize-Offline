@@ -200,6 +200,11 @@ Function Set-RegistryProperties
             RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\System" -Name "DisableAcrylicBackgroundOnLogon" -Value 1 -Type DWord
         }
 
+        If ($InstallInfo.Build -ge '22000') {
+            $RegistryData.EnablePrintScreenKeyForSnipping | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
+            RegKey -Path "HKLM:\WIM_HKCU\Control Panel\Keyboard" -Name "PrintScreenKeyForSnippingEnabled" -Value 1 -Type DWord
+        }
+
         $RegistryData.DisableShortcutText | Out-File -FilePath $RegistryLog -Encoding UTF8 -Append -Force
         RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "link" -Value (0, 0, 0, 0) -Type Binary
 

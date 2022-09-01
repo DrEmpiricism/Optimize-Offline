@@ -45,4 +45,5 @@ RemoveRestorePreviousVersions       = Removing Restore Previous Versions from th
 EnableRebootRecoveryMyPC            = Adding Reboot to Recovery to This PC.
 EnableLongFilePaths                 = Enabling Long File Paths.
 EnableStrongCrypto                  = Enabling Strong Cryptography for .NET Applications.
+EnablePrintScreenKeyForSnipping     = Enable Printscreen key to open snipping app
 '@
