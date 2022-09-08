@@ -71,11 +71,11 @@ Function Import-Registry
         Finally
         {
             Purge $ProcessedItem.FullName; Start-Sleep 2
-            If(!$RegistryLoaded) {
-                RegHives -Unload
-            }
         }
     }
 
+    If(!$RegistryLoaded) {
+        RegHives -Unload
+    }
     
 }
