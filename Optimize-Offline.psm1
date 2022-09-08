@@ -2187,19 +2187,20 @@ Function Optimize-Offline
 			}
 			If ($Additional.Unattend -and (Test-Path -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml)))
 			{
+				RegHives -Load
 				Try
 				{
 					Unblock-File -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml)
-					<# $ApplyUnattendParams = @{
+					$ApplyUnattendParams = @{
 						UnattendPath     = '{0}\unattend.xml' -f $OptimizeOffline.Unattend
 						Path             = $InstallMount
 						ScratchDirectory = $ScratchFolder
 						LogPath          = $DISMLog
 						LogLevel         = 1
 						ErrorAction      = 'Stop'
-					} #>
+					}
 					Log $OptimizeData.ApplyingAnswerFile
-					# [Void](Use-WindowsUnattend @ApplyUnattendParams)
+					[Void](Use-WindowsUnattend @ApplyUnattendParams)
 					(GetPath -Path $InstallMount -Child 'Windows\Panther') | Create
 					Copy-Item -Path (GetPath -Path $OptimizeOffline.Unattend -Child unattend.xml) -Destination (GetPath -Path $InstallMount -Child 'Windows\Panther') -Force
 				}
@@ -2209,9 +2210,11 @@ Function Optimize-Offline
 					(GetPath -Path $InstallMount -Child 'Windows\Panther') | Purge
 					Start-Sleep 3
 				}
+				RegHives -Unload
 			}
 			If ($Additional.Drivers)
 			{
+				RegHives -Load
 				Get-ChildItem -Path $OptimizeOffline.Drivers -Recurse -Force | ForEach-Object -Process {
 					Unblock-File -Path $PSItem.FullName
 					Set-ItemProperty -Path $PSItem.FullName -Name IsReadOnly -Value $false -ErrorAction Ignore
@@ -2288,6 +2291,7 @@ Function Optimize-Offline
 						Start-Sleep 3
 					}
 				}
+				RegHives -Unload
 			}
 			If ($Additional.NetFx3 -and (Get-ChildItem -Path (GetPath -Path $ISOMedia.FullName -Child 'sources\sxs') -Filter *netfx3*.cab) -and (Get-WindowsOptionalFeature -Path $InstallMount -FeatureName NetFx3 -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1 | Where-Object -Property State -EQ DisabledWithPayloadRemoved))
 			{
