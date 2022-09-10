@@ -30,21 +30,21 @@ Function Optimize-Offline
 			HelpMessage = 'The full path to a Windows Installation Media ISO, or a Windows WIM, SWM or ESD file.')]
 		[Object]$SourcePath,
 		[Parameter(HelpMessage = 'Selectively or automatically deprovisions Windows Apps and removes their associated provisioning packages (.appx or .appxbundle).')]
-		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All', IgnoreCase = $true)]
 		[String]$WindowsApps,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of System Apps for selective removal.')]
-		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All', IgnoreCase = $true)]
 		[String]$SystemApps,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Capability Packages for selective removal.')]
-		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All', IgnoreCase = $true)]
 		[String]$Capabilities,
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Cabinet File Packages for selective removal.')]
-		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All')]
+		[ValidateSet('None', 'Select', 'Whitelist', 'Blacklist', 'All', IgnoreCase = $true)]
 		[String]$Packages,
-		[ValidateSet('None', 'Select', 'List', 'All')]
+		[ValidateSet('None', 'Select', 'List', 'All', IgnoreCase = $true)]
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.')]
 		[String]$FeaturesToEnable,
-		[ValidateSet('None', 'Select', 'List', 'All')]
+		[ValidateSet('None', 'Select', 'List', 'All', IgnoreCase = $true)]
 		[Parameter(HelpMessage = 'Populates and outputs a Gridview list of Windows Optional Features for selective disabling and enabling.')]
 		[String]$FeaturesToDisable,
 		[Parameter(HelpMessage = 'Integrates the Developer Mode Feature into the image.')]
@@ -60,7 +60,7 @@ Function Optimize-Offline
 		[Parameter(HelpMessage = 'Integrates the Windows Server Data Deduplication Feature into the image.')]
 		[Switch]$Dedup,
 		[Parameter(HelpMessage = 'Integrates the Microsoft Diagnostic and Recovery Toolset (DaRT 10) and Windows 10 Debugging Tools into Windows Setup and Windows Recovery.')]
-		[ValidateSet('Setup', 'Recovery')]
+		[ValidateSet('Setup', 'Recovery', IgnoreCase = $true)]
 		[String[]]$DaRT,
 		[Parameter(HelpMessage = 'Applies optimized settings to the image registry hives.')]
 		[Switch]$Registry,
@@ -71,12 +71,12 @@ Function Optimize-Offline
 		[Parameter(HelpMessage = 'Performs a clean-up of the Component Store by compressing all superseded components.')]
 		[Switch]$ComponentCleanup,
 		[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
-		[ValidateSet('Prompt', 'No-Prompt')]
+		[ValidateSet('Prompt', 'No-Prompt', IgnoreCase = $true)]
 		[String]$ISO,
 		[Parameter(Mandatory=$false)] $populateLists,
 		[Parameter(Mandatory=$false)] $populateTemplates,
 		[Parameter(Mandatory=$false)]
-		[ValidateSet('Select', 'None', 'Fast', 'Maximum', 'Solid')]
+		[ValidateSet('Select', 'None', 'Fast', 'Maximum', 'Solid', IgnoreCase = $true)]
 		[String]$CompressionType,
 		[Parameter(Mandatory=$false)]
 		[Hashtable]$SelectiveRegistry = @{
@@ -94,13 +94,14 @@ Function Optimize-Offline
 			RunAsTiContextMenu = $false
 			AmoledBlackTheme = $false
 		},
-		[Hashtable]$Miscellaneous = @{
-			ShutDownOnComplete = $false
-			FlashToUSB = $false
-		},
+		[Parameter(HelpMessage = 'Shutdown PC on script completion')]
+		[Switch]$ShutDownOnComplete = $false,
 		[Parameter(HelpMessage = 'Removal of windows services.')]
-		[ValidateSet('None', 'List', 'Advanced', 'Select')]
-		[String]$Services
+		[ValidateSet('None', 'List', 'Advanced', 'Select', IgnoreCase = $true)]
+		[String]$Services,
+		[Parameter(HelpMessage = 'Set USB booting support')]
+		[ValidateSet('Off', 'Legacy', 'UEFI', IgnoreCase = $true)]
+		[String]$FlashToUSB = "Off"
 	)
 
 	Begin
@@ -264,7 +265,7 @@ Function Optimize-Offline
 
 		#region USB device selection
 		$null = $USBDrive
-		If ($Miscellaneous.FlashToUSB) {
+		If ($FlashToUSB.ToLower().Trim() -ne "off") {
 			$USBDrive = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to Format' -OutputMode Single
 		}
 		#endregion USB device selection
@@ -1018,7 +1019,7 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "AllowTextSuggestions" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\SecureAssessment" -Name "RequirePrinting" -Value 0 -Type DWord
 		}
-		If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager')
+		If ($RemovedPackages.'Microsoft.Windows.ContentDeliveryManager' -or $SelectiveRegistry.Disable3rdPartyApps)
 		{
 			Log "Applying ContentDeliveryManager removal tweak"
 			Start-Sleep 1
@@ -1036,6 +1037,11 @@ Function Optimize-Offline
 				"SubscribedContent-88000166Enabled") | ForEach-Object -Process { RegKey -Path "HKLM:\WIM_HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name $PSItem -Value 0 -Type DWord }
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKCU\Software\Policies\Microsoft\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "NoCloudApplicationNotification" -Value 1 -Type DWord
+
+			If ($InstallInfo.Build -ge "22000") {
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\current\device\Start" -Name "ConfigureStartPins" -Type String -Value '{"pinnedList": [{}]}'
+				RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\current\device\Start" -Name "ConfigureStartPins_ProviderSet" -Type Dword -Value "0"
+			}
 		}
 		If ($DormantDefender.IsPresent -or $RemovedPackages.'Microsoft.Windows.SecHealthUI' -or $RemovedPackages.'Microsoft.SecHealthUI' -or (($AppxPackages | Where-Object {$_.DisplayName -eq 'Microsoft.SecHealthUI'}).Count -eq 0 -and $InstallInfo.Build -ge 22000))
 		{
@@ -2760,10 +2766,10 @@ Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
 			If ($ISOFile) {
 				Move-Item -Path $ISOFile -Destination $SaveDirectory.FullName -Force
 				$MovedItem = Get-ChildItem -Path $SaveDirectory.FullName -Filter (Split-Path -Path $ISOFile -leaf)
-				If ($Miscellaneous.FlashToUSB -and $USBDrive) {
+				If ($FlashToUSB.ToLower().Trim() -ne "off" -and $USBDrive) {
 					Log "Creating bootable usb."
 					Try {
-						Write-USB -ISOPath $MovedItem.FullName -USBDrive $USBDrive
+						Write-USB -ISOPath $MovedItem.FullName -USBDrive $USBDrive -Legacy:$(($FlashToUSB.ToLower().Trim() -eq "legacy"))
 						Log "Successfully created bootable usb."
 					} Catch {
 						Log "Failed creating bootable USB, see the error log for details" -Type Error -ErrorRecord $Error[0]
@@ -2815,7 +2821,7 @@ Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
 		Log "Clearing temp directory..."
 		Start-Sleep 3
 		Remove-Item -Recurse -Force -ErrorAction Ignore $TempDirectory
-		If($Miscellaneous.ShutDownOnComplete){
+		If($ShutDownOnComplete){
 			$continue = $true
 			for ($i = 1; $i -le 100; $i++ )
 			{

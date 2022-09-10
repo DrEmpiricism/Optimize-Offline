@@ -6,7 +6,8 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List | Advanced",
-    "OutputPath : default | path[{filename}?] | select"
+    "OutputPath : default | path[{filename}?] | select",
+    "FlashToUSB: Off | UEFI | Legacy" 
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",
@@ -54,8 +55,6 @@
     "RunAsTiContextMenu": false,
     "AmoledBlackTheme": false
   },
-  "Miscellaneous": {
-    "ShutDownOnComplete": false,
-    "FlashToUSB": false
-  }
+  "ShutDownOnComplete": false,
+  "FlashToUSB": "Off"
 }

@@ -68,22 +68,6 @@ If($SelectiveRegistry.DormantOneDrive) {
 	Start-Sleep 1
 }
 
-If ($SelectiveRegistry.Disable3rdPartyApps) {
-
-	Log $OptimizeData.SelectiveRegistryDisable3rdPartyApps
-
-	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "OemPreInstalledAppsEnabled" -Type Dword -Value "0"
-	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "PreInstalledAppsEnabled" -Type Dword -Value "0"
-	RegKey -Path "HKLM:\WIM_HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SilentInstalledAppsEnabled" -Type Dword -Value "0"
-	RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Type Dword -Value "1"
-
-	If ($Global:InstallInfo.Build -ge "22000") {
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\current\device\Start" -Name "ConfigureStartPins" -Type String -Value '{"pinnedList": [{}]}'
-		RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\PolicyManager\current\device\Start" -Name "ConfigureStartPins_ProviderSet" -Type Dword -Value "0"
-	}
-	Start-Sleep 1
-}
-
 # classic search in explorer
 If($SelectiveRegistry.ClassicSearchExplorer -and $Global:InstallInfo.Build -ge '18363') {
 

@@ -284,6 +284,13 @@ Code:
 Please note that the interactive filling of lists, will fill the list chosen in configuration.json. So first set up configuration.json with the proper list method!! If no list methods are specified in configuration.json the populateLists will just populate the templates, as it doesn't have info about which lists to fill, so it will be basically the same behaviour like populateTemplates.
 
 
+## Flashing to USB
+
+In order to flash to an USB device, please set the key FlashToUSB to "UEFI" or "Legacy" value.
+The Legacy option uses `\boot\bootsect.exe /nt60` method.
+The UEFI method creates a special UEFI partition in the USB drive and then sets it as bootable.
+Depending on your bios capabilities and on the boot method, choose the right method for your PC. 
+
 ## Windows services removal
 
 ***==Services Template==***
