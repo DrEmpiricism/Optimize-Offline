@@ -71,12 +71,30 @@ exit
 	
 			Update_bcd $($USBUEFIVolume.DriveLetter+":")
 		}
-	
+		
+		$NewPartitionParams = @{
+			AssignDriveLetter = $true
+			IsActive = $true
+		}
+		If ($Legacy -and $USBDrive.Size -gt 32GB) {
+			$NewPartitionParams.Size = 32GB
+		} Else {
+			$NewPartitionParams.UseMaximumSize = $true
+		}
 		$USBVolume = $USBDrive |
-		New-Partition -UseMaximumSize -AssignDriveLetter -IsActive |
+		New-Partition @NewPartitionParams |
 		Format-Volume -FileSystem $(If ($Legacy) {"FAT32"} Else {"NTFS"}) -NewFileSystemLabel "$((Get-Volume -DriveLetter $ISOMount).FileSystemLabel)"
-	
-		Copy-Item -Path "$($ISOMount):\*" -Destination "$($USBVolume.DriveLetter):" -Recurse -Force -Exclude $(If (!$Legacy) {"boot.wim"} Else {$null})
+
+		$CopyItemParams = @{
+			Path = "$($ISOMount):\*"
+			Destination = "$($USBVolume.DriveLetter):"
+			Recurse = $true
+			Force = $true
+		}
+		If (!$Legacy) {
+			$CopyItemParams.Exclude = "boot.wim"
+		}
+		Copy-Item @CopyItemParams
 	
 		If(!$Legacy){
 			Update_bcd $($USBVolume.DriveLetter+":")
