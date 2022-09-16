@@ -1,0 +1,3 @@
+Place different assets here
+You can place windows.ico - used as the windows local disk icon
+setup.ico - used as the USB/ISO icon

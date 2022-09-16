@@ -289,7 +289,12 @@ Please note that the interactive filling of lists, will fill the list chosen in 
 In order to flash to an USB device, please set the key FlashToUSB to "UEFI" or "Legacy" value.
 The Legacy option uses `\boot\bootsect.exe /nt60` method.
 The UEFI method creates a special UEFI partition in the USB drive and then sets it as bootable.
-Depending on your bios capabilities and on the boot method, choose the right method for your PC. 
+Depending on your bios capabilities and on the boot method, choose the right method for your PC.
+
+## Custom Icons
+You can customize the icons of the windows local disk volume and of the ISO/USB volumes.
+To set a custom windows local disk icon place it under `Content\Assets\windows.ico`
+To set a custom USB drive/ISO disk icon place it under `Content\Assets\setup.ico`
 
 ## Windows services removal
 
