@@ -14,9 +14,9 @@ Function Write-USB {
 	Param (
 		[Parameter(
 			Mandatory = $true,
-			HelpMessage = 'full path of the iso file to be flashed to the usb device'
+			HelpMessage = 'full path of the source files to be flashed to the usb device'
 		)]
-		[String]$ISOPath,
+		[String]$Source,
 		[Parameter(
 			Mandatory = $true,
 			HelpMessage = 'USB device drive object'
@@ -24,97 +24,115 @@ Function Write-USB {
 		[PSCustomObject]$USBDrive,
 		[Parameter(
 			Mandatory = $false,
+			HelpMessage = 'USB label'
+		)]
+		[String]$Label = "Windows_Install",
+		[Parameter(
+			Mandatory = $false,
 			HelpMessage = "If usb will support legacy bios booting scheme"
 		)]
-		[Switch]$Legacy = $false
+		[Switch]$Legacy = $false,
+		[Parameter(
+			Mandatory = $false,
+			HelpMessage = "Will override the main USB partition FS type to this one"
+		)]
+		[ValidateSet("NTFS", "FAT32")]
+		[String]$ForceFS,
+		[Parameter(
+			Mandatory = $false,
+			HelpMessage = "Will override the main USB partition schema to this one"
+		)]
+		[ValidateSet("MBR", "GPT")]
+		[String]$ForcePartitionSchema
 	)
 
 	Try {
 		If ($USBDrive.Count -eq 0 -or $USBDrive.BusType -ne "USB") {
 			Throw "Could not find USB drive"
 		}
-		$ISO = (Get-Item $ISOPath)
-		$ISOSize = $ISO.Length
-		If (!$ISO -or $ISOSize -eq 0) {
-			Throw "Invalid iso file"
+		$TotalSize = 0
+		Get-ChildItem -Path $source -Recurse  | Where-Object {!$_.PSIsContainer} | ForEach-Object -Process {
+			$TotalSize = $TotalSize + $_.Length
 		}
-		If ($USBDrive.Size -lt $ISOSize + 200MB) {
+		If ($USBDrive.Size -lt $TotalSize + 100MB) {
 			Throw "USB disk size is smaller than ISO size"
 		}
-		
+		$PartitionSchema = $(If($ForcePartitionSchema) {$ForcePartitionSchema} Else {"MBR"})
+		$FileSystem = $(If ($ForceFS) {$ForceFS} Else {If($Legacy) {"FAT32"} Else {"NTFS"}})
 @"
 select disk $($USBDrive.DiskNumber)
 clean
-convert MBR
+convert $PartitionSchema
 rescan
 exit
 "@ | diskpart | Out-Null
 	
 		Stop-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
 	
-		$Volumes = (Get-Volume).Where({$_.DriveLetter}).DriveLetter
-		[Void](Mount-DiskImage -ImagePath $ISOPath)
-		$ISOMount = (Compare-Object -ReferenceObject $Volumes -DifferenceObject (Get-Volume).Where({$_.DriveLetter}).DriveLetter).InputObject
-	
 		If(!$Legacy){
 			$USBUEFIVolume = $USBDrive |
 			New-Partition -Size 1GB -AssignDriveLetter |
 			Format-Volume -FileSystem FAT32 -NewFileSystemLabel "BOOT"
 	
-			Copy-Item -Path "$($ISOMount):\bootmgr*" -Destination "$($USBUEFIVolume.DriveLetter):\"
-			Copy-Item -Path "$($ISOMount):\boot" -Destination "$($USBUEFIVolume.DriveLetter):\boot" -Recurse
-			Copy-Item -Path "$($ISOMount):\efi" -Destination "$($USBUEFIVolume.DriveLetter):\efi" -Recurse
+			Copy-Item -Path "$Source\bootmgr*" -Destination "$($USBUEFIVolume.DriveLetter):\"
+			Copy-Item -Path "$Source\boot" -Destination "$($USBUEFIVolume.DriveLetter):\boot" -Recurse
+			Copy-Item -Path "$Source\efi" -Destination "$($USBUEFIVolume.DriveLetter):\efi" -Recurse
 			If (!(Test-Path -path "$($USBUEFIVolume.DriveLetter):\sources")) {
 				New-Item "$($USBUEFIVolume.DriveLetter):\sources" -Type Directory | Out-Null
 			}
-			Copy-Item -Path "$($ISOMount):\sources\boot.wim" -Destination "$($USBUEFIVolume.DriveLetter):\sources"
+			Copy-Item -Path "$Source\sources\boot.wim" -Destination "$($USBUEFIVolume.DriveLetter):\sources"
 	
 			Update_bcd $($USBUEFIVolume.DriveLetter+":")
 		}
-		
 		$NewPartitionParams = @{
 			AssignDriveLetter = $true
-			IsActive = $true
+			ErrorAction = "Stop"
 		}
-		If ($Legacy -and $USBDrive.Size -gt 32GB) {
+		If($PartitionSchema -eq "MBR") {
+			$NewPartitionParams.IsActive = $true
+		}
+		If ($FileSystem -eq "FAT32" -and $USBDrive.Size -gt 32GB) {
 			$NewPartitionParams.Size = 32GB
 		} Else {
 			$NewPartitionParams.UseMaximumSize = $true
 		}
 		$USBVolume = $USBDrive |
 		New-Partition @NewPartitionParams |
-		Format-Volume -FileSystem $(If ($Legacy) {"FAT32"} Else {"NTFS"}) -NewFileSystemLabel "$((Get-Volume -DriveLetter $ISOMount).FileSystemLabel)"
+		Format-Volume -FileSystem $FileSystem -ErrorAction Stop -NewFileSystemLabel $Label
 
 		$CopyItemParams = @{
-			Path = "$($ISOMount):\*"
+			Path = "$Source\*"
 			Destination = "$($USBVolume.DriveLetter):"
 			Recurse = $true
 			Force = $true
+			ErrorAction = "Stop"
+			Exclude = @()
 		}
+
 		If (!$Legacy) {
-			$CopyItemParams.Exclude = "boot.wim"
+			$CopyItemParams.Exclude = $CopyItemParams.Exclude + "boot.wim"
+		}
+		
+		If ($FileSystem -eq "FAT32" -and (Test-Path -Path "$Source\sources\install.wim") -and (Get-Item -Path "$Source\sources\install.wim").Length -gt 4GB) {
+			[Void](New-Item -Path "$($USBVolume.DriveLetter):\sources" -Type Directory)
+			[Void](Split-WindowsImage -ImagePath "$Source\sources\install.wim" -SplitImagePath "$($USBVolume.DriveLetter):\sources\install.swm" -FileSize 4090 -LogPath $DISMLog -ScratchDirectory $ScratchFolder -LogLevel 1 -ErrorAction Stop)
+			$CopyItemParams.Exclude = $CopyItemParams.Exclude + "install.wim"
 		}
 		Copy-Item @CopyItemParams
 	
 		If(!$Legacy){
 			Update_bcd $($USBVolume.DriveLetter+":")
 		} Else {
-			[Void](& "$($ISOMount):\boot\bootsect.exe" /nt60 "$($USBVolume.DriveLetter):")
+			[Void](& "$Source\boot\bootsect.exe" /nt60 "$($USBVolume.DriveLetter):")
 		}
 	} Catch {
 		Throw $Error[0]
 	} Finally {
-		If ($ISOPath) {
-			[Void](Dismount-DiskImage -ImagePath $ISOPath)
-		}
 		Start-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
-	
-		If (!$Legacy -and $USBUEFIVolume -and $USBVolume -and $ISOMount) {
+		If (!$Legacy -and $USBUEFIVolume) {
 @"
 select volume $($USBUEFIVolume.DriveLetter)
 remove letter=$($USBUEFIVolume.DriveLetter)
-select volume $($USBVolume.DriveLetter)
-assign letter=$($ISOMount)
 rescan
 exit
 "@ | diskpart | Out-Null

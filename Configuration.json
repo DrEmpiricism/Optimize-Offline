@@ -6,6 +6,7 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List | Advanced",
+    "CompressionType: 'Select | None | Fast | Maximum | Solid",
     "OutputPath : default | path[{filename}?] | select",
     "FlashToUSB: Off | UEFI | Legacy" 
   ],

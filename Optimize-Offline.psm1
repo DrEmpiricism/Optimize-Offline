@@ -73,8 +73,8 @@ Function Optimize-Offline
 		[Parameter(HelpMessage = 'Creates a new bootable Windows Installation Media ISO.')]
 		[ValidateSet('Prompt', 'No-Prompt', IgnoreCase = $true)]
 		[String]$ISO,
-		[Parameter(Mandatory=$false)] $populateLists,
-		[Parameter(Mandatory=$false)] $populateTemplates,
+		[Parameter(Mandatory=$false)] [Switch]$populateLists,
+		[Parameter(Mandatory=$false)] [Switch]$populateTemplates,
 		[Parameter(Mandatory=$false)]
 		[ValidateSet('Select', 'None', 'Fast', 'Maximum', 'Solid', IgnoreCase = $true)]
 		[String]$CompressionType,
@@ -2499,6 +2499,13 @@ Function Optimize-Offline
 This $($InstallInfo.Name) installation was optimized with $($OptimizeOffline.BaseName) version $($ManifestData.ModuleVersion)
 on $(Get-Date -UFormat "%m/%d/%Y at %r")
 "@ | Out-File -FilePath (GetPath -Path $InstallMount -Child Optimize-Offline.txt) -Encoding Unicode -Force
+			If((Test-Path -Path "$($OptimizeOffline.Assets)\windows.ico")) {
+				Copy-Item -Path (Get-Item -Path "$($OptimizeOffline.Assets)\windows.ico") -Destination $InstallMount
+"[Autorun]
+Icon=setup.ico" | Out-File "$($InstallMount)\Autorun.inf" -Encoding ascii
+				(Get-Item -Path "$($InstallMount)\windows.ico").Attributes += 'Hidden'
+				(Get-Item -Path "$($InstallMount)\Autorun.inf").Attributes += 'Hidden'
+			}
 			Start-Sleep 3
 		}
 		Else
@@ -2717,7 +2724,7 @@ on $(Get-Date -UFormat "%m/%d/%Y at %r")
 			Log $OptimizeData.OptimizingInstallMedia
 			Optimize-InstallMedia
 			Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination (GetPath -Path $ISOMedia.FullName -Child sources) -Force
-			If(!(Test-Path -Path "$($ISOMedia.FullName)\Autorun.inf")) {
+			If(!(Test-Path -Path "$($ISOMedia.FullName)\Autorun.inf") -and (Test-Path -Path "$($OptimizeOffline.Assets)\setup.ico")) {
 				Copy-Item -Path (Get-Item -Path "$($OptimizeOffline.Assets)\setup.ico") -Destination $ISOMedia.FullName
 "[Autorun]
 Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
@@ -2769,7 +2776,7 @@ Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
 				If ($FlashToUSB.ToLower().Trim() -ne "off" -and $USBDrive) {
 					Log "Creating bootable usb."
 					Try {
-						Write-USB -ISOPath $MovedItem.FullName -USBDrive $USBDrive -Legacy:$(($FlashToUSB.ToLower().Trim() -eq "legacy"))
+						Write-USB -USBDrive $USBDrive -Legacy:$(($FlashToUSB.ToLower().Trim() -eq "legacy")) -Source $ISOMedia.FullName -Label $InstallInfo.Name
 						Log "Successfully created bootable usb."
 					} Catch {
 						Log "Failed creating bootable USB, see the error log for details" -Type Error -ErrorRecord $Error[0]
