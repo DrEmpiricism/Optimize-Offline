@@ -2500,6 +2500,8 @@ This $($InstallInfo.Name) installation was optimized with $($OptimizeOffline.Bas
 on $(Get-Date -UFormat "%m/%d/%Y at %r")
 "@ | Out-File -FilePath (GetPath -Path $InstallMount -Child Optimize-Offline.txt) -Encoding Unicode -Force
 			If((Test-Path -Path "$($OptimizeOffline.Assets)\windows.ico")) {
+				Unblock-File -Path "$($OptimizeOffline.Assets)\windows.ico"
+				Set-ItemProperty -Path "$($OptimizeOffline.Assets)\windows.ico" -Name IsReadOnly -Value $false
 				Copy-Item -Path (Get-Item -Path "$($OptimizeOffline.Assets)\windows.ico") -Destination $InstallMount
 "[Autorun]
 Icon=setup.ico" | Out-File "$($InstallMount)\Autorun.inf" -Encoding ascii
@@ -2725,6 +2727,8 @@ Icon=setup.ico" | Out-File "$($InstallMount)\Autorun.inf" -Encoding ascii
 			Optimize-InstallMedia
 			Get-ChildItem -Path $ImageFolder -Include $ImageFiles -Recurse | Move-Item -Destination (GetPath -Path $ISOMedia.FullName -Child sources) -Force
 			If(!(Test-Path -Path "$($ISOMedia.FullName)\Autorun.inf") -and (Test-Path -Path "$($OptimizeOffline.Assets)\setup.ico")) {
+				Unblock-File -Path "$($OptimizeOffline.Assets)\setup.ico"
+				Set-ItemProperty -Path "$($OptimizeOffline.Assets)\setup.ico" -Name IsReadOnly -Value $false
 				Copy-Item -Path (Get-Item -Path "$($OptimizeOffline.Assets)\setup.ico") -Destination $ISOMedia.FullName
 "[Autorun]
 Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
