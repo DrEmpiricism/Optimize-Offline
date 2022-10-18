@@ -1,0 +1,1 @@
+start "" powershell.exe -noexit -WindowStyle Hidden "& %~dp0Src\GUI\Start.ps1"

@@ -1,0 +1,289 @@
+{
+  "Main": {
+    "Label": "Main",
+    "Column": 1,
+    "Controls": [
+      {
+        "Name": "DormantDefender",
+        "Label": "Disable Windows Defender/Security",
+        "Type": "Switch",
+        "Binding": "DormantDefender",
+        "Description": "Disable Windows defender while retaining the option to reactivate it."
+      },
+      {
+        "Name": "Registry",
+        "Label": "Apply Registry tweaks",
+        "Type": "Switch",
+        "Binding": "Registry",
+        "Description": "For the specifics check file: .\\Src\\Public\\Set-RegistryProperties.ps1"
+      },
+      {
+        "Name": "ComponentCleanup",
+        "Label": "Clean the Component Store",
+        "Type": "Switch",
+        "Binding": "ComponentCleanup",
+        "Description": "compresses all superseded components, thus reducing the size of the Component Store"
+      },
+      {
+        "Name": "Win32Calc",
+        "Label": "Integrate classic windows calculator",
+        "Type": "Switch",
+        "Binding": "Win32Calc",
+        "Description": "Integrates the traditional Win32 Calculator into the image."
+      },
+      {
+        "Name": "DeveloperMode",
+        "Label": "Developer mode",
+        "Type": "Switch",
+        "Binding": "DeveloperMode",
+        "Description": "Enables developer mode"
+      },
+      {
+        "Name": "WindowsStore",
+        "Label": "Integrate Windows Store",
+        "Type": "Switch",
+        "Binding": "WindowsStore",
+        "Description": "Integrate Windows Store"
+      },
+      {
+        "Name": "Dedup",
+        "Label": "Integrate Windows Server Data Deduplication",
+        "Type": "Switch",
+        "Binding": "Dedup",
+        "Description": "Integrates the Windows Server Data Deduplication Feature into the image."
+      },
+      {
+        "Name": "MicrosoftEdge",
+        "Label": "Integrate Microsoft Edge Chromium",
+        "Type": "Switch",
+        "Binding": "MicrosoftEdge",
+        "Description": "Only works on windows 10 builds without Edge Chromium",
+        "Restrictions": [
+          {
+            "Build": "18362",
+            "Criteria": "min"
+          },
+          {
+            "Build": "19041",
+            "Criteria": "max"
+          }
+        ]
+      },
+      {
+        "Name": "ISO",
+        "Label": "Prompt at boot",
+        "Type": "ComboBox",
+        "Description": "Prompt at boot",
+        "Values": ["Prompt", "No-Prompt"],
+        "Binding": "ISO",
+        "ShowNone": false
+      },
+      {
+        "Name": "CompressionType",
+        "Label": "WIM/ESD compression level",
+        "Type": "ComboBox",
+        "Description": "WIM/ESD compression level",
+        "Values": ["None", "Fast", "Maximum", "Solid"],
+        "Binding": "CompressionType",
+        "ShowNone": false
+      },
+      {
+        "Name": "ShutDownOnComplete",
+        "Label": "Turn off pc on script completion",
+        "Type": "Switch",
+        "Binding": "ShutDownOnComplete",
+        "Description": "Turn off pc on script completion, when clicking the process button"
+      }
+    ]
+  },
+  "Additional": {
+    "Label": "Additional",
+    "Column": 0,
+    "Controls": [
+      {
+        "Name": "Setup",
+        "Label": "Apply Setup Content",
+        "Type": "Switch",
+        "Binding": "Additional.Setup",
+        "Description": "Integrates user-specific content added to the 'Content/Additional' directory into the image when enabled"
+      },
+      {
+        "Name": "Wallpaper",
+        "Label": "Apply Wallpaper",
+        "Type": "Switch",
+        "Binding": "Additional.Wallpaper",
+        "Description": "Integrates 'Content\\Additional\\Wallpaper\\Windows 10 HD' wallpapers in the image"
+      },
+      {
+        "Name": "SystemLogo",
+        "Label": "Apply System Logo",
+        "Type": "Switch",
+        "Binding": "Additional.SystemLogo",
+        "Description": "Integrates a custom system logo into the image. Place the logo in 'Content\\Additional\\SystemLogo'"
+      },
+      {
+        "Name": "LockScreen",
+        "Label": "Apply LockScreen",
+        "Type": "Switch",
+        "Binding": "Additional.LockScreen",
+        "Description": "Converts and integrates a custom lockscreen into the image. Place the lockscreen files into 'Content\\Additional\\LockScreen'"
+      },
+      {
+        "Name": "RegistryTemplates",
+        "Label": "Apply Additional Registry",
+        "Type": "Switch",
+        "Binding": "Additional.RegistryTemplates",
+        "Description": "Custom registry template (.reg) files placed in the '\\Content\\Additional\\RegistryTemplates' folder are imported by Optimize-Offline into the offline image's appropriate registry hive."
+      },
+      {
+        "Name": "LayoutModification",
+        "Label": "Apply custom Start Menu layout",
+        "Type": "Switch",
+        "Binding": "Additional.LayoutModification",
+        "Description": "Imports a custom LayoutModification.xml to provision the Start layout.If adding additional user content, place any custom Start Menu layout XML/JSON (LayoutModification.xml/LayoutModification.json) file to be added to the image in '\\Content\\Additional\\LayoutModification'"
+      },
+      {
+        "Name": "Unattend",
+        "Label": "Apply answer file",
+        "Type": "Switch",
+        "Binding": "Additional.Unattend",
+        "Description": "Place the answer file (unattend.xml) into '\\Content\\Additional\\Unattend' folder"
+      },
+      {
+        "Name": "Drivers",
+        "Label": "Integrate Windows drivers",
+        "Type": "Switch",
+        "Binding": "Additional.Drivers",
+        "Description": "Place the drivers into '\\Content\\Additional\\Drivers' folder"
+      },
+      {
+        "Name": "NetFx3",
+        "Label": "Integrate .Net Framework 3.5",
+        "Type": "Switch",
+        "Binding": "Additional.NetFx3",
+        "Description": "Integrates the .NET Framework 3 payload packages into the image and enables the NetFx3 optional feature. Works only when input is an ISO image."
+      }
+    ]
+  },
+  "SelectiveRegistry": {
+    "Label": "Selective registry",
+    "Column": 0,
+    "Controls": [
+      {
+        "Name": "DisableWindowsUpgrade",
+        "Label": "Disable Windows upgrade",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DisableWindowsUpgrade",
+        "Description": "Disables the ability to upgrade to newer versions of Windows"
+      },
+      {
+        "Name": "DisableWindowsUpdateMicrosoft",
+        "Label": "Disable Microsoft contacting servers",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DisableWindowsUpdateMicrosoft",
+        "Description": "This disables completely the windows update services and Microsoft Store downloading"
+      },
+      {
+        "Name": "DisableDriverUpdate",
+        "Label": "Disable Windows driver update",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DisableDriverUpdate",
+        "Description": "Disabled Windows update from automatically updating drivers"
+      },
+      {
+        "Name": "DormantOneDrive",
+        "Label": "Disable Microsoft OneDrive",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DormantOneDrive",
+        "Description": "Disables Onedrive installation after OOBE run"
+      },
+      {
+        "Name": "Disable3rdPartyApps",
+        "Label": "Disable 3rd party app installation",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.Disable3rdPartyApps",
+        "Description": "Disables ContentDeliveryManager from installing 3rd party apps. This tweak is activated also in case the system app 'ContentDeliveryManager' is removed from the system apps tab."
+      },
+      {
+        "Name": "ExplorerUIRibbon",
+        "Label": "Classic Explorer UI ribbon",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.ExplorerUIRibbon",
+        "Description": "Add the explorer UI ribbon in Windows 10"
+      },
+      {
+        "Name": "ClassicSearchExplorer",
+        "Label": "Explorer classic file search",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.ClassicSearchExplorer",
+        "Description": "Disables modern UWP explorer file search"
+      },
+      {
+        "Name": "RemoveTaskbarPinnedIcons",
+        "Label": "Remove taskbar pinned icons",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.RemoveTaskbarPinnedIcons",
+        "Description": "Removes taskbar pinned icons"
+      },
+      {
+        "Name": "DisableTeamsApp",
+        "Label": "Remove Microsoft Teams App",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DisableTeamsApp",
+        "Description": "Removes Microsoft Teams App"
+      },
+      {
+        "Name": "RunAsTiContextMenu",
+        "Label": "Add Run As Trusted Installer context menu entry",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.RunAsTiContextMenu",
+        "Description": "Add Run As Trusted Installer context menu entry"
+      }
+    ]
+  },
+  "Specific": {
+    "Label": "Specific",
+    "Column": 1,
+    "Controls": [
+      {
+        "Name": "W11ClassicContextMenu",
+        "Label": "W11 Classic context menus",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.W11ClassicContextMenu",
+        "Description": "Makes context menus classic looking, as in W10",
+        "Restrictions": [
+          {
+            "Build": "22000",
+            "Criteria": "min"
+          }
+        ]
+      },
+      {
+        "Name": "DisableVirtualizationSecurity",
+        "Label": "W11 Disable Virtualization Security",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.DisableVirtualizationSecurity",
+        "Description": "Disables Core integrity and Virtualization based security (builds >= 22000)",
+        "Restrictions": [
+          {
+            "Build": "22000",
+            "Criteria": "min"
+          }
+        ]
+      },
+      {
+        "Name": "AmoledBlackTheme",
+        "Label": "W11 Add AMOLED Black Theme",
+        "Type": "Switch",
+        "Binding": "SelectiveRegistry.AmoledBlackTheme",
+        "Description": "W11 Add AMOLED Black Theme",
+        "Restrictions": [
+          {
+            "Build": "22000",
+            "Criteria": "min"
+          }
+        ]
+      }
+    ]
+  }
+}

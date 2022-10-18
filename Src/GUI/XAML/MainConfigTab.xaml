@@ -1,0 +1,10 @@
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
+	<RowDefinition Height="Auto" />
+</Grid.RowDefinitions>
+
+<UniformGrid Columns="{Cols}" Margin="0,0,0,15" Grid.Column="0" Grid.Row="0">
+	{ColsXAML}
+</UniformGrid>

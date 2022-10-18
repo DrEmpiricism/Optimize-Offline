@@ -16,7 +16,9 @@
 [CmdletBinding()]
 Param (
 	[Parameter(Mandatory = $false)] [switch]$populateLists,
-	[Parameter(Mandatory = $false)] [switch]$populateTemplates
+	[Parameter(Mandatory = $false)] [switch]$populateTemplates,
+	[Parameter(Mandatory = $false)] [switch]$noPause,
+	[Parameter(Mandatory = $false)] [int]$FlashUSBDriveNumber = -1
 )
 
 $Global:Error.Clear()
@@ -27,7 +29,9 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 	foreach ($param in $PSBoundParameters.GetEnumerator()) {
 		$arguments += "-"+[string]$param.Key+$(If ($param.Value -notin @("True", "False")) {"="+$param.Value} Else {""})
 	}
-	$arguments += " ; pause"
+	If(!$noPause){
+		$arguments += " ; pause"
+	}
 	Start-Process powershell -Verb RunAs -ArgumentList $arguments
 	Stop-Process -Id $PID
 }
@@ -65,10 +69,7 @@ Finally {
 }
 
 # Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
-$ConfigParams = [Ordered]@{
-	populateLists     = $populateLists
-	populateTemplates = $populateTemplates
-}
+$ConfigParams = [Ordered]@{ }
 ForEach ($Name In $ContentJSON.PSObject.Properties.Name) {
 	$Value = $ContentJSON.PSObject.Properties.Item($Name).Value
 	If ($Value -is [PSCustomObject]) {
@@ -81,6 +82,9 @@ ForEach ($Name In $ContentJSON.PSObject.Properties.Name) {
 		$ConfigParams.$Name = $Value
 	}
 }
+$ConfigParams.populateLists = $populateLists
+$ConfigParams.populateTemplates = $populateTemplates
+$ConfigParams.FlashUSBDriveNumber = $FlashUSBDriveNumber
 
 # Import the Optimize-Offline module and call it by passing the JSON configuration.
 If ($PSVersionTable.PSVersion.Major -gt 5) {

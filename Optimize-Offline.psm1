@@ -101,7 +101,9 @@ Function Optimize-Offline
 		[String]$Services,
 		[Parameter(HelpMessage = 'Set USB booting support')]
 		[ValidateSet('Off', 'Legacy', 'UEFI', IgnoreCase = $true)]
-		[String]$FlashToUSB = "Off"
+		[String]$FlashToUSB = "Off",
+		[Parameter(Mandatory = $false, HelpMessage = 'Set USB Drive to flash the ISO')]
+		[Int]$FlashUSBDriveNumber = -1
 	)
 
 	Begin
@@ -265,8 +267,13 @@ Function Optimize-Offline
 
 		#region USB device selection
 		$null = $USBDrive
-		If ($FlashToUSB.ToLower().Trim() -ne "off") {
-			$USBDrive = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to Format' -OutputMode Single
+		If ($FlashToUSB.ToLower().Trim() -ne "off" -and !$populateLists -and !$populateTemplates) {
+			$USBDrive = Get-Disk | Where-Object BusType -eq USB
+			If($FlashUSBDriveNumber -ge 0) {
+				$USBDrive = $USBDrive | Where-Object Number -eq $FlashUSBDriveNumber
+			} Else {
+				$USBDrive = $USBDrive | Out-GridView -Title 'Select USB Drive to Format' -OutputMode Single
+			}
 		}
 		#endregion USB device selection
 
@@ -288,6 +295,7 @@ Function Optimize-Offline
 			$Host.UI.RawUI.WindowTitle = "Validating Image Metadata."
 			$InstallInfo = $InstallWim | Get-ImageData -Index $ImageIndex -ErrorAction Stop
 			$Global:InstallInfo = $InstallInfo
+			$InstallInfo | ConvertTo-Json | Out-File -FilePath "$($OptimizeOffline.GUI.Main)\image_info.json" -Encoding UTF8 -Force -ErrorAction Ignore
 		}
 		Catch
 		{
@@ -551,18 +559,25 @@ Function Optimize-Offline
 
 			Try {
 				$Items = [System.Collections.ArrayList]@( )
+				$ItemsGUI = [System.Collections.ArrayList]@( )
 				Get-AppxPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.DisplayName)
+					[Void]$ItemsGUI.Add(@{
+						PackageName = $PSItem.PackageName
+						DisplayName = $PSItem.DisplayName
+						Selected = $false
+					})
 				}
 				## Populate WindowsApps template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.WindowsApps.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.WindowsAppsTemplate)"
 				[ordered]@{
 					DisplayName = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.WindowsApps.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.WindowsAppsTemplate -Encoding UTF8 -Force -ErrorAction Ignore
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.WindowsApps -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $WindowsApps -in @('Whitelist', 'Blacklist')) {
 					## Populate WindowsApps selected type of list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.WindowsApps[$WindowsApps])"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.WindowsAppsList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select windows apps to save to the $($WindowsApps)" -PassThru
 					If($Items -isnot [array]) {
@@ -570,22 +585,28 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						DisplayName = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.WindowsApps[$WindowsApps] -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.WindowsAppsList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 
 				$Items = [System.Collections.ArrayList]@( )
+				$ItemsGUI = [System.Collections.ArrayList]@( )
 				Get-SystemPackages | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.DisplayName)
+					[Void]$ItemsGUI.Add(@{
+						DisplayName = $PSItem.DisplayName
+						Selected = $false
+					})
 				}
 				## Populate SystemApps template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.SystemApps.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.SystemAppsTemplate)"
 				[ordered]@{
 					DisplayName = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemApps.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemAppsTemplate -Encoding UTF8 -Force -ErrorAction Ignore
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.SystemApps -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $SystemApps -in @('Whitelist', 'Blacklist')) {
 					## Populate SystemApps selected type of list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.SystemApps[$SystemApps])"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.SystemAppsList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select system apps to save to the $($SystemApps)" -PassThru
 					If($Items -isnot [array]) {
@@ -593,22 +614,28 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						DisplayName = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemApps[$SystemApps] -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.SystemAppsList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 
 				$Items = [System.Collections.ArrayList]@( )
+				$ItemsGUI = [System.Collections.ArrayList]@( )
 				Get-CapabilityPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.Name)
+					[Void]$ItemsGUI.Add(@{
+						Name = $PSItem.Name
+						Selected = $false
+					})
 				}
 				## Populate capabilities template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Capabilities.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.CapabilitiesTemplate)"
 				[ordered]@{
 					Name = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Capabilities.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.CapabilitiesTemplate -Encoding UTF8 -Force -ErrorAction Ignore
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.Capabilities -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $Capabilities -in @('Whitelist', 'Blacklist')) {
 					## Populate Capabilities selected type of list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Capabilities[$Capabilities])"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.CapabilitiesList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select capabilities to save to the $($Capabilities)" -PassThru
 					If($Items -isnot [array]) {
@@ -616,22 +643,28 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						Name = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Capabilities[$Capabilities] -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.CapabilitiesList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 
 				$Items = [System.Collections.ArrayList]@( )
+				$ItemsGUI = [System.Collections.ArrayList]@( )
 				Get-OtherWindowsPackages -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.PackageName)
+					[Void]$ItemsGUI.Add(@{
+						PackageName = $PSItem.PackageName
+						Selected = $false
+					})
 				}
 				# Populate Packages template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Packages.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.PackagesTemplate)"
 				[ordered]@{
 					PackageName = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Packages.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.PackagesTemplate -Encoding UTF8 -Force -ErrorAction Ignore
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.Packages -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $Packages -in @('Whitelist', 'Blacklist')) {
 					## Populate Packages selected type of list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Packages[$Packages])"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.PackagesList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select packages to save to the $($Packages)" -PassThru
 					If($Items -isnot [array]) {
@@ -639,22 +672,29 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						PackageName = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Packages[$Packages] -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.PackagesList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 
 				$Items = [System.Collections.ArrayList]@( )
+				$ItemsGUI = [System.Collections.ArrayList]@( )
 				Get-OptionalEnabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.FeatureName)
+					[Void]$ItemsGUI.Add(@{
+						FeatureName = $PSItem.FeatureName
+						States = @("Enabled", "Disabled")
+						State = $PSItem.StateLabel
+						OriginalState = $PSItem.StateLabel
+					})
 				}
 				## Populate FeaturesToDisable template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToDisable.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToDisableTemplate)"
 				[ordered]@{
 					FeatureName = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisable.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisableTemplate -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $FeaturesToDisable -eq 'List') {
 					## Populate FeaturesToDisable list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToDisable.List)"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToDisableList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select features to disable for saving to the FeaturesToDisable list" -PassThru
 					If($Items -isnot [array]) {
@@ -662,22 +702,28 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						FeatureName = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisable.List -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToDisableList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 
 				$Items = [System.Collections.ArrayList]@( )
 				Get-OptionalDisabledFeatures -Path $InstallMount -ScratchDirectory $ScratchFolder -LogPath $DISMLog | ForEach-Object -Process {
 					[Void]$Items.Add([String]$PSItem.FeatureName)
+					[Void]$ItemsGUI.Add(@{
+						FeatureName = $PSItem.FeatureName
+						States = @("Enabled", "Disabled")
+						State = $PSItem.StateLabel
+						OriginalState = $PSItem.StateLabel
+					})
 				}
 				## Populate FeaturesToEnable template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToEnable.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToEnableTemplate)"
 				[ordered]@{
 					FeatureName = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnable.Template -Encoding UTF8 -Force -ErrorAction Ignore
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnableTemplate -Encoding UTF8 -Force -ErrorAction Ignore
 				Start-Sleep 1
 				If ($populateLists -and $FeaturesToEnable -eq 'List') {
 					## Populate FeaturesToEnable list
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToEnable.List)"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.FeaturesToEnableList)"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select features to disable for saving to the FeaturesToEnable list" -PassThru
 					If($Items -isnot [array]) {
@@ -685,38 +731,34 @@ Function Optimize-Offline
 					}
 					[ordered]@{
 						FeatureName = $Items
-					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnable.List -Encoding UTF8 -Force -ErrorAction Ignore
+					} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.FeaturesToEnableList -Encoding UTF8 -Force -ErrorAction Ignore
 				}
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.Features -Encoding UTF8 -Force -ErrorAction Ignore
 
 				RegHives -Load
-				$Items = [System.Collections.ArrayList]@( )
-				Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
-					$serviceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
-					$folderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
-					If($null -ne $folderKeys.Start -and $null -eq $folderKeys.Owners -and $folderKeys.Start -gt 1){
-						[Void]$Items.Add((New-Object PSObject -Property @{
-							name = [String]$PSItem.PSChildName
-							description = $(If ($null -ne $serviceDetails -and $null -ne $serviceDetails.DisplayName) {$serviceDetails.DisplayName} Else {""})
-							start = $folderKeys.Start
-						}))
-					}
+				$Items = Get-ImageServices
+				$ItemsGUI = [System.Collections.ArrayList]@( )
+				$Items | ForEach-Object -Process {
+					[Void]$ItemsGUI.Add(@{
+						Name = [String]$PSItem.name
+						Description = $PSItem.description
+						OriginalStart = $PSItem.startLabel
+						Start = $PSItem.startLabel
+						Starts = $OptimizeOffline.ServicesStartLabels
+					})
 				}
-				$JsonInfo = @(
-				"start key values",
-					"0 = Boot",
-					"1 = System",
-					"2 = Automatic",
-					"3 = Manual",
-					"4 = Disabled"
-				)
+				$JsonInfo = $OptimizeOffline.ServicesStartLabels | ForEach-Object -Process {
+					"$($OptimizeOffline.ServicesStartLabels.IndexOf($_)) = $_"
+				}
 				## Populate Services template
-				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Services.Template)"
+				Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.ServicesTemplate)"
 				[ordered]@{
 					__Info = $JsonInfo
 					Services = $Items
-				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Services.Template -Encoding UTF8 -Force -ErrorAction Ignore 
+				} | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.ServicesTemplate -Encoding UTF8 -Force -ErrorAction Ignore
+				$ItemsGUI | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.GUI.RemovalTemplates.Services -Encoding UTF8 -Force -ErrorAction Ignore
 				If ($populateLists -and $Services -in @('List', 'Advanced')) {
-					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists.Services[$Services])"
+					Log "$($OptimizeData.Populating) $($OptimizeOffline.Lists."Services$($Services)")"
 					Start-Sleep 1
 					$Items = $Items | Out-GridView -Title "Select services save to the list" -PassThru
 					If($Items -isnot [array]) {
@@ -732,7 +774,7 @@ Function Optimize-Offline
 							[Void]$JsonData.Services.Add($Item.name)
 						}
 					}
-					$JsonData | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Services[$Services] -Encoding UTF8 -Force -ErrorAction Ignore
+					$JsonData | ConvertTo-Json | Out-File -FilePath $OptimizeOffline.Lists.Services$($Services) -Encoding UTF8 -Force -ErrorAction Ignore
 				}
 				RegHives -Unload
 
@@ -767,9 +809,9 @@ Function Optimize-Offline
 					}
 					'Whitelist'
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Whitelist)
+						If (Test-Path -Path $OptimizeOffline.Lists.WindowsAppsList)
 						{
-							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
+							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsAppsList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 
 							$AppxPackages | ForEach-Object -Process {
 								$ToRemove = $true
@@ -789,9 +831,9 @@ Function Optimize-Offline
 					}
 					'Blacklist'
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.WindowsApps.Blacklist)
+						If (Test-Path -Path $OptimizeOffline.Lists.WindowsAppsList)
 						{
-							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop  | Select-Object -ExpandProperty DisplayName
+							$AppsJson = Get-Content -Path $OptimizeOffline.Lists.WindowsAppsList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop  | Select-Object -ExpandProperty DisplayName
 
 							$AppxPackages | ForEach-Object -Process {
 								Foreach($App in $AppsJson){
@@ -874,9 +916,9 @@ Function Optimize-Offline
 						}
 						'Whitelist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Whitelist)
+							If (Test-Path -Path $OptimizeOffline.Lists.SystemAppsList)
 							{
-								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
+								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemAppsList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 								$InboxAppsPackages | ForEach-Object -Process {
 									$ToRemove = $true
 									Foreach($SystemApp in $SystemAppsJson){
@@ -895,9 +937,9 @@ Function Optimize-Offline
 						}
 						'Blacklist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.SystemApps.Blacklist)
+							If (Test-Path -Path $OptimizeOffline.Lists.SystemAppsList)
 							{
-								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemApps.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
+								$SystemAppsJson = Get-Content -Path $OptimizeOffline.Lists.SystemAppsList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty DisplayName
 								$InboxAppsPackages | ForEach-Object -Process {
 									Foreach($SystemApp in $SystemAppsJson){
 										If ($PSItem.DisplayName -eq $SystemApp -or ($SystemApp -Match "\*" -and $PSItem.DisplayName -like $SystemApp))
@@ -923,7 +965,7 @@ Function Optimize-Offline
 						If ($RET -eq 1) { Log ($OptimizeData.FailedRemovingSystemApp -f $PSItem.DisplayName) -Type Error; Continue }
 						$RemovedSystemApps.Add($PSItem.DisplayName, $PSItem.PackageName)
 						$RemovedPackages.Add($PSItem.DisplayName, $PSItem.PackageName)
-						Start-Sleep 2
+						Start-Sleep 1
 					}
 
 					$DynamicParams.SystemApps = $($packagesToRemove.Count -gt 0)
@@ -1201,9 +1243,9 @@ Function Optimize-Offline
 						}
 						'Whitelist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.Capabilities.Whitelist)
+							If (Test-Path -Path $OptimizeOffline.Lists.CapabilitiesList)
 							{
-								$Names = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
+								$Names = Get-Content -Path $OptimizeOffline.Lists.CapabilitiesList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
 
 								$WindowsCapabilities | ForEach-Object -Process {
 									$ToRemove = $true
@@ -1222,9 +1264,9 @@ Function Optimize-Offline
 						}
 						'Blacklist'
 						{
-							If (Test-Path -Path $OptimizeOffline.Lists.Capabilities.Blacklist)
+							If (Test-Path -Path $OptimizeOffline.Lists.CapabilitiesList)
 							{
-								$Names = Get-Content -Path $OptimizeOffline.Lists.Capabilities.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
+								$Names = Get-Content -Path $OptimizeOffline.Lists.CapabilitiesList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty Name
 
 								$WindowsCapabilities | ForEach-Object -Process {
 									Foreach($Name in $Names){
@@ -1289,9 +1331,9 @@ Function Optimize-Offline
 						'Whitelist' 
 						{
 
-							If (Test-Path -Path $OptimizeOffline.Lists.Packages.Whitelist)
+							If (Test-Path -Path $OptimizeOffline.Lists.PackagesList)
 							{
-								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.Packages.Whitelist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
+								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.PackagesList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
 
 								$WindowsPackages | ForEach-Object -Process {
 									$ToRemove = $true
@@ -1312,9 +1354,9 @@ Function Optimize-Offline
 						'Blacklist' 
 						{
 							
-							If (Test-Path -Path $OptimizeOffline.Lists.Packages.Blacklist)
+							If (Test-Path -Path $OptimizeOffline.Lists.PackagesList)
 							{
-								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.Packages.Blacklist -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
+								$PackageNames = Get-Content -Path $OptimizeOffline.Lists.PackagesList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Select-Object -ExpandProperty PackageName
 
 								$WindowsPackages | ForEach-Object -Process {
 									Foreach($PackageName in $PackageNames){
@@ -1407,9 +1449,9 @@ Function Optimize-Offline
 					}
 					"List" 
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.FeaturesToDisable.List)
+						If (Test-Path -Path $OptimizeOffline.Lists.FeaturesToDisableList)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.FeaturesToDisable.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$JSON = Get-Content -Path $OptimizeOffline.Lists.FeaturesToDisableList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$EnabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $JSON.FeatureName)
@@ -1472,9 +1514,9 @@ Function Optimize-Offline
 					}
 					"List" 
 					{
-						If (Test-Path -Path $OptimizeOffline.Lists.FeaturesToEnable.List)
+						If (Test-Path -Path $OptimizeOffline.Lists.FeaturesToEnableList)
 						{
-							$JSON = Get-Content -Path $OptimizeOffline.Lists.FeaturesToEnable.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+							$JSON = Get-Content -Path $OptimizeOffline.Lists.FeaturesToEnableList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 							$DisabledFeatures | ForEach-Object -Process {
 								If ($PSItem.FeatureName -in $JSON.FeatureName)
@@ -1536,7 +1578,7 @@ Function Optimize-Offline
 				Switch($PSBoundParameters.Services){
 					"List"
 					{
-						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.List -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+						$JSON = Get-Content -Path $OptimizeOffline.Lists.ServicesList -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 						$JSON.Services | ForEach-Object -Process {
 							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem)")
@@ -1555,7 +1597,7 @@ Function Optimize-Offline
 					}
 					"Advanced"
 					{
-						$JSON = Get-Content -Path $OptimizeOffline.Lists.Services.Advanced -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+						$JSON = Get-Content -Path $OptimizeOffline.Lists.ServicesAdvanced -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
 
 						$JSON.Services | ForEach-Object -Process {
 							If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)")
@@ -1575,44 +1617,19 @@ Function Optimize-Offline
 					}
 					"Select"
 					{
-						$ServicesSelection = [System.Collections.ArrayList]@();
-						Get-ChildItem -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services" | Where-Object{$_.ValueCount -gt 0} | ForEach-Object -Process {
-
-							$ServiceDetails =  Get-Service -Name $PSItem.PSChildName -ErrorAction Ignore
-
-							$FolderKeys = Get-ItemProperty -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.PSChildName)"
-
-							If($null -ne $FolderKeys.Start -and $null -eq $FolderKeys.Owners -and $FolderKeys.Start -ne 4 -and $FolderKeys.Start -gt 1){
-								$O = New-Object PSObject -Property @{
-									name = [String]$PSItem.PSChildName
-									description = $(If ($null -ne $ServiceDetails -and $null -ne $ServiceDetails.DisplayName) {$ServiceDetails.DisplayName} Else {""})
-									start = $FolderKeys.Start
-								}
-								[void]$ServicesSelection.Add($O)
-							}
-						}
-
-						$ServicesToRemove = $ServicesSelection | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
+						$ServicesToRemove = Get-ImageServices | Out-GridView -PassThru -Title $OptimizeData.ChooseServicesTitle
 					}
-				}
-
-				$StartLabels = @{
-					0 = $OptimizeData.ServiceStartBoot
-					1 = $OptimizeData.ServiceStartSystem
-					2 = $OptimizeData.ServiceStartAutomatic
-					3 = $OptimizeData.ServiceStartManual
-					4 = $OptimizeData.ServiceStartDisabled
 				}
 				
 				$ServicesToRemove | ForEach-Object -Process {
 					$Start = If ($PSBoundParameters.Services -eq "Select") {4} Else {[Int]$PSItem.start}
-					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), Start: $($StartLabels[$Start])"
+					Log "$($OptimizeData.ServiceModifying): $($PSItem.name), Start: $($OptimizeOffline.ServicesStartLabels[$Start])"
 					RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\$($PSItem.name)" -Name "Start" -Type DWord -Value $Start
 					$ServicesToRemoveNames[$PSItem.name] = $Start
 					Start-Sleep 1
 				}
 				$DynamicParams.DisabledWindowsServices = $($ServicesToRemove.Count -gt 0)
-
+				
 				# If the Delivery Optimization service has a SetState value of 'Disabled' in the Services.json file, set the delivery optimization download mode to bypass.
 				If ($null -ne $ServicesToRemoveNames['DoSvc'] -and $ServicesToRemoveNames['DoSvc'] -eq 4){
 					Log $OptimizeData.DeliveryOptimizationBypass
@@ -2328,6 +2345,13 @@ Function Optimize-Offline
 			& $_.FullName
 		}
 		#endregion selective registry
+		#region custom registry
+		If (Test-Path -Path $OptimizeOffline.CustomRegistry)
+		{
+			Import-Registry -Path $OptimizeOffline.CustomRegistry
+			Start-Sleep 3
+		}
+		#endregion custom registry
 		#region Component Store Clean-up
 		If ($ComponentCleanup.IsPresent)
 		{

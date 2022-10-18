@@ -1,0 +1,13 @@
+<Label Margin='5,0,0,0' Grid.Column='0' Content='{Label} ' HorizontalAlignment='Left' VerticalAlignment='Center' ToolTip="{Tooltip}" />
+<ComboBox 
+	SelectedIndex='{Value}'
+	Grid.Column='1' 
+	Name='{Name}' 
+	Height='22'
+	Width='150'
+	HorizontalAlignment='Left' VerticalAlignment='Center'
+	ToolTip="{Tooltip}"
+	Margin="0,5,0,5"
+>
+	{Items}
+</ComboBox>

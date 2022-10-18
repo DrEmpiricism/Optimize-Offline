@@ -1,0 +1,32 @@
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
+	<RowDefinition Height="30" />
+	<RowDefinition />
+</Grid.RowDefinitions>
+<Button Name="{ListType}SelectAll" Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0" Width="80" Height="25" Margin="5,5,10,0" Content="Select All" />
+<Button Name="{ListType}SelectNone" Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0" Width="80" Height="25" Margin="100,5,0,0" Content="Select None"/>
+<ComboBox Name="{ListType}ListType" Width="90" Height="25" Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="195,5,0,0" SelectedIndex="{ListTypeSelectedIndex}" >
+	<ComboBoxItem Content="BlackList" />
+	<ComboBoxItem Content="WhiteList" />
+</ComboBox>
+<DockPanel Grid.Row="1" Grid.Column="0" Margin="0">
+	<DockPanel DockPanel.Dock="Top">
+		<Label VerticalAlignment="Center" DockPanel.Dock="Left" Content="Filter: "/>
+		<TextBox DockPanel.Dock="Right" Margin="5,10,5,5" Padding="4" Name="{ListType}ListFilter" />
+	</DockPanel>
+	<ListView  HorizontalAlignment="Stretch" Name="{ListType}ListView"
+	Margin="5" IsSynchronizedWithCurrentItem="False" SelectionMode="Multiple">
+		<ListView.View>
+			<GridView>
+				{Columns}
+			</GridView>
+		</ListView.View>
+		<ListView.Resources>
+			<Style TargetType="{x:Type ListViewItem}">
+				<Setter Property="IsSelected" Value="{Binding Selected, Mode=TwoWay}"/>
+			</Style>
+		</ListView.Resources>
+	</ListView>
+</DockPanel>

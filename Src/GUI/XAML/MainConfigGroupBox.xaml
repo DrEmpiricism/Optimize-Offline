@@ -1,0 +1,5 @@
+<GroupBox Margin="0,10,10,0" BorderBrush="Black" Header="{Header}">
+	<StackPanel Orientation="Vertical">
+		{Content}
+	</StackPanel>
+</GroupBox>

@@ -1,15 +1,6 @@
 Function Get-SystemPackages {
-
-	[CmdletBinding()]
-
-	Param (
-		[Parameter(Mandatory = $false)]
-		[String]$RegKeyPath
-	)
-
-	If(-Not $RegKeyPath){
-		$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
-	}
+	
+	$RegKeyPath = "HKLM:\WIM_HKLM_SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications"
 
 	RegHives -Load
 

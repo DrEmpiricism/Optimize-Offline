@@ -1,4 +1,4 @@
-﻿{
+{
   "_Info": [
     "This is a JSON based Configuration file for Optimize-Offline.",
     "Ensure proper formatting is used when editing the JSON parameter values.",
@@ -6,9 +6,9 @@
     "WindowsApps, SystemApps, Capabilities, Packages : All | None | Select | Whitelist | Blacklist",
     "FeaturesToEnable, FeaturesToDisable : All | None | Select | List",
     "Services : None | Select | List | Advanced",
-    "CompressionType: 'Select | None | Fast | Maximum | Solid",
+    "CompressionType: Select | None | Fast | Maximum | Solid",
     "OutputPath : default | path[{filename}?] | select",
-    "FlashToUSB: Off | UEFI | Legacy" 
+    "FlashToUSB: Off | UEFI | Legacy"
   ],
   "SourcePath": "PathTo:\\sources\\install.wim",
   "WindowsApps": "Select",

@@ -43,6 +43,7 @@ $OptimizeOffline.Directory = (Resolve-FullPath -Path $OptimizeOffline.Path -Spli
 $OptimizeOffline.Culture = 'en-US'
 $OptimizeOffline.Resources = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Src)
 $OptimizeOffline.Content = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child Content)
+$OptimizeOffline.CustomRegistry = (Resolve-FullPath -Path $OptimizeOffline.Content -Child CustomRegistry.reg)
 $OptimizeOffline.LocalizedData = (Resolve-FullPath -Path $OptimizeOffline.Directory -Child $OptimizeOffline.Culture)
 $OptimizeOffline.Additional = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Additional)
 $OptimizeOffline.Assets = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Assets)
@@ -76,46 +77,50 @@ $OptimizeOffline.SelectiveRegistry = (Resolve-FullPath -Path $OptimizeOffline.Ad
 $OptimizeOffline.Lists = @{}
 $OptimizeOffline.Lists.Path = (Resolve-FullPath -Path $OptimizeOffline.Content -Child Lists)
 
-$OptimizeOffline.Lists.WindowsApps = @{}
-$OptimizeOffline.Lists.WindowsApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child WindowsApps)
-$OptimizeOffline.Lists.WindowsApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsWhitelist.json)
-$OptimizeOffline.Lists.WindowsApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsBlacklist.json)
-$OptimizeOffline.Lists.WindowsApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsApps.Path -Child WindowsAppsTemplate.json)
+$OptimizeOffline.Lists.WindowsAppsPath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child WindowsApps)
+$OptimizeOffline.Lists.WindowsAppsList = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsAppsPath -Child WindowsAppsList.json)
+$OptimizeOffline.Lists.WindowsAppsTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.WindowsAppsPath -Child WindowsAppsTemplate.json)
 
-$OptimizeOffline.Lists.SystemApps = @{}
-$OptimizeOffline.Lists.SystemApps.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemApps)
-$OptimizeOffline.Lists.SystemApps.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsWhitelist.json)
-$OptimizeOffline.Lists.SystemApps.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsBlacklist.json)
-$OptimizeOffline.Lists.SystemApps.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemApps.Path -Child SystemAppsTemplate.json)
+$OptimizeOffline.Lists.SystemAppsPath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child SystemApps)
+$OptimizeOffline.Lists.SystemAppsList = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppsPath -Child SystemAppsList.json)
+$OptimizeOffline.Lists.SystemAppsTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.SystemAppsPath -Child SystemAppsTemplate.json)
 
-$OptimizeOffline.Lists.Capabilities = @{}
-$OptimizeOffline.Lists.Capabilities.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Capabilities)
-$OptimizeOffline.Lists.Capabilities.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesWhitelist.json)
-$OptimizeOffline.Lists.Capabilities.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesBlacklist.json)
-$OptimizeOffline.Lists.Capabilities.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Capabilities.Path -Child CapabilitiesTemplate.json)
+$OptimizeOffline.Lists.CapabilitiesPath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Capabilities)
+$OptimizeOffline.Lists.CapabilitiesList = (Resolve-FullPath -Path $OptimizeOffline.Lists.CapabilitiesPath -Child CapabilitiesList.json)
+$OptimizeOffline.Lists.CapabilitiesTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.CapabilitiesPath -Child CapabilitiesTemplate.json)
 
-$OptimizeOffline.Lists.Packages = @{}
-$OptimizeOffline.Lists.Packages.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Packages)
-$OptimizeOffline.Lists.Packages.Whitelist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesWhitelist.json)
-$OptimizeOffline.Lists.Packages.Blacklist = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesBlacklist.json)
-$OptimizeOffline.Lists.Packages.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Packages.Path -Child PackagesTemplate.json)
+$OptimizeOffline.Lists.PackagesPath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Packages)
+$OptimizeOffline.Lists.PackagesList = (Resolve-FullPath -Path $OptimizeOffline.Lists.PackagesPath -Child PackagesList.json)
+$OptimizeOffline.Lists.PackagesTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.PackagesPath -Child PackagesTemplate.json)
 
-$OptimizeOffline.Lists.FeaturesToEnable = @{}
-$OptimizeOffline.Lists.FeaturesToEnable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToEnable)
-$OptimizeOffline.Lists.FeaturesToEnable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableList.json)
-$OptimizeOffline.Lists.FeaturesToEnable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnable.Path -Child FeaturesToEnableTemplate.json)
+$OptimizeOffline.Lists.FeaturesToEnablePath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToEnable)
+$OptimizeOffline.Lists.FeaturesToEnableList = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnablePath -Child FeaturesToEnableList.json)
+$OptimizeOffline.Lists.FeaturesToEnableTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToEnablePath -Child FeaturesToEnableTemplate.json)
 
-$OptimizeOffline.Lists.FeaturesToDisable = @{}
-$OptimizeOffline.Lists.FeaturesToDisable.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToDisable)
-$OptimizeOffline.Lists.FeaturesToDisable.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableList.json)
-$OptimizeOffline.Lists.FeaturesToDisable.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisable.Path -Child FeaturesToDisableTemplate.json)
+$OptimizeOffline.Lists.FeaturesToDisablePath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child FeaturesToDisable)
+$OptimizeOffline.Lists.FeaturesToDisableList = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisablePath -Child FeaturesToDisableList.json)
+$OptimizeOffline.Lists.FeaturesToDisableTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.FeaturesToDisablePath -Child FeaturesToDisableTemplate.json)
 
-$OptimizeOffline.Lists.Services = @{}
-$OptimizeOffline.Lists.Services.Path = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Services)
-$OptimizeOffline.Lists.Services.List = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesList.json)
-$OptimizeOffline.Lists.Services.Advanced = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesAdvanced.json)
-$OptimizeOffline.Lists.Services.Template = (Resolve-FullPath -Path $OptimizeOffline.Lists.Services.Path -Child ServicesTemplate.json)
+$OptimizeOffline.Lists.ServicesPath = (Resolve-FullPath -Path $OptimizeOffline.Lists.Path -Child Services)
+$OptimizeOffline.Lists.ServicesList = (Resolve-FullPath -Path $OptimizeOffline.Lists.ServicesPath -Child ServicesList.json)
+$OptimizeOffline.Lists.ServicesAdvanced = (Resolve-FullPath -Path $OptimizeOffline.Lists.ServicesPath -Child ServicesAdvanced.json)
+$OptimizeOffline.Lists.ServicesTemplate = (Resolve-FullPath -Path $OptimizeOffline.Lists.ServicesPath -Child ServicesTemplate.json)
 #endregion List paths
+
+## startregion GUI paths
+$OptimizeOffline.GUI = @{
+	Main = (Resolve-FullPath -Path $OptimizeOffline.Resources -Child GUI)
+}
+$OptimizeOffline.GUI.RemovalTemplates = @{
+	Main = (Resolve-FullPath -Path $OptimizeOffline.GUI.Main -Child RemovalTemplates)
+}
+$OptimizeOffline.GUI.RemovalTemplates.WindowsApps = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child WindowsAppsTemplate.json)
+$OptimizeOffline.GUI.RemovalTemplates.SystemApps = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child SystemAppsTemplate.json)
+$OptimizeOffline.GUI.RemovalTemplates.Packages = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child PackagesTemplate.json)
+$OptimizeOffline.GUI.RemovalTemplates.Capabilities = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child CapabilitiesTemplate.json)
+$OptimizeOffline.GUI.RemovalTemplates.Features = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child FeaturesTemplate.json)
+$OptimizeOffline.GUI.RemovalTemplates.Services = (Resolve-FullPath -Path $OptimizeOffline.GUI.RemovalTemplates.Main -Child ServicesTemplate.json)
+## endregion GUI paths
 
 #region Data Declarations
 Try { $ManifestData = Import-PowerShellDataFile -Path $OptimizeOffline.ManifestDataFile -ErrorAction Stop }
@@ -126,13 +131,13 @@ Catch { Write-Warning ('Failed to import the localized data file: "{0}"' -f (Res
 #endregion Data Declarations
 
 #region translations
-$OptimizeOffline.ServicesStartLabels = @{
-	0 = $OptimizeData.ServiceStartBoot
-	1 = $OptimizeData.ServiceStartSystem
-	2 = $OptimizeData.ServiceStartAutomatic
-	3 = $OptimizeData.ServiceStartManual
-	4 = $OptimizeData.ServiceStartDisabled
-}
+$OptimizeOffline.ServicesStartLabels = @(
+	$OptimizeData.ServiceStartBoot,
+	$OptimizeData.ServiceStartSystem,
+	$OptimizeData.ServiceStartAutomatic,
+	$OptimizeData.ServiceStartManual,
+	$OptimizeData.ServiceStartDisabled
+)
 #endregion translations
 
 #region Variable Declarations

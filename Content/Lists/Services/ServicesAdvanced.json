@@ -8,20 +8,6 @@
 		"4 = Disabled"
 	],
 	"Services": [
-		{
-			"name": "BDESVC",
-			"description": "BitLocker Drive Encryption Service",
-			"start": 3
-		 },
-		 {
-			"name": "ConsentUxUserSvc",
-			"description": "ConsentUX",
-			"start": 3
-		 },
-		 {
-			"name": "CredentialEnrollmentManagerUserSvc",
-			"description": "CredentialEnrollmentManagerUserSvc",
-			"start": 3
-		 }
+		
 	]
 }

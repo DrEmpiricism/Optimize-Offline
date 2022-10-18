@@ -1,0 +1,29 @@
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
+	<RowDefinition />
+</Grid.RowDefinitions>
+<TextBox  
+	HorizontalAlignment="Left"
+	BorderThickness="0"
+	Grid.Row="0" 
+	Grid.Column="0" 
+	Background="Black" 
+	Height="{Binding ActualHeight, ElementName=OutputTabGrid, Mode=OneWay}" 
+	Width="{Binding ActualWidth, ElementName=OutputTabGrid, Mode=OneWay}" 
+	VerticalAlignment="Top" 
+	Foreground="Cyan" 
+	ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+	ScrollViewer.VerticalScrollBarVisibility="Auto" 
+	FontSize="11"
+	Name="Console"
+	Text="Console output will appear here"
+	IsReadOnly="True"
+	TextWrapping="Wrap"
+	AcceptsReturn="True"
+	Padding="3"
+	TextBlock.LineHeight="16"
+	TextBlock.LineStackingStrategy="BlockLineHeight"
+>
+</TextBox>

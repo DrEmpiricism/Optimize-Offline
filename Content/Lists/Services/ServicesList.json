@@ -3,22 +3,6 @@
 		"Insert the services display names as a list, the names are found in the ./ServicesTemplate.json in the 'name' key"
 	],
 	"Services": [
-		"BDESVC",
-		"lmhosts",
-		"DiagTrack",
-		"DusmSvc",
-		"edgeupdate",
-		"edgeupdatem",
-		"FontCache",
-		"iphlpsvc",
-		"PimIndexMaintenanceSvc",
-		"SSDPSRV",
-		"PcaSvc",
-		"Spooler",
-		"VSS",
-		"UsoSvc",
-		"WaaSMedicSvc",
-		"WSearch",
-		"wuauserv"
+
 	]
 }

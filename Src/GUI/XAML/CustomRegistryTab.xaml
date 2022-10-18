@@ -1,0 +1,29 @@
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
+	<RowDefinition />
+</Grid.RowDefinitions>
+<TextBox  
+	HorizontalAlignment="Left"
+	BorderThickness="1"
+	Grid.Row="0" 
+	Grid.Column="0" 
+	Background="White" 
+	Height="{Binding ActualHeight, ElementName=CustomRegistryTabGrid, Mode=OneWay}" 
+	Width="{Binding ActualWidth, ElementName=CustomRegistryTabGrid, Mode=OneWay}" 
+	VerticalAlignment="Top" 
+	Foreground="Black" 
+	ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+	ScrollViewer.VerticalScrollBarVisibility="Auto" 
+	FontSize="12"
+	Name="CustomRegistry"
+	Text="Please input custom registry tweaks here."
+	IsReadOnly="False"
+	TextWrapping="Wrap"
+	AcceptsReturn="True"
+	Padding="3"
+	TextBlock.LineHeight="16"
+	TextBlock.LineStackingStrategy="BlockLineHeight"
+>
+</TextBox>

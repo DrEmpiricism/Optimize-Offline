@@ -1,0 +1,25 @@
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
+	<RowDefinition />
+</Grid.RowDefinitions>
+<DockPanel Grid.Row="0" Grid.Column="0" Margin="0">
+	<DockPanel DockPanel.Dock="Top">
+		<Label VerticalAlignment="Center" DockPanel.Dock="Left" Content="Filter: "/>
+		<TextBox DockPanel.Dock="Right" Margin="5,10,5,5" Padding="4" Name="{ListType}ListFilter" />
+	</DockPanel>
+	<ListView  HorizontalAlignment="Stretch" Name="{ListType}ListView"
+	Margin="5" IsSynchronizedWithCurrentItem="False" SelectionMode="Multiple">
+		<ListView.View>
+			<GridView>
+				{Columns}
+			</GridView>
+		</ListView.View>
+		<ListView.Resources>
+			<Style TargetType="{x:Type ListViewItem}">
+				<Setter Property="Focusable" Value="false"/>
+			</Style>
+		</ListView.Resources>
+	</ListView>
+</DockPanel>

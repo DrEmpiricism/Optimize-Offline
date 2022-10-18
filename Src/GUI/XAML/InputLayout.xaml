@@ -1,0 +1,10 @@
+<Grid>
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition Width='300' />
+		<ColumnDefinition Width='Auto' />
+	</Grid.ColumnDefinitions>
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto" />
+	</Grid.RowDefinitions>
+	{Input}
+</Grid>
