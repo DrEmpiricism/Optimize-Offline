@@ -465,16 +465,22 @@ Function SetControlsAccess {
 }
 
 Function Save-Configuration {
-	foreach($ListType in $ListType){
+	foreach($ListType in $ListTypes){
 		If($Configuration.$ListType -and $ListTypesNoRemoval.IndexOf($ListType) -ge 0){
-			$Configuration.$ListType = "List"
 			continue
 		}
 		$Control = $Window.FindName("$($ListType)ListType")
-		If($Configuration.$ListType -and $Control -and $RemovalTypes.IndexOf($Control.SelectedItem.Content) -ge 0){
-			$Configuration.$ListType = $Control.SelectedItem.Content
+		If($Configuration.$ListType -and $Control){
+			If($RemovalTypes.IndexOf($Control.SelectedItem.Content) -ge 0){
+				$Configuration.$ListType = $Control.SelectedItem.Content
+			} Else {
+				$Configuration.$ListType = $RemovalTypes[0]
+			}
 		}
 	}
+	$Configuration.Services = "Advanced"
+	$Configuration.FeaturesToEnable = "List"
+	$Configuration.FeaturesToDisable = "List"
 	$Configuration | ConvertTo-Json | Out-File -FilePath $Configuration_path -Encoding UTF8 -Force -ErrorAction Ignore
 }
 
@@ -500,18 +506,6 @@ Function RunOO {
 	param([switch]$populateTemplates)
 	$Global:populateTemplates = $populateTemplates
 	Try{
-		Foreach($ListType in $ListTypes) {
-			If($Configuration.$ListType -and $ListTypesNoRemoval.IndexOf($ListType) -ge 0){
-				$Configuration.$ListType = "List"
-				continue
-			}
-			$Control = $Window.FindName("$($ListType)ListType")
-			$V = If($Control) {$Window.FindName("$($ListType)ListType").SelectedItem.Content} Else {""}
-			If($Configuration.$ListType -and $RemovalTypes.IndexOf($V) -ge 0) {
-				$Configuration.$ListType = $V
-			}
-		}
-		$Configuration.Services = "Advanced"
 		Save-Configuration
 		$OutputTab.IsSelected = $true
 		SetControlsAccess -Enabled $false
