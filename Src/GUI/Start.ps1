@@ -9,12 +9,6 @@ $OO_Lists_Path = "$($OO_Root_Path)Content\Lists\"
 $ConsoleSTDOutPath = "$($OO_Root_Path)ConsoleOut.txt"
 $CustomRegistryPath = "$($OO_Root_Path)\Content\CustomRegistry.reg"
 
-Function Import-ImageData {
-	return (Get-Content -Raw -Path "$RootPath\image_info.json" -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
-}
-
-$ImageInfo = Import-ImageData
-
 $RemovalTypes = @("Blacklist", "Whitelist")
 $ListTypes = @("WindowsApps", "SystemApps", "Capabilities", "Packages", "Services", "Features")
 $ListTypesNoRemoval = @("Services", "Features")
@@ -243,8 +237,9 @@ Function GenerateControlXaml {
 	return $XAML
 }
 
-Function SetControlsVisibility {
-	If (!$ImageInfo.Path){
+Function Set-ControlsVisibility {
+	$ImageInfo = (Get-Content -Raw -Path "$RootPath\image_info.json" -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
+	If(!$ImageInfo -or !$ImageInfo.Build){
 		return
 	}
 	$ConfigurationDef.PSObject.Properties | ForEach-Object {
@@ -427,6 +422,7 @@ $OutputPath = $Window.FindName("OutputPath")
 $OutputTab = $Window.FindName("OutputTab")
 $Console = $Window.FindName("Console")
 $CustomRegistry = $Window.FindName("CustomRegistry")
+$GeneralTab = $Window.FindName("GeneralTab")
 $WindowsAppsTab = $Window.FindName("WindowsAppsTab")
 $SystemAppsTab = $Window.FindName("SystemAppsTab")
 $CapabilitiesTab = $Window.FindName("CapabilitiesTab")
@@ -435,7 +431,7 @@ $FeaturesTab = $Window.FindName("FeaturesTab")
 $ServicesTab = $Window.FindName("ServicesTab")
 $CustomRegistryTab = $Window.FindName("CustomRegistryTab")
 
-SetControlsVisibility
+Set-ControlsVisibility
 
 Foreach($ListType in $ListTypes) {
 	New-Variable -Name "$($ListType)ListView" -Value $Window.FindName("$($ListType)ListView")
@@ -447,6 +443,7 @@ Foreach($ListType in $ListTypes) {
 
 Function SetControlsAccess {
 	param($Enabled)
+	$GeneralTab.IsEnabled = $Enabled
 	$WindowsAppsTab.IsEnabled = $Enabled
 	$SystemAppsTab.IsEnabled = $Enabled
 	$CapabilitiesTab.IsEnabled = $Enabled
@@ -509,13 +506,18 @@ Function RunOO {
 		Save-Configuration
 		$OutputTab.IsSelected = $true
 		SetControlsAccess -Enabled $false
+		If($(Get-ExecutionPolicy) -ne "Unrestricted" -and [System.Windows.MessageBox]::Show('Set execution policy to Unrestricted?','Powershell Execution Policy','YesNoCancel','Info') -eq "Yes"){
+			Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy Unrestricted" -Verb RunAs
+		} Else {
+			Throw "Execution policy prevents scripts to run in the system"
+		}
 		$Global:OO_GUI_Job = Start-Process powershell -WindowStyle Hidden -argument "$($OO_Root_Path)Start-Optimize.ps1 -noPause -FlashUSBDriveNumber $Global:OO_GUI_FlashUSBDriveNumber $(If($populateTemplates) {"-populateTemplates"} Else {''}) *>> $($ConsoleSTDOutPath)" -Verb RunAs -PassThru
 		$Global:OO_GUI_Timer.Start()
 	} Catch {
 		SetError -Err $Error[0]
 		SetControlsAccess -Enabled $true
 		$Global:OO_GUI_Timer.Stop()
-		If($LogExists){
+		If(Test-Path -path $ConsoleSTDOutPath){
 			Remove-Item -Path $ConsoleSTDOutPath
 		}
 	}
@@ -643,15 +645,14 @@ Foreach($ListType in $ListTypes) {
 }
 
 $TimerTick = {
-	$LogExists = (Test-Path -Path $ConsoleSTDOutPath)
-	If($LogExists){
+	If(Test-Path -Path $ConsoleSTDOutPath){
 		WriteToConsole -Text (Get-Content -Path $ConsoleSTDOutPath -Raw -Encoding utf8)
 		[Windows.Input.InputEventHandler]{ $Window.UpdateLayout() }
 	}
 	If($null -ne $Global:OO_GUI_Job.ExitCode){
 		$Global:OO_GUI_Timer.Stop()
 		SetControlsAccess -Enabled $true
-		If($LogExists){
+		If(Test-Path -Path $ConsoleSTDOutPath){
 			Remove-Item -Path $ConsoleSTDOutPath
 		}
 		Import-Templates
@@ -659,8 +660,7 @@ $TimerTick = {
 			$ListView = (Get-Variable -Name "$($ListType)ListView" -ValueOnly)
 			$ListView.ItemsSource = (Get-Variable -Name "$($ListType)Template" -ValueOnly -Scope Global)
 		}
-		Import-ImageData
-		SetControlsVisibility
+		Set-ControlsVisibility
 		Save-Configuration
 		WriteToConsole -Text "`nFinished" -Append
 	}
