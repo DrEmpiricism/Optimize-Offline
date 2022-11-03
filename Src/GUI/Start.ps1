@@ -506,8 +506,8 @@ Function RunOO {
 		Save-Configuration
 		$OutputTab.IsSelected = $true
 		SetControlsAccess -Enabled $false
-		If($(Get-ExecutionPolicy) -ne "Unrestricted" -and [System.Windows.MessageBox]::Show('Set execution policy to Unrestricted?','Powershell Execution Policy','YesNoCancel','Info') -eq "Yes"){
-			Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy Unrestricted" -Verb RunAs
+		If($(Get-ExecutionPolicy) -ne "RemoteSigned" -and [System.Windows.MessageBox]::Show('Set execution policy to RemoteSigned?','Powershell Execution Policy','YesNoCancel','Info') -eq "Yes"){
+			Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy RemoteSigned" -Verb RunAs
 		} Else {
 			Throw "Execution policy prevents scripts to run in the system"
 		}
