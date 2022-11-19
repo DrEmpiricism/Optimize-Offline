@@ -506,12 +506,7 @@ Function RunOO {
 		Save-Configuration
 		$OutputTab.IsSelected = $true
 		SetControlsAccess -Enabled $false
-		If($(Get-ExecutionPolicy) -ne "RemoteSigned" -and [System.Windows.MessageBox]::Show('Set execution policy to RemoteSigned?','Powershell Execution Policy','YesNoCancel','Info') -eq "Yes"){
-			Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy RemoteSigned" -Verb RunAs
-		} Else {
-			Throw "Execution policy prevents scripts to run in the system"
-		}
-		$Global:OO_GUI_Job = Start-Process powershell -WindowStyle Hidden -argument "$($OO_Root_Path)Start-Optimize.ps1 -noPause -FlashUSBDriveNumber $Global:OO_GUI_FlashUSBDriveNumber $(If($populateTemplates) {"-populateTemplates"} Else {''}) *>> $($ConsoleSTDOutPath)" -Verb RunAs -PassThru
+		$Global:OO_GUI_Job = Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy Bypass -Scope Process -Force; $($OO_Root_Path)Start-Optimize.ps1 -noPause -FlashUSBDriveNumber $Global:OO_GUI_FlashUSBDriveNumber $(If($populateTemplates) {"-populateTemplates"} Else {''}) *>> $($ConsoleSTDOutPath)" -Verb RunAs -PassThru
 		$Global:OO_GUI_Timer.Start()
 	} Catch {
 		SetError -Err $Error[0]
