@@ -25,7 +25,7 @@ $Global:Error.Clear()
 
 # Ensure we are running with administrative permissions.
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-	$arguments = @(" & '" + $MyInvocation.MyCommand.Definition + "'")
+	$arguments = @(" Set-ExecutionPolicy Bypass -Scope Process -Force; & '" + $MyInvocation.MyCommand.Definition + "'")
 	foreach ($param in $PSBoundParameters.GetEnumerator()) {
 		$arguments += "-"+[string]$param.Key+$(If ($param.Value -notin @("True", "False")) {"="+$param.Value} Else {""})
 	}

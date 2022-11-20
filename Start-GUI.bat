@@ -1,1 +1,1 @@
-start "" powershell.exe -noexit -WindowStyle Hidden "& %~dp0Src\GUI\Start.ps1"
+powershell -ExecutionPolicy Bypass -noexit -WindowStyle Hidden -File "%~dp0Src\GUI\Start.ps1"

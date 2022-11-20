@@ -475,9 +475,16 @@ Function Optimize-Offline
 
 		If ($DynamicParams.BootImage)
 		{
+			$BootWimImageIndex = 0
+			$BootWimImages = Get-WindowsImage -ImagePath $BootWim -ScratchDirectory $ScratchFolder -LogPath $DISMLog -LogLevel 1
+			Foreach($Image in $BootWimImages) {
+				If ($Image.ImageDescription -like "Microsoft Windows Setup*") {
+					$BootWimImageIndex = $Image.ImageIndex
+				}
+			}
 			Try
 			{
-				$BootInfo = $BootWim | Get-ImageData -Index 2 -ErrorAction Stop
+				$BootInfo = $BootWim | Get-ImageData -Index $BootWimImageIndex -ErrorAction Stop
 			}
 			Catch
 			{
@@ -490,7 +497,7 @@ Function Optimize-Offline
 				$MountBootParams = @{
 					Path             = $BootMount
 					ImagePath        = $BootWim
-					Index            = 2
+					Index            = $BootWimImageIndex
 					CheckIntegrity   = $true
 					ScratchDirectory = $ScratchFolder
 					LogPath          = $DISMLog
