@@ -115,5 +115,17 @@ Else {
 		Exit
 	}
 }
-
-Optimize-Offline @ConfigParams
+Try{
+	Optimize-Offline @ConfigParams
+} Catch {
+	$formatstring = "{0} : {1}`n{2}`n" +
+                "    + CategoryInfo          : {3}`n" +
+                "    + FullyQualifiedErrorId : {4}`n"
+	$fields = $_.InvocationInfo.MyCommand.Name,
+          $_.ErrorDetails.Message,
+          $_.InvocationInfo.PositionMessage,
+          $_.CategoryInfo.ToString(),
+          $_.FullyQualifiedErrorId
+	Write-Host -Foreground Red ($formatstring -f $fields)
+	Exit
+}
