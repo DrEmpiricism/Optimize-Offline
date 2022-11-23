@@ -407,6 +407,7 @@ If (!$Window) {
 
 $Window.Add_Closing({
 	CleanVars
+	Stop-Process $Global:OO_GUI_Job
 })
 
 $Window.Icon = "$RootPath\setup.ico"
