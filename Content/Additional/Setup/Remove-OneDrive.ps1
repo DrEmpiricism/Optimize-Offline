@@ -154,6 +154,19 @@ Function Remove-OneDrive
 	}
 }
 
+# Ensure we are running with administrative permissions.
+If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+	$arguments = @(" Set-ExecutionPolicy Bypass -Scope Process -Force; & '" + $MyInvocation.MyCommand.Definition + "'")
+	foreach ($param in $PSBoundParameters.GetEnumerator()) {
+		$arguments += "-"+[string]$param.Key+$(If ($param.Value -notin @("True", "False")) {"="+$param.Value} Else {""})
+	}
+	If(!$noPause){
+		$arguments += " ; pause"
+	}
+	Start-Process powershell -Verb RunAs -ArgumentList $arguments
+	Stop-Process -Id $PID
+}
+
 If (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
 	Clear-Host
