@@ -17,7 +17,7 @@
 Param (
 	[Parameter(Mandatory = $false)] [switch]$populateLists,
 	[Parameter(Mandatory = $false)] [switch]$populateTemplates,
-	[Parameter(Mandatory = $false)] [switch]$noPause,
+	[Parameter(Mandatory = $false)] [switch]$GUI,
 	[Parameter(Mandatory = $false)] [int]$FlashUSBDriveNumber = -1
 )
 
@@ -27,9 +27,9 @@ $Global:Error.Clear()
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
 	$arguments = @(" Set-ExecutionPolicy Bypass -Scope Process -Force; & '" + $MyInvocation.MyCommand.Definition + "'")
 	foreach ($param in $PSBoundParameters.GetEnumerator()) {
-		$arguments += "-"+[string]$param.Key+$(If ($param.Value -notin @("True", "False")) {"="+$param.Value} Else {""})
+		$arguments += "-"+[string]$param.Key+$(If ($null -ne $param.Value -and $param.Value -ne "" -and $param.Value -notin @("True", "False")) {" '"+$param.Value+"'"} Else {""})
 	}
-	If(!$noPause){
+	If(!$GUI){
 		$arguments += " ; pause"
 	}
 	Start-Process powershell -Verb RunAs -ArgumentList $arguments
@@ -69,11 +69,11 @@ Finally {
 }
 
 # Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
-$ConfigParams = [Ordered]@{ }
+$ConfigParams = @{ }
 ForEach ($Name In $ContentJSON.PSObject.Properties.Name) {
 	$Value = $ContentJSON.PSObject.Properties.Item($Name).Value
 	If ($Value -is [PSCustomObject]) {
-		$ConfigParams.$Name = [Ordered]@{ }
+		$ConfigParams.$Name = @{ }
 		ForEach ($Property in $Value.PSObject.Properties) {
 			$ConfigParams.$Name[$Property.Name] = $Property.Value
 		}
@@ -84,7 +84,10 @@ ForEach ($Name In $ContentJSON.PSObject.Properties.Name) {
 }
 $ConfigParams.populateLists = $populateLists
 $ConfigParams.populateTemplates = $populateTemplates
-$ConfigParams.FlashUSBDriveNumber = $FlashUSBDriveNumber
+
+If ($FlashUSBDriveNumber -ge 0){
+	$ConfigParams.FlashUSBDriveNumber = $FlashUSBDriveNumber
+}
 
 # Import the Optimize-Offline module and call it by passing the JSON configuration.
 If ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -115,17 +118,22 @@ Else {
 		Exit
 	}
 }
-Try{
+
+If ($GUI){
+	Try{
+		Optimize-Offline @ConfigParams
+	} Catch {
+		$formatstring = "{0} : {1}`n{2}`n" +
+									"    + CategoryInfo          : {3}`n" +
+									"    + FullyQualifiedErrorId : {4}`n"
+		$fields = $_.InvocationInfo.MyCommand.Name,
+						$_.ErrorDetails.Message,
+						$_.InvocationInfo.PositionMessage,
+						$_.CategoryInfo.ToString(),
+						$_.FullyQualifiedErrorId
+		Write-Host -Foreground Red ($formatstring -f $fields)
+		Exit
+	}
+} Else {
 	Optimize-Offline @ConfigParams
-} Catch {
-	$formatstring = "{0} : {1}`n{2}`n" +
-                "    + CategoryInfo          : {3}`n" +
-                "    + FullyQualifiedErrorId : {4}`n"
-	$fields = $_.InvocationInfo.MyCommand.Name,
-          $_.ErrorDetails.Message,
-          $_.InvocationInfo.PositionMessage,
-          $_.CategoryInfo.ToString(),
-          $_.FullyQualifiedErrorId
-	Write-Host -Foreground Red ($formatstring -f $fields)
-	Exit
 }

@@ -407,7 +407,9 @@ If (!$Window) {
 
 $Window.Add_Closing({
 	CleanVars
-	Stop-Process $Global:OO_GUI_Job
+	If($Global:OO_GUI_Job) {
+		Stop-Process $Global:OO_GUI_Job
+	}
 })
 
 $Window.Icon = "$RootPath\setup.ico"
@@ -507,7 +509,7 @@ Function RunOO {
 		Save-Configuration
 		$OutputTab.IsSelected = $true
 		SetControlsAccess -Enabled $false
-		$Global:OO_GUI_Job = Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy Bypass -Scope Process -Force; & '$($OO_Root_Path)Start-Optimize.ps1' -noPause -FlashUSBDriveNumber $Global:OO_GUI_FlashUSBDriveNumber $(If($populateTemplates) {"-populateTemplates"} Else {''}) *>> '$($ConsoleSTDOutPath)'" -Verb RunAs -PassThru
+		$Global:OO_GUI_Job = Start-Process powershell -WindowStyle Hidden -argument "Set-ExecutionPolicy Bypass -Scope Process -Force; & '$($OO_Root_Path)Start-Optimize.ps1' -GUI -FlashUSBDriveNumber $Global:OO_GUI_FlashUSBDriveNumber $(If($populateTemplates) {"-populateTemplates"} Else {''}) *>> '$($ConsoleSTDOutPath)'" -Verb RunAs -PassThru
 		$Global:OO_GUI_Timer.Start()
 	} Catch {
 		SetError -Err $Error[0]
