@@ -69,11 +69,11 @@ Finally {
 }
 
 # Convert the JSON object into a nested ordered collection list. We use the PSObject.Properties method to retain the JSON object order.
-$ConfigParams = @{ }
+$ConfigParams = [Ordered]@{ }
 ForEach ($Name In $ContentJSON.PSObject.Properties.Name) {
 	$Value = $ContentJSON.PSObject.Properties.Item($Name).Value
 	If ($Value -is [PSCustomObject]) {
-		$ConfigParams.$Name = @{ }
+		$ConfigParams.$Name = [Ordered]@{ }
 		ForEach ($Property in $Value.PSObject.Properties) {
 			$ConfigParams.$Name[$Property.Name] = $Property.Value
 		}
