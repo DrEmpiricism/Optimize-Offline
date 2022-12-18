@@ -15,6 +15,7 @@
 	GUID                   = '86c4db30-1a45-43c7-a96b-46d2a1d84671'
 	RootModule             = 'Optimize-Offline.psm1'
 	ModuleVersion          = '4.0.1.9'
+	ModuleForkVersion      = 'gdeliana-7.1'
 	Author                 = 'Ben White'
 	Copyright              = '(c) 2021. All rights reserved.'
 	Description            = 'The Optimize-Offline module enables the offline optimizing of Windows images (WIM/ESD) files for optimal runtime environments.'

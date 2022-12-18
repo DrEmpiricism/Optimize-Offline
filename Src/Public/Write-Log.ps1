@@ -23,7 +23,7 @@ Function Write-Log
 		$LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
 		$Header = @"
 ***************************************************************************************************
-Running Module : $($OptimizeOffline.BaseName) $($ManifestData.ModuleVersion)
+Running Module : $($OptimizeOffline.BaseName) $($ManifestData.ModuleVersion) $($ManifestData.ModuleForkVersion)
 Optimize Start : {0}
 Identity Name  : $([Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[1])
 Computer Name  : $Env:COMPUTERNAME
