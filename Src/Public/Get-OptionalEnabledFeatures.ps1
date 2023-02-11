@@ -14,11 +14,5 @@ Function Get-OptionalEnabledFeatures {
 		[String]$LogPath
 	)
 
-	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object -Property State -EQ Enabled | ForEach-Object -Process {
-		@{
-			State = $_.State
-			FeatureName = $_.FeatureName
-			StateLabel = "Enabled"
-		}
-	}
+	return Get-WindowsOptionalFeature -Path $Path -ScratchDirectory $ScratchDirectory -LogPath $LogPath -LogLevel 1 | Select-Object -Property FeatureName, State | Sort-Object -Property FeatureName | Where-Object -Property State -EQ Enabled
 }

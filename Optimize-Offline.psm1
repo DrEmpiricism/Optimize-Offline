@@ -689,8 +689,8 @@ Function Optimize-Offline
 					[Void]$ItemsGUI.Add(@{
 						FeatureName = $PSItem.FeatureName
 						States = @("Enabled", "Disabled")
-						State = $PSItem.StateLabel
-						OriginalState = $PSItem.StateLabel
+						State = "Enabled"
+						OriginalState = "Enabled"
 					})
 				}
 				## Populate FeaturesToDisable template
@@ -718,8 +718,8 @@ Function Optimize-Offline
 					[Void]$ItemsGUI.Add(@{
 						FeatureName = $PSItem.FeatureName
 						States = @("Enabled", "Disabled")
-						State = $PSItem.StateLabel
-						OriginalState = $PSItem.StateLabel
+						State = "Disabled"
+						OriginalState = "Disabled"
 					})
 				}
 				## Populate FeaturesToEnable template
