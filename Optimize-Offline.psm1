@@ -195,6 +195,10 @@ Function Optimize-Offline
 				ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
 				{
 					$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
+					$destPathDir = $(Split-Path $ISOExport)
+					If (!(Test-Path -Path $destPathDir)) {
+						[Void](New-Item -path $(Split-Path $ISOExport) -ItemType Directory -Force)
+					}
 					Copy-Item -Path $Item.FullName -Destination $ISOExport
 				}
 				Do

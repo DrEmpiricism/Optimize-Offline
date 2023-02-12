@@ -178,7 +178,7 @@
       },
       {
         "Name": "DisableWindowsUpdateMicrosoft",
-        "Label": "Disable Microsoft contacting servers",
+        "Label": "Disabling Windows update contacting Microsoft servers",
         "Type": "Switch",
         "Binding": "SelectiveRegistry.DisableWindowsUpdateMicrosoft",
         "Description": "This disables completely the windows update services and Microsoft Store downloading"
