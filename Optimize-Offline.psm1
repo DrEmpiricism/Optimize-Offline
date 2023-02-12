@@ -192,7 +192,11 @@ Function Optimize-Offline
 				Write-Host ($OptimizeData.ExportingMedia -f $SourcePath.Name) -ForegroundColor Cyan
 				$ISOMedia = Create -Path (GetPath -Path $TempDirectory -Child $SourcePath.BaseName) -PassThru
 				$ISOMedia | Export-DataFile -File ISOMedia
-				robocopy $ISOMount $ISOMedia.FullName /MIR | Out-Null
+				ForEach ($Item In Get-ChildItem -Path $ISOMount -Recurse)
+				{
+					$ISOExport = $ISOMedia.FullName + $Item.FullName.Replace($ISOMount, $null)
+					Copy-Item -Path $Item.FullName -Destination $ISOExport
+				}
 				Do
 				{
 					[Void](Dismount-DiskImage -ImagePath $SourcePath.FullName)
