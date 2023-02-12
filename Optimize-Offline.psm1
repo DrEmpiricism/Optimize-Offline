@@ -993,10 +993,6 @@ Function Optimize-Offline
 		$DynamicParams.RemovedPackages = $RemovedPackages;
 
 		#region Removed Package Clean-up
-		If ($DynamicParams.WindowsApps -or $DynamicParams.SystemApps)
-		{
-			Log $OptimizeData.RemovedPackageCleanup
-		}
 		If ($DynamicParams.WindowsApps)
 		{
 			If ($InstallInfo.Build -lt '19041')
