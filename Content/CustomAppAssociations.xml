@@ -3,22 +3,13 @@
   <Association Identifier=".3g2" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
   <Association Identifier=".3gp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
   <Association Identifier=".3gp2" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
-  <Association Identifier=".3gpp" ProgId="WMP11.AssocFile.3G2" ApplicationName="Windows Media Player" />
+  <Association Identifier=".3gpp" ProgId="WMP11.AssocFile.3GPP" ApplicationName="Windows Media Player" />
   <Association Identifier=".aac" ProgId="WMP11.AssocFile.AAC" ApplicationName="Windows Media Player" />
-  <Association Identifier=".avi" ProgId="WMP11.AssocFile.AVI" ApplicationName="Windows Media Player" />
+  <Association Identifier=".ac3" ProgId="WMP11.AssocFile.AC3" ApplicationName="Windows Media Player" />
   <Association Identifier=".adt" ProgId="WMP11.AssocFile.ADTS" ApplicationName="Windows Media Player" />
   <Association Identifier=".adts" ProgId="WMP11.AssocFile.ADTS" ApplicationName="Windows Media Player" />
-  <Association Identifier=".bmp" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".cdxml" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
-  <Association Identifier=".CFG" ProgId="Applications\notepad.exe" ApplicationName="Notepad" />
-  <Association Identifier=".cr2" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".dib" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".gif" ProgId="PhotoViewer.FileAssoc.Gif" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".jfif" ProgId="PhotoViewer.FileAssoc.JFIF" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".jpe" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".jpeg" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".jpg" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".jxr" ProgId="PhotoViewer.FileAssoc.Wdp" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".amr" ProgId="WMP11.AssocFile.AMR" ApplicationName="Windows Media Player" />
+  <Association Identifier=".avi" ProgId="WMP11.AssocFile.AVI" ApplicationName="Windows Media Player" />
   <Association Identifier=".MP2" ProgId="WMP11.AssocFile.MP3" ApplicationName="Windows Media Player" />
   <Association Identifier=".mpa" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
   <Association Identifier=".m4a" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
@@ -31,24 +22,30 @@
   <Association Identifier=".mpeg" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
   <Association Identifier=".mpg" ProgId="WMP11.AssocFile.MPEG" ApplicationName="Windows Media Player" />
   <Association Identifier=".mts" ProgId="WMP11.AssocFile.M2TS" ApplicationName="Windows Media Player" />
-  <Association Identifier=".nfo" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
-  <Association Identifier=".oxps" ProgId="Windows.XPSReachViewer" ApplicationName="XPS Viewer" />
-  <Association Identifier=".png" ProgId="PhotoViewer.FileAssoc.Png" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".txt" ProgId="txtfile" ApplicationName="Notepad" />
-  <Association Identifier=".tif" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".tiff" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
   <Association Identifier=".TS" ProgId="WMP11.AssocFile.TTS" ApplicationName="Windows Media Player" />
   <Association Identifier=".TTS" ProgId="WMP11.AssocFile.TTS" ApplicationName="Windows Media Player" />
-  <Association Identifier=".url" ProgId="IE.AssocFile.URL" ApplicationName="Internet Browser" />
   <Association Identifier=".wav" ProgId="WMP11.AssocFile.WAV" ApplicationName="Windows Media Player" />
-  <Association Identifier=".wdp" ProgId="PhotoViewer.FileAssoc.Wdp" ApplicationName="Windows Photo Viewer" />
-  <Association Identifier=".website" ProgId="IE.AssocFile.WEBSITE" ApplicationName="Internet Explorer" />
   <Association Identifier=".wm" ProgId="WMP11.AssocFile.WM" ApplicationName="Windows Media Player" />
   <Association Identifier=".wma" ProgId="WMP11.AssocFile.WMA" ApplicationName="Windows Media Player" />
   <Association Identifier=".wmv" ProgId="WMP11.AssocFile.WMV" ApplicationName="Windows Media Player" />
   <Association Identifier=".WPL" ProgId="WMP11.AssocFile.WPL" ApplicationName="Windows Media Player" />
+  <Association Identifier=".bmp" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".dib" ProgId="PhotoViewer.FileAssoc.Bitmap" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".gif" ProgId="PhotoViewer.FileAssoc.Gif" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jfif" ProgId="PhotoViewer.FileAssoc.JFIF" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jpe" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jpeg" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jpg" ProgId="PhotoViewer.FileAssoc.Jpeg" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jxr" ProgId="PhotoViewer.FileAssoc.Wdp" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".png" ProgId="PhotoViewer.FileAssoc.Png" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".tif" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".tiff" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".wdp" ProgId="PhotoViewer.FileAssoc.Wdp" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".cdxml" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
+  <Association Identifier=".CFG" ProgId="Applications\notepad.exe" ApplicationName="Notepad" />
+  <Association Identifier=".nfo" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
+  <Association Identifier=".txt" ProgId="txtfile" ApplicationName="Notepad" />
   <Association Identifier=".xml" ProgId="Applications\Notepad.exe" ApplicationName="Notepad" />
-  <Association Identifier=".xps" ProgId="Windows.XPSReachViewer" ApplicationName="XPS Viewer" />
   <Association Identifier="http" ProgId="IE.HTTP" ApplicationName="Internet Explorer" />
   <Association Identifier="https" ProgId="IE.HTTPS" ApplicationName="Internet Explorer" />
 </DefaultAssociations>
