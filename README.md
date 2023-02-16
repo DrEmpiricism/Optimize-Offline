@@ -61,6 +61,8 @@ The following System Applications are safe to remove:
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
+AppResolverUX is a UWP app that not only issues the pop-up asking how to open a specific file that does not have its own dedicated app association, but also allows for the installation of DHC drivers. It is advised not to remove this System Application as doing so will prevent all Store, UWP/DHC driver apps from running and also prevent them from being manually installed.
+
 **Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its impact on a live system.**
 
 ### About Windows Capabilities and Packages ###
