@@ -160,7 +160,7 @@ If (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::
 	Write-Host "Remove the Microsoft OneDrive component store files?" -ForegroundColor Yellow
 	$RemoveComponentFiles = Read-Host "[ y / N ] "
 	Switch ($RemoveComponentFiles)
- {
+	{
 		Y { Remove-OneDrive -RemoveComponents; Break }
 		N { Remove-OneDrive; Break }
 		Default { Remove-OneDrive; Break }
