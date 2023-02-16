@@ -26,6 +26,7 @@ DisableShortcutText                 = Disabling the Trailing Text for Shortcuts.
 EnableCMDWinXMenu                   = Enabling Command Prompt on the Win+X Quick Link Menu.
 DisableEdgeShortcutPrelaunch        = Disabling Microsoft Edge Desktop Shortcut Creation and Pre-Launching.
 DisableTaskbarInterestsNews         = Disabling Interests and News on Taskbar.
+DisableTaskbarMeetNow               = Disabling the Meet Now on Taskbar.
 DisablePinnedIcons                  = Disabling Pinned Windows Store, Windows Mail and People Icons.
 ReduceStartMenuDelay                = Reducing Start Menu Delay.
 EnableCombineSmallIcons             = Enabling TaskBar Icon Combining with Small Icons.
