@@ -75,6 +75,12 @@ Function Get-ImageData
                     $ImageData.Build = $CurrentVersion.CurrentBuildNumber
                     If ($CurrentVersion.DisplayVersion -eq '21H2') { $ImageData.CodeName = $CurrentVersion.DisplayVersion }
                 }
+                ElseIf ($ImageData.Build -eq '19041' -and $CurrentVersion.CurrentBuildNumber -eq '19045')
+                {
+                    $ImageData.Version = $ImageData.Version.Replace($ImageData.Build, $CurrentVersion.CurrentBuildNumber)
+                    $ImageData.Build = $CurrentVersion.CurrentBuildNumber
+                    If ($CurrentVersion.DisplayVersion -eq '22H2') { $ImageData.CodeName = $CurrentVersion.DisplayVersion }
+                }
                 Else
                 {
                     If ($ImageData.Build -eq '19041') { $ImageData.CodeName = '20H1' }

@@ -4,20 +4,18 @@
 #Requires -Module Dism
 <#
 	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2021 v5.8.194
+	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2023 v5.8.218
 	 Created on:   	11/20/2019 11:53 AM
 	 Created by:   	BenTheGreat
 	 Filename:     	Optimize-Offline.psm1
-	 Version:       4.0.1.9
-	 Last updated:	09/12/2021
+	 Version:       4.0.1.10
+	 Last updated:	02/16/2023
 	-------------------------------------------------------------------------
 	 Module Name: Optimize-Offline
 	===========================================================================
 #>
-
 Function Optimize-Offline
 {
-
 	<#
 	.EXTERNALHELP Optimize-Offline-help.xml
 	#>
@@ -113,6 +111,7 @@ Function Optimize-Offline
 		$ErrorActionPreference = 'SilentlyContinue'
 		$Global:ProgressPreference = 'SilentlyContinue'
 		$Host.UI.RawUI.BackgroundColor = 'Black'
+		If ($PSVersionTable.PSVersion.Major -eq 7) { $PSStyle.OutputRendering = 'Host' }
 		Clear-Host
 		Test-Requirements
 		If (Get-WindowsImage -Mounted) { Dismount-Images; Clear-Host }
@@ -1058,6 +1057,7 @@ Function Optimize-Offline
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics" -Name "Enabled" -Value 0 -Type DWord
 			RegKey -Path "HKLM:\WIM_HKLM_SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" -Name "Enabled" -Value 0 -Type DWord
 			If (Test-Path -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc") { RegKey -Path "HKLM:\WIM_HKLM_SYSTEM\ControlSet001\Services\WbioSrvc" -Name "Start" -Value 4 -Type DWord }
+			[Void]$Visibility.Append('signinoptions-launchfaceenrollment;signinoptions-launchfingerprintenrollment;')
 			$DynamicParams.BioEnrollment = $true
 		}
 		If ($RemovedPackages.'Microsoft.Windows.SecureAssessmentBrowser')
@@ -2784,7 +2784,7 @@ Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
 		Try
 		{
 			Log $OptimizeData.FinalizingOptimizations
-			$SaveDirectoryOOFiles = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-ddThh.mm.ss'))) -PassThru
+			$SaveDirectoryOOFiles = Create -Path (GetPath -Path $OptimizeOffline.Directory -Child Optimize-Offline_$((Get-Date).ToString('yyyy-MM-dd-HHmmss'))) -PassThru
 			If($OutputPath.ToLower().Trim() -eq 'default'){
 				$SaveDirectory = $SaveDirectoryOOFiles
 			} ElseIf ($OutputPath.ToLower().Trim() -ne 'select') {
@@ -2858,6 +2858,7 @@ Icon=setup.ico" | Out-File "$($ISOMedia.FullName)\Autorun.inf" -Encoding ascii
 		((Compare-Object -ReferenceObject (Get-Variable).Name -DifferenceObject $LocalScope.Variables).InputObject).ForEach{ Remove-Variable -Name $PSItem -ErrorAction Ignore }
 		$ErrorActionPreference = $LocalScope.ErrorActionPreference
 		$Global:ProgressPreference = $LocalScope.ProgressPreference
+		If ($PSVersionTable.PSVersion.Major -eq 7) { $PSStyle.OutputRendering = 'Ansi' }
 		$Global:Error.Clear()
 		$Global:InstallInfo = $null
 		Log "Clearing temp directory..."

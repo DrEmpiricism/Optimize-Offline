@@ -15,5 +15,5 @@ Function Invoke-Cleanup
     }
 
     @((GetPath -Path $MountPath -Child "Windows\WinSxS\Temp\PendingDeletes\*"), (GetPath -Path $MountPath -Child "Windows\WinSxS\Temp\TransformerRollbackData\*"), (GetPath -Path $MountPath -Child "Windows\WinSxS\ManifestCache\*.bin")) | Purge -Force -ErrorAction Ignore
-    @((GetPath -Path $MountPath -Child PerfLogs), (GetPath -Path $MountPath -Child "Windows\INF\*.log"), (GetPath -Path $MountPath -Child "Windows\CbsTemp\*"), (GetPath -Path $MountPath -Child PerfLogs), ("$MountPath\" + '$Recycle.Bin')) | Purge -ErrorAction Ignore
+    @((GetPath -Path $MountPath -Child PerfLogs), (GetPath -Path $MountPath -Child "Windows\INF\*.log"), (GetPath -Path $MountPath -Child "Windows\CbsTemp\*"), ("$MountPath\" + '$Recycle.Bin')) | Purge -ErrorAction Ignore
 }

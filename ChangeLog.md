@@ -1,5 +1,23 @@
 # ChangeLog #
 
+## Build 4.0.1.10 (02-16-2023) ##
+
+- Corrected the improper formatting of the output WimFileInfo.xml file when running Optimize-Offline with PowerShell 7+
+- Windows 10 22H2 will now display properly in the output WimFileInfo.xml file.
+- Added additional telemetry disabling registry entries.
+- Disabled Interests and News and Meet Now taskbar registry entries.
+- Updated the Win32Calc integration WIM file.
+- Updated the integrated Microsoft Edge Administrative Policy Templates WIM file to the latest versions.
+- Updated the integrated CustomAppsAssociations.xml
+- Updated the 'Additional Tweaks' registry template.
+- Updated the Set-Additional.ps1 post-setup script.
+- Added a Remove-DefaultUser0.ps1 post-setup script.
+- The Get-DeploymentTool function has been replaced with the Get-DISMPath function.
+- Removed redundancies in the Invoke-Cleanup function.
+- Additional framework code changes and other core module updates.
+
+**NOTE: Windows 11 compatibility will be coming with build 4.0.2. Furthermore, the reason for the fairly long hiatus with updates has been due to the passing of my father and the subsequent birth of a little bundle of joy. Though my personal life is not anyone's business on the internet, I also do not think it's fair to let those who use this framework to sit in the dark about its current state. Conclusively, I will try to get to the Troubleshooting/Bug reports as soon as I'm available to do so. Thank you for your understanding and patience.**
+
 ## Build 4.0.1.9 (09-12-2021) ##
 
 - Optimize-Offline's native ISO creation function has been re-written and now supports PowerShell 6+.
@@ -46,10 +64,3 @@
 - Updated the Windows Store bundle packages.
 - The MAML XML external help file and manifest data have been updated.
 - Multiple code improvements across the framework.
-
-## Build 4.0.1.5 (09-17-2020) ##
-
-- Fixed an error where the metadata for the image would not be returned if both the -DaRT and -Additional parameters were omitted.
-- Updated the Win32Calc integration image package to correct a bug where selecting 'Unit Conversion' from its drop-down list would cause the Win32Calc.exe to close immediately.
-- Updated the Resource Function that returns the metadata for any images being optimized.
-- Additional Optimize-Offline code improvements.

@@ -143,12 +143,14 @@ Function Set-Additional
 
         If ((Get-ItemPropertyValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" -Name DrvType) -eq 'SSD')
         {
-            # Enable TRIM support for NTFS and ReFS file systems for SSD drives.
+            # Enable TRIM support for NTFS and ReFS file systems.
             Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY NTFS 0') | Out-Null
-            $QueryReFS = Invoke-Expression -Command ('FSUTIL BEHAVIOR QUERY DISABLEDELETENOTIFY') | Select-String -Pattern ReFS
-            If ($QueryReFS) { Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY REFS 0') | Out-Null }
+            If (Invoke-Expression -Command ('FSUTIL BEHAVIOR QUERY DISABLEDELETENOTIFY') | Select-String -Pattern ReFS) { Invoke-Expression -Command ('FSUTIL BEHAVIOR SET DISABLEDELETENOTIFY REFS 0') | Out-Null }
 
-            # Disable Prefetch and Superfetch (optimal for SSD drives).
+            # Disable Swapfile.sys which can improve SSD performance
+            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name SwapfileControl -Value 0 -Force
+
+            # Disable Prefetch and Superfetch (optimal for SSD drives)
             If (!(Test-Path -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters")) { New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -ItemType Directory -Force | Out-Null }
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name EnablePrefetcher -Value 0 -Force
             Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name EnableSuperfetch -Value 0 -Force
@@ -161,6 +163,10 @@ Function Set-Additional
         }
         Else
         {
+            # If the Ultimate Performance power scheme is not available, duplicate the power scheme's GUID so it becomes available. Finally, set the active power scheme to Ultimate Performance
+            If (!(Get-CimInstance -ClassName Win32_PowerPlan -Namespace root\cimv2\power -Filter "ElementName = 'Ultimate Performance'")) { Invoke-Expression -Command ('POWERCFG -DUPLICATESCHEME e9a42b02-d5df-448d-aa00-03f14749eb61') }
+            Invoke-Expression -Command ('POWERCFG -S e9a42b02-d5df-448d-aa00-03f14749eb61') | Out-Null
+
             # Disable hibernation.
             Invoke-Expression -Command ('POWERCFG -H OFF') | Out-Null
 
@@ -169,26 +175,14 @@ Function Set-Additional
                 $PSItem.AllowComputerToTurnOffDevice = 'Disabled'
                 $PSItem | Set-NetAdapterPowerManagement
             }
-
-            # Set the active power scheme to Ultimate Performance if the runtime Windows version is Windows 10 Pro for Workstations or the Ultimate Performance power scheme GUID is detected, else set the active power scheme to High Performance.
-            If ((Get-WindowsEdition -Online | Select-Object -ExpandProperty Edition) -eq 'ProfessionalWorkstation') { Invoke-Expression -Command ('POWERCFG -S e9a42b02-d5df-448d-aa00-03f14749eb61') | Out-Null }
-            ElseIf (POWERCFG -L | Out-String | Select-String -Pattern 'e9a42b02-d5df-448d-aa00-03f14749eb61') { Invoke-Expression -Command ('POWERCFG -S e9a42b02-d5df-448d-aa00-03f14749eb61') | Out-Null }
-            Else { Invoke-Expression -Command ('POWERCFG -S 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c') | Out-Null }
         }
 
         # Use the total amount of memory installed on the device to modify the svchost.exe split threshold to reduce the amount of svchost.exe processes that run simultaneously.
         $Memory = (Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1KB
         If ($Memory -is [Double]) { Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name SvcHostSplitThresholdInKB -Value $Memory -Force }
 
-        # If the Windows build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
-        If ($Build -ge 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
-
-        <#Try{
-            If ($Build -ge 19041 -and (Get-WmiObject -Class Win32_Processor | Select-Object -Property Name).Name.ToLower() -Like "*amd*") {
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name FeatureSettingsOverride -Value 3 -Force
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name FeatureSettingsOverrideMask -Value 3 -Force
-            }
-        } Catch {}#>
+        # If the Windows 10 build is 19041, use the new DISM PowerShell cmdlet to disable the Reserved Storage feature for future updates.
+        If ($Build -eq 19041 -and (Get-WindowsReservedStorageState | Select-Object -ExpandProperty ReservedStorageState) -ne 'Disabled') { Set-WindowsReservedStorageState -State Disabled }
 
         # Remove the dism log file if present.
         If (Test-Path -Path $Env:SystemRoot\Logs\DISM\dism.log) { Remove-Item -Path $Env:SystemRoot\Logs\DISM\dism.log -Force }
@@ -204,10 +198,11 @@ Function Set-Additional
         If ($RequestReboot -eq [Windows.MessageBoxResult]::Yes)
         {
             Clear-Host
+            Remove-Item -Path $PSScriptRoot\Set-Additional.error -Force -ErrorAction Ignore
             $ProgressPreference = 'Continue'
-            ForEach ($Count In (1 .. 15))
+            ForEach ($Count In (1 .. 5))
             {
-                Write-Progress -Id 1 -Activity "Restarting $Env:COMPUTERNAME" -Status "Restarting in 15 seconds, $(15 - $Count) seconds left" -PercentComplete (($Count / 15) * 100)
+                Write-Progress -Id 1 -Activity "Restarting $Env:COMPUTERNAME" -Status "Restarting in 5 seconds, $(5 - $Count) seconds left" -PercentComplete (($Count / 5) * 100)
                 Start-Sleep 1
             }
             Restart-Computer -Force

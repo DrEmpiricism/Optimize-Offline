@@ -1,8 +1,8 @@
-# Optimize-Offline
+# Optimize-Offline #
 
 Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for Windows 10 versions 1803-to-2009 64-bit architectures.
 
-## About Optimize-Offline
+## About Optimize-Offline ##
 
 - Expands the user experience by eliminating unnecessary bloat, enhancing privacy, improving aesthetics and increasing system performance.
 - Accepts either a full Windows 10 Installation Media ISO, Windows 10 WIM, SWM or ESD file.
@@ -14,7 +14,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 - All optimization processes are done silently with internal error-handling.
 - All images are optimized independently - without the need for 3rd party programs - by utilizing custom module resources.
 
-## Module Disclaimer
+## Module Disclaimer ##
 
 - The latest releases of Optimize-Offline can be found [here](https://github.com/DrEmpiricism/Optimize-Offline/releases).
 - It is the responsibility of the end-user to be aware of what each parameter value does, which are all well documented in the [Module Help Topics and Optimization Details](docs/Optimize-Offline-help.md).
@@ -23,7 +23,7 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 - Just because something can be removed does not mean it should be removed. Haphazard removal of packages or features can prevent Windows 10 Setup from completing or cause runtime errors.
 - Support will not be given to users who attempt to optimize unsupported builds, previously modified images or modify the default code to circumvent edition requirements.
 
-## Optimize-Offline Best Practices
+## Optimize-Offline Best Practices ##
 
 - Before optimizing an image, read the [Module Help Topics and Optimization Details](docs/Optimize-Offline-help.md).
 - Keep the project file stucture in its default state.
@@ -31,15 +31,15 @@ Optimize-Offline is a Windows Image (WIM/ESD) optimization module designed for W
 - If maintaining fully updated OEM images, it is best to integrate offline updates into the image BEFORE running Optimize-Offline.
 - Do not run any other programs or scripts - or manually run commands - that can interact with either the working directories of the module or the registry while optimizations are processing.
 
-## Parameters
+## Parameters ##
 
-### About System Applications
+### About System Applications ###
 
 System Applications are a lot like Provisioned Application Packages (Windows Apps) in respect that they are provisioned and installed during the setup of Windows. During the Windows Setup component pass, setup looks for these System Applications in the default registry and provisions them for installation only if their entries are present. By removing these entries, Windows Setup does not provision them for installation.
 
 This method is safer than force removing the System Application using its component package because it retains the default file structure. Furthermore, the force removal of System Applications' component packages can trip the dreaded "STATUS_SXS_COMPONENT_STORE_CORRUPT" flag. This is a critical component store corruption flag that will then be detected by any servicing command and Windows Update and prevents both the servicing and updating of the Operating System. The only way to remedy and fix this error is to re-install or reset the Operating System.
 
-#### System Applications universally safe to remove
+#### System Applications universally safe to remove ####
 
 The following System Applications are safe to remove:
 
@@ -61,15 +61,17 @@ The following System Applications are safe to remove:
 
 Cortana can also be removed, though doing so will render the default search feature inoperable and is only recommended if a 3rd party search program like Classic Shell will be used.
 
+AppResolverUX is a UWP app that not only issues the pop-up asking how to open a specific file that does not have its own dedicated app association, but also allows for the installation of DHC drivers. It is advised not to remove this System Application as doing so will prevent all Store, UWP/DHC driver apps from running and also prevent them from being manually installed.
+
 **Some System Applications are required during the OOBE setup pass and their removal can cause setup to fail. Do not remove any System Application if you're unsure of its impact on a live system.**
 
-### About Windows Capabilities and Packages
+### About Windows Capabilities and Packages ###
 
 The Capabilities parameter allows for the removal of Features on Demand (FOD) installed in the image and the Packages parameter allows for the removal of Windows Cabinet File Packages.
 
 Like with all removals, care must be taken when using either of these removal parameters, particularly the Packages parameter. Do not remove any Capability or Package if you are unaware of its impact on a live installation. It is recommended to read the [Features on Demand Document](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities) to better understand their functions.
 
-### About Registry Optimizations
+### About Registry Optimizations ###
 
 The Registry parameter applies an array of entries and values to the image registry hives designed to further enhance both the security of the default image as well as its usability and aesthetics.
 The module only applies those registry entries and values applicable to the image build being optimized and bypasses those that are unsupported. Likewise, Optimize-Offline will apply additional entries and values to accommodate any application removal or integration. Optimize-Offline does not apply any Group Policy entries that are not available in the specific image edition by default, as this would just add unnecessary bloat to the registry itself with zero functionality.
@@ -87,14 +89,14 @@ A short list of some of the optimizations include:
 - Disables intrusive Microsoft feedback and notification queries.
 - Cleans-up the default Context Menu.
 
-### About the SMB1 File Sharing Protocol and Windows PowerShell 2.0 Optional Features
+### About the SMB1 File Sharing Protocol and Windows PowerShell 2.0 Optional Features ###
 
 When optimizing an image with Optimize-Offline, curiosity may arise as to why the SMB1 Protocol and Windows PowerShell 2.0 Optional Features are automatically disabled. In short, Microsoft has labled both of them a security risk.
 
 - The SMB1 Protocol is vulnerable to [Ransomware propagation](https://techcommunity.microsoft.com/t5/Storage-at-Microsoft/Stop-using-SMB1/ba-p/425858).
 - Windows PowerShell 2.0 can be used to run melicous scripts and has been [depreciated since Windows 10 version 1709](https://devblogs.microsoft.com/powershell/windows-powershell-2-0-deprecation/).
 
-### About Additional Content
+### About Additional Content ###
 
 When the Additional parameter is used, user-specific content added to the "Content/Additional" directory will get integrated into the image when enabled within the hashtable. This eliminates the need to use an external Distribution Share.
 
@@ -102,20 +104,15 @@ All content that gets transfered to the image are copied to locations that are i
 
 Content can be in the form of files, folders or directories, unless a specific filetype is required. Content is NOT copied haphazardly nor are original file structures ignored.
 
-#### Registry Template Integration
+#### Registry Template Integration ####
 
-Custom registry template (.reg) files placed in the '\Content\Additional\RegistryTemplates' folder are imported by Optimize-Offline into the offline image's appropriate registry hive.
+Any custom registry template (.reg) file to be imported into the offline image's registry hives can be placed in the '\Content\Additional\RegistryTemplates' folder. No editing of these template files is required and Optimize-Offline will copy and edit them accordingly to apply them to the appropriate hives.
 
-***Note:***
-To qualify for Optimize-Offline hive import, all custom registry template additions are constrained to having unrestricted permissions. If any key change included in a custom registry template addition requires restricted access, the entire Optimize-Offline script fails without notice and without any descriptive warning. The solution is to remove any registry key change that requires access to protected registry keys.
-
-> Registry templates that users can add to be automatically imported into the offline registry hives are not granted the token privileges required for access to protected registry keys. Only certain values applied by the script itself are granted these privileges. [GitHub-DrEmpiricism](https://github.com/DrEmpiricism/Optimize-Offline/issues/136#issuecomment-554158335)
-
-#### Adding Drivers
+#### Adding Drivers ####
 
 Any driver package to be injected into the offline image can be placed in its respective folder in the '\Content\Additional\Drivers' directory. Within this directory you can select whether a driver package is added to just the Windows Installation, or also to the Windows Setup and Windows Recovery environments. Either single .inf files or full driver packages are supported.
 
-#### Adding an Answer File
+#### Adding an Answer File ####
 
 When an unattend.xml answer file is added to the '\Content\Additional\Unattend' folder, Optimize-Offline applies the answer file directly to the image, creates the '\Windows\Panther' directory within the image and finally copies the answer file to it. "Panther" was the code-name for a servicing and setup engine that began with Windows Vista and has remained as such since.
 
@@ -127,7 +124,7 @@ It is also in good practice to have a good idea what each configuration pass doe
 
 **Having incorrect, null or incomplete values in your answer file, most notably the WindowsPE Configuration Pass, WILL prevent Windows from completing its setup or even starting its setup. If a custom disk layout is included for installation, make certain the proper drive index numbers, partition type IDs and sizes are entered.**
 
-### About Microsoft DaRT 10
+### About Microsoft DaRT 10 ###
 
 With Optimize-Offline, the Microsoft 10 Diagnostic and Recovery Toolset and the Windows 10 Debugging Tools can be integrated into Windows Setup and/or the Windows Recovery allowing for the troubleshooting of system issues from a Preinstallation Environment. Likewise, it is NOT recommended to integrate Microsoft DaRT 10 into images accessible by multiple people or the default Recovery Environement because any user will be able to attain access to these tools by rebooting the device into Windows Recovery. Only integrate Microsoft DaRT 10 into the default Recovery Environment if the device will require specific credentials to gain access to the Operating System and the ability to reboot into the Recovery Environment is removed from the log-in screen using Group Policy.
 
@@ -135,7 +132,7 @@ It is also recommended to be well versed and aware of all recovery tools Microso
 
 > Microsoft Diagnostics and Recovery Toolset (DaRT) 10 lets you diagnose and repair a computer that cannot be started or that has problems starting as expected. By using DaRT 10, you can recover end-user computers that have become unusable, diagnose probable causes of issues, and quickly repair unbootable or locked-out computers. When it is necessary, you can also quickly restore important lost files and detect and remove malware, even when the computer is not online. [Microsoft Document](https://docs.microsoft.com/en-us/microsoft-desktop-optimization-pack/dart-v10/)
 
-### About Win32Calc
+### About Win32Calc ###
 
 Starting in Windows 8.1, Microsoft introduced a Metro-style calculator to replace its traditional Calculator.  In Windows 10 non-LTSB/LTSC/Server editions, the traditional Calculator was entirely removed and replaced with a UWP (Universal Windows Platform) App version.  This new UWP Calculator introduced a fairly bloated UI many users were simply not fond of and much preferred the simplicity of the traditional Calculator (now labeled Win32Calc.exe).  Unfortunately, Microsoft never added the ability to revert back to the traditional Calculator nor released a downloadable package to install the traditional Calculator.
 
@@ -166,13 +163,13 @@ After Microsoft Defender is restored, retain full control by applying the "Toggl
 
 If you apply both methods to control Microsoft Defender e.g. remove the SecHealthUI package and apply the Dormant Defender parameter, then the former removal method takes precedence. Meaning that the outcome of applying both methods is the same as if you only removed the SecHealthUI package.
 
-### About Data Deduplication
+### About Data Deduplication ###
 
 > Data Deduplication, often called Dedup for short, is a feature of Windows Server 2016 that can help reduce the impact of redundant data on storage costs. When enabled, Data Deduplication optimizes free space on a volume by examining the data on the volume by looking for duplicated portions on the volume. Duplicated portions of the volume's dataset are stored once and are (optionally) compressed for additional savings. Data Deduplication optimizes redundancies without compromising data fidelity or integrity. [Microsoft Document](https://docs.microsoft.com/en-us/windows-server/storage/data-deduplication/overview)
 
 With Optimize-Offline, the Data Deduplication packages can be integrated into the offline image. PowerShell's storage cmdlets can then be used to enable and manage Data Deduplication after the optimized image has been installed. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/powershell/module/deduplication/?view=win10-ps)
 
-### About Developer Mode
+### About Developer Mode ###
 
 Developer Mode is a Windows Setting that, when enabled, allows the end-user to test any unsigned UWP app, use the Ubuntu Bash shell environment and offers optimizations for Windows Explorer, Remote Desktop and PowerShell. It is also a requirement when writing certain code in Visual Studio.
 
@@ -180,29 +177,29 @@ Enabling Developer Mode also installs Device Portal and Device Discovery, though
 
 Developer Mode should ONLY be enabled on systems that require settings it provides. More information is available from its [Microsoft Document](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)
 
-### Integrating Windows Store
+### Integrating Windows Store ###
 
 For Windows 10 Enterprise LTSC 2019, the latest Windows Store package bundles and dependency packages can be integrated into the image, as this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain any Windows Apps in its OEM state. There is no additional procedure required once the optimized Windows 10 LTSC 2019 is installed, and the Windows Store will be displayed in the Start Menu.
 
-### Integrating Microsoft Edge HTML
+### Integrating Microsoft Edge HTML ###
 
 For Windows 10 Enterprise LTSC 2019, Microsoft's flagship browser - Microsoft Edge (HTML-based) - can be integrated into the image since this flavor of Windows (like Windows 10 Enterprise LTSB 2015-2016) does not contain Microsoft Edge in its OEM state.
 
-### Integrating Microsoft Edge Chromium
+### Integrating Microsoft Edge Chromium ###
 
 Microsoft Edge Chromium was publicly released on January 15, 2020 and runs on the same Chromium web engine as the Google Chrome browser. Microsoft Edge Chromium is designed to replace the Microsoft Edge (HTML-based) system application. Moreover, the Microsoft Edge system application can be removed while still allowing for the usage of Microsoft Edge Chromium.
 
 For Windows 10 builds 18362 and above, the new Microsoft Edge Chromium browser can be integrated into the image. When the Microsoft Edge Chromium browser is integrated into an image, Optimize-Offline will also apply its administrative policy templates for GPO (Group Policy) control of its functions and features.
 
-### Solid Image Compression
+### Solid Image Compression ###
 
 Solid image compression uses the undocumented LZMS compression format to concatenate all file data within a regular WIM file into a solid WIM archive (ESD file). By doing this, a 4GB WIM file is able to be compressed to a size of 2GB or less. However, as with other forms of high-ratio compression, LZMS compression can take quite a while to complete and is extremely system intensive. Solid compression should NOT be selected as the final image compression type if the end-user is impatient or has limited system resources.
 
-### ISO File Structure Optimization
+### ISO File Structure Optimization ###
 
 This is a process that occurs automatically when a Windows Installation ISO is used as the source image for optimization. In short, it removes all unnecessary media files used to install Windows 10 from a live system, thus reducing the total size of the installation media. The order in which files are removed and moved is critical for proper file structuring.
 
-### ISO Remastering and Creation
+### ISO Remastering and Creation ###
 
 When a Windows Installation Media ISO is used as the source image for optimizing, Optimize-Offline expands the entire media structure of the ISO into its own directory and allows for the creation of a new bootable Windows Installation Media ISO containing the newly optimized Windows Image after all processes have completed.
 
@@ -210,9 +207,7 @@ The ISO parameter allows for two values to be passed to it: 'Prompt' and 'No-Pro
 
 Optimize-Offline calls the COM IMAPI2 interface for file system image building and also opens a binary stream that writes a bootfile sector code to the ISO. This allows for bootable Windows Installation Media ISO creation without the need for 3rd party tools like oscdimg.
 
-Also it's possible to pre-define the Compression level with a json key located in Configuration.json file named: CompressionType, it's values can be one of the following: 'Select', 'None', 'Fast', 'Maximum', 'Solid'. Select will show the selection window of the compression type on runtime.
-
-### About Defaultuser0
+### About Defaultuser0 ###
 
 Any time an OEM Windows Image is modified offline, or the System Preparation, Reset and Provisioning Package deployment features are used, there is a chance this ghost account will surface.
 defaultuser0 is not a real account, however, and is a bug that has been present in Windows through countless flavors and variations. It is not added to any user groups nor does it even have a profile.
@@ -220,7 +215,7 @@ Conversely, failing to remove the defaultuser0 account immediately after Windows
 
 In earlier versions of Optimize-Offline, a specific registry key was appended to allow for elevated control over the defaultuser0 account which allowed for its manual removal, as well as a SetupComplete.cmd script code that automatically removed it. However, with the newer builds (17134+), this is no longer required and simply rebooting the newly installed OS will automatically remove the defaultuser0 account from the 'Users' directory without having to manually remove it.
 
-## Using Optimize-Offline
+## Using Optimize-Offline ##
 
 Open the custom configuration JSON file (Configuration.json) in any text editing program and edit any values for your specific optimization requirements. While editing the Configuration.json file, do not change the template structure and make sure its formatting is retained when adding or changing values.
 
