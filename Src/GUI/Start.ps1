@@ -123,14 +123,18 @@ Function Import-Templates {
 				}
 			}
 			default {
-				If ($RemovalTypes.IndexOf($Configuration.$ListType) -gt -1){
-					$Key = $ListMainKey.$ListType
-					$List_OO = (Get-Content -Raw -Path "$OO_Lists_Path\$($ListType)\$($ListType)List.json" -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).$Key
-					If($List_OO){
-						Foreach($Item in $JSON) {
-							Foreach($ItemOO in $List_OO){
-								If ($Item.$Key -eq $ItemOO -or ($ItemOO -Match "\*" -and $Item.$Key -like $ItemOO)){
-									$Item.Selected = $true
+				If ($Configuration.$ListType){
+					$Type = $($Configuration.$ListType).Trim()
+					$Type = $Type.substring(0,1).toupper()+$Type.substring(1).tolower()
+					If ($RemovalTypes.IndexOf($Type) -gt -1){
+						$Key = $ListMainKey.$ListType
+						$List_OO = (Get-Content -Raw -Path "$OO_Lists_Path\$($ListType)\$($ListType)List.json" -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).$Key
+						If($List_OO){
+							Foreach($Item in $JSON) {
+								Foreach($ItemOO in $List_OO){
+									If ($Item.$Key -eq $ItemOO -or ($ItemOO -Match "\*" -and $Item.$Key -like $ItemOO)){
+										$Item.Selected = $true
+									}
 								}
 							}
 						}
@@ -330,10 +334,12 @@ Function GenerateMainConfigTab {
 
 Function GenerateListTab {
 	param([string]$ListType, [string]$Header)
-	If(!$Configuration.$ListType){
+	If(!($Configuration.$ListType)){
 		return ""
 	}
-	$ListTypeSelectedIndex = $($RemovalTypes.IndexOf($Configuration.$ListType))
+	$Type = $($Configuration.$ListType).Trim()
+	$Type = $Type.substring(0,1).toupper()+$Type.substring(1).tolower()
+	$ListTypeSelectedIndex = $($RemovalTypes.IndexOf($Type))
 	If($ListTypeSelectedIndex -lt 0){
 		$ListTypeSelectedIndex = 0
 	}
