@@ -43,6 +43,8 @@ WindowState="Maximized"
 
 		<Button Padding="3" x:Name="ProcessButton" IsEnabled="False" Content="Process" HorizontalAlignment="Left" Margin="5,15,0,0" VerticalAlignment="Center" Background="#FF50FF50" Width="101" Grid.Column="1" Grid.Row="0"/>
 
+		<Button Padding="3" x:Name="CancelButton" Background="#ff6262" IsEnabled="False" Content="Cancel" HorizontalAlignment="Left" Margin="120,15,0,0" VerticalAlignment="Center" Width="101" Grid.Column="1" Grid.Row="0"/>
+
 		<TabControl Name="TabControl" Grid.Row="1" Grid.ColumnSpan="2">
 			{Tabs}
 		</TabControl>

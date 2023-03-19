@@ -413,15 +413,14 @@ If (!$Window) {
 
 $Window.Add_Closing({
 	CleanVars
-	If($Global:OO_GUI_Job) {
-		Stop-Process $Global:OO_GUI_Job
-	}
+	StopOO
 })
 
 $Window.Icon = "$RootPath\setup.ico"
 $BrowseSourcePathButton = $Window.FindName("Browse_SourcePath")
 $BrowseOutputPathButton = $Window.FindName("Browse_OutputPath")
 $ProcessButton = $Window.FindName("ProcessButton")
+$CancelButton = $Window.FindName("CancelButton")
 $PopulateButton = $Window.FindName("PopulateButton")
 $SelectUSB = $Window.FindName("SelectUSB")
 $SelectedUSB = $Window.FindName("SelectedUSB")
@@ -461,6 +460,7 @@ Function SetControlsAccess {
 	$ServicesTab.IsEnabled = $Enabled
 	$CustomRegistryTab.IsEnabled = $Enabled
 	$ProcessButton.IsEnabled = $Enabled
+	$CancelButton.IsEnabled = -not $Enabled
 	$PopulateButton.IsEnabled = $Enabled
 	$FlashToUSB.IsEnabled = $Enabled
 	$SelectUSB.IsEnabled = $Enabled
@@ -527,8 +527,27 @@ Function RunOO {
 	}
 }
 
+Function Kill-Tree {
+	Param([int]$ppid)
+	Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq $ppid } | ForEach-Object { Kill-Tree $_.ProcessId } | Stop-Process -Id $ppid
+}
+
+Function StopOO {
+	If($Global:OO_GUI_Job) {
+		Kill-Tree $Global:OO_GUI_Job.Id
+		Stop-Process $Global:OO_GUI_Job
+	}
+}
+
 $ProcessButton.Add_Click({
 	RunOO
+})
+
+$CancelButton.Add_Click({
+	$continue = [System.Windows.MessageBox]::Show("Are you sure you want to cancel the processing job?", "Cancel processing", 'YesNo')
+	If($continue -eq 'Yes') {
+		StopOO
+	}
 })
 
 $PopulateButton.Add_Click({
