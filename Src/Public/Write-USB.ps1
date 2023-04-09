@@ -50,11 +50,9 @@ Function Write-USB {
 		If ($USBDrive.Count -eq 0 -or $USBDrive.BusType -ne "USB") {
 			Throw "Could not find USB drive"
 		}
-		$TotalSize = 0
-		Get-ChildItem -Path $source -Recurse  | Where-Object {!$_.PSIsContainer} | ForEach-Object -Process {
-			$TotalSize = $TotalSize + $_.Length
-		}
-		If ($USBDrive.Size -lt $TotalSize + 100MB) {
+		$TotalSize = (Get-PathSize -Path $Source)
+		$USBSize = $USBDrive.Size
+		If ($USBSize -lt $TotalSize + 100MB) {
 			Throw "USB disk size is smaller than ISO size"
 		}
 		$PartitionSchema = $(If($ForcePartitionSchema) {$ForcePartitionSchema} Else {"MBR"})
@@ -70,8 +68,24 @@ exit
 		Stop-Service ShellHWDetection -ErrorAction SilentlyContinue | Out-Null
 	
 		If(!$Legacy){
+
+			$bootSize = (Get-PathSize -Path "$Source\bootmgr*")
+			$bootSize += (Get-PathSize -Path "$Source\boot")
+			$bootSize += (Get-PathSize -Path "$Source\efi")
+			$bootSize += (Get-PathSize -Path "$Source\sources\boot.wim")
+
+			If($bootSize -eq 0) {
+				Throw "Boot files total size is 0"
+			}
+
+			$bootSize += 100MB
+
+			If($bootSize -gt $USBSize) {
+				Throw "Boot files total size is greater than usb size"
+			}
+
 			$USBUEFIVolume = $USBDrive |
-			New-Partition -Size 1GB -AssignDriveLetter |
+			New-Partition -Size $bootSize -AssignDriveLetter |
 			Format-Volume -FileSystem FAT32 -NewFileSystemLabel "BOOT"
 	
 			Copy-Item -Path "$Source\bootmgr*" -Destination "$($USBUEFIVolume.DriveLetter):\"
@@ -83,6 +97,9 @@ exit
 			Copy-Item -Path "$Source\sources\boot.wim" -Destination "$($USBUEFIVolume.DriveLetter):\sources"
 	
 			Update_bcd $($USBUEFIVolume.DriveLetter+":")
+
+			$USBSize -= $bootSize
+
 		}
 		$NewPartitionParams = @{
 			AssignDriveLetter = $true
@@ -91,7 +108,7 @@ exit
 		If($PartitionSchema -eq "MBR") {
 			$NewPartitionParams.IsActive = $true
 		}
-		If ($FileSystem -eq "FAT32" -and $USBDrive.Size -gt 32GB) {
+		If ($FileSystem -eq "FAT32" -and $USBSize -gt 32GB) {
 			$NewPartitionParams.Size = 32GB
 		} Else {
 			$NewPartitionParams.UseMaximumSize = $true
