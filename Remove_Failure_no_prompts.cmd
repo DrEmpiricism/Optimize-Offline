@@ -49,13 +49,6 @@ cd \
 )
 
 :precheck
-echo.
-echo.
-choice /C YN /N /M "Detect and cleanup any mounted directories? [y/n]: "
-if errorlevel 2 goto :eof
-if errorlevel 1 goto :ALL
-
-:ALL
 @cls
 for /f "tokens=3*" %%a in ('reg.exe query "%_key%" /s /v "Mount Path" 2^>nul ^| findstr /i /c:"Mount Path"') do (set "_mount=%%b"&call :CLN)
 dism.exe /English /Cleanup-Wim
@@ -76,6 +69,4 @@ exit /b
 
 :TheEnd
 echo.
-echo Press any key to exit.
-pause >nul
 goto :eof
